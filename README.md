@@ -169,6 +169,8 @@ The saved-boat table is protected with row-level security, and all client-side b
 
 ## Render deployment
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/marketintelbot-alt/NSN_Web)
+
 ### Frontend: Render Static Site
 
 Create a new Static Site with:

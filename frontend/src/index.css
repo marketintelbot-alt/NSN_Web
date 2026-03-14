@@ -1,0 +1,122 @@
+@import '@fontsource/source-sans-3/latin-400.css';
+@import '@fontsource/source-sans-3/latin-600.css';
+@import '@fontsource/source-sans-3/latin-700.css';
+@import '@fontsource/libre-baskerville/400.css';
+@import '@fontsource/libre-baskerville/700.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: 'Source Sans 3', sans-serif;
+    color: #1d2f3f;
+    background:
+      radial-gradient(circle at top, rgba(127, 164, 184, 0.18), transparent 32%),
+      linear-gradient(180deg, #f9fbfc 0%, #f4f7f9 100%);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-synthesis: none;
+  }
+
+  * {
+    @apply border-line;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-transparent text-slate;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+
+  ::selection {
+    background: rgba(127, 164, 184, 0.35);
+    color: #06131f;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  img {
+    @apply block max-w-full;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply relative overflow-hidden;
+  }
+
+  .section-pad {
+    @apply py-20 md:py-28;
+  }
+
+  .eyebrow {
+    @apply mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-white/80;
+  }
+
+  .section-label {
+    @apply mb-4 inline-flex items-center gap-2 rounded-full border border-ink/10 bg-white/70 px-4 py-2 text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-navy/70 shadow-soft;
+  }
+
+  .display-title {
+    @apply font-display text-4xl font-normal leading-[1.03] tracking-[-0.03em] text-ink md:text-5xl lg:text-6xl;
+  }
+
+  .display-title-inverse {
+    @apply font-display text-4xl font-normal leading-[1.03] tracking-[-0.03em] text-white md:text-5xl lg:text-6xl;
+  }
+
+  .section-title {
+    @apply font-display text-3xl font-normal leading-tight tracking-[-0.02em] text-ink md:text-4xl;
+  }
+
+  .section-copy {
+    @apply max-w-2xl text-base leading-8 text-slate md:text-lg;
+  }
+
+  .panel {
+    @apply rounded-4xl border border-white/50 bg-white/80 shadow-panel backdrop-blur-md;
+  }
+
+  .soft-panel {
+    @apply rounded-3xl border border-ink/10 bg-white/80 shadow-soft backdrop-blur-sm;
+  }
+
+  .nav-link {
+    @apply relative text-sm font-semibold tracking-[0.06em] text-white/80 transition duration-300 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-ink;
+  }
+
+  .nav-link-active::after {
+    @apply absolute -bottom-3 left-0 h-px w-full bg-lake content-[''];
+  }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3.5 text-sm font-semibold tracking-[0.08em] text-ink transition duration-300 hover:-translate-y-0.5 hover:bg-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/30 bg-white/5 px-6 py-3.5 text-sm font-semibold tracking-[0.08em] text-white transition duration-300 hover:-translate-y-0.5 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-transparent;
+  }
+
+  .button-dark {
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink px-6 py-3.5 text-sm font-semibold tracking-[0.08em] text-white transition duration-300 hover:-translate-y-0.5 hover:bg-navy focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  }
+
+  .input-field {
+    @apply h-14 w-full rounded-2xl border border-ink/10 bg-white px-4 text-sm text-ink placeholder:text-slate/70 focus:border-lake focus:outline-none focus:ring-2 focus:ring-lake/25;
+  }
+
+  .text-area {
+    @apply min-h-36 w-full rounded-2xl border border-ink/10 bg-white px-4 py-4 text-sm text-ink placeholder:text-slate/70 focus:border-lake focus:outline-none focus:ring-2 focus:ring-lake/25;
+  }
+}

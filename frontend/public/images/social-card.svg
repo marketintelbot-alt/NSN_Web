@@ -1,0 +1,20 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" rx="32" fill="#06131F"/>
+  <rect width="1200" height="630" rx="32" fill="url(#paint0_radial_95_2)"/>
+  <rect x="48" y="48" width="1104" height="534" rx="28" fill="url(#paint1_linear_95_2)" fill-opacity="0.68" stroke="rgba(255,255,255,0.12)"/>
+  <text x="98" y="180" fill="#B7CBD7" font-family="Source Sans 3, sans-serif" font-size="22" font-weight="700" letter-spacing="8">CHICAGO'S NORTH SHORE</text>
+  <text x="98" y="296" fill="#FFFFFF" font-family="Libre Baskerville, serif" font-size="82" font-weight="400">North Shore Nautical</text>
+  <text x="98" y="378" fill="#D7E4EB" font-family="Source Sans 3, sans-serif" font-size="34" font-weight="500">Premium boat storage, launch delivery, and</text>
+  <text x="98" y="424" fill="#D7E4EB" font-family="Source Sans 3, sans-serif" font-size="34" font-weight="500">optional pre-launch cleaning.</text>
+  <text x="98" y="520" fill="#B7CBD7" font-family="Source Sans 3, sans-serif" font-size="24" font-weight="600">Reserve Lloyd or Evanston launch delivery at least 24 hours in advance.</text>
+  <defs>
+    <radialGradient id="paint0_radial_95_2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(714 108) rotate(90) scale(522 768.905)">
+      <stop stop-color="#33556A"/>
+      <stop offset="1" stop-color="#06131F"/>
+    </radialGradient>
+    <linearGradient id="paint1_linear_95_2" x1="600" y1="48" x2="600" y2="582" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#123149"/>
+      <stop offset="1" stop-color="#081824"/>
+    </linearGradient>
+  </defs>
+</svg>

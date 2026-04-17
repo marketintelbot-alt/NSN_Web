@@ -36,16 +36,30 @@ export function AdminPage() {
   }
 
   useEffect(() => {
+    let isMounted = true
+
     readAccountSession()
       .then((response) => {
+        if (!isMounted) {
+          return
+        }
+
         if (response.ok && response.session) {
           setSession(response.session)
           return
         }
 
-        setSession(null)
+        setSession((current) => current ?? null)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false)
+        }
+      })
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -112,11 +126,7 @@ export function AdminPage() {
 
       <section className="section-pad">
         <div className="container">
-          {loading ? (
-            <FadeIn className="panel max-w-3xl p-8">
-              <p className="text-base leading-8 text-slate">Loading secure account access...</p>
-            </FadeIn>
-          ) : session ? (
+          {session ? (
             session.role === 'admin' ? (
               <AdminDashboard accountSession={session} onSignedOut={() => setSession(null)} />
             ) : (
@@ -132,6 +142,12 @@ export function AdminPage() {
                 <p className="mt-4 text-base leading-8 text-slate">
                   Sign in with your North Shore Nautical account credentials to continue.
                 </p>
+
+                {loading ? (
+                  <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-4 py-4 text-sm text-slate">
+                    Checking for a saved sign-in while the page loads...
+                  </div>
+                ) : null}
 
                 <form className="mt-8 grid gap-5" onSubmit={handleSubmit}>
                   <label className="field-label">

@@ -24,6 +24,7 @@ export function AboutPage() {
         <div className="container grid gap-12 lg:grid-cols-[0.92fr_1.08fr]">
           <FadeIn>
             <SectionIntro
+              inverse
               label="Brand Story"
               title="Boat ownership should feel supported, not administratively heavy."
               copy="North Shore Nautical is designed around a clear idea: storage, care, and launch coordination should be handled with the same level of polish owners expect from the rest of their lives. The business does not rely on overstatement or gimmicks. It focuses on preparation, communication, and local execution."

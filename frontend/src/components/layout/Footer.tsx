@@ -2,7 +2,7 @@ import { ArrowUpRight, Mail, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import {
-  contactDetails,
+  contacts,
   navigation,
   serviceAreas,
   services,
@@ -20,21 +20,31 @@ export function Footer() {
               Premium boat storage, open online booking times, launch delivery, and calm
               communication for owners across Chicago&apos;s North Shore.
             </p>
-            <div className="mt-6 space-y-3 text-sm text-ink">
-              <a
-                className="inline-flex items-center gap-3 font-semibold hover:text-navy"
-                href={`mailto:${contactDetails.email}`}
-              >
-                <Mail className="h-4 w-4 text-lake" />
-                {contactDetails.email}
-              </a>
-              <a
-                className="inline-flex items-center gap-3 font-semibold hover:text-navy"
-                href={contactDetails.phoneHref}
-              >
-                <Phone className="h-4 w-4 text-lake" />
-                {contactDetails.phoneDisplay}
-              </a>
+            <div className="mt-6 grid gap-4 text-sm text-ink">
+              {contacts.map((contact) => (
+                <div key={contact.email} className="rounded-2xl border border-ink/10 bg-white/60 px-4 py-4">
+                  <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-slate">
+                    {contact.role}
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-ink">{contact.name}</p>
+                  <a
+                    className="mt-3 inline-flex items-center gap-3 font-semibold hover:text-navy"
+                    href={`mailto:${contact.email}`}
+                  >
+                    <Mail className="h-4 w-4 text-lake" />
+                    {contact.email}
+                  </a>
+                  {contact.phoneDisplay && contact.phoneHref ? (
+                    <a
+                      className="mt-3 inline-flex items-center gap-3 font-semibold hover:text-navy"
+                      href={contact.phoneHref}
+                    >
+                      <Phone className="h-4 w-4 text-lake" />
+                      {contact.phoneDisplay}
+                    </a>
+                  ) : null}
+                </div>
+              ))}
             </div>
           </div>
 

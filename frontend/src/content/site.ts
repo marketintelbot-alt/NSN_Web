@@ -41,10 +41,27 @@ export const serviceAreas = [
   'Lake Bluff',
 ]
 
+export const contacts = [
+  {
+    name: 'Carter',
+    role: 'President',
+    email: 'carter@ellismarinegroup.com',
+    phoneDisplay: '(314) 606-2112',
+    phoneHref: 'tel:+13146062112',
+  },
+  {
+    name: 'Johnny',
+    role: 'Vice President',
+    email: 'johnny@ellismarinegroup.com',
+    phoneDisplay: '(847) 331-0927',
+    phoneHref: 'tel:+18473310927',
+  },
+]
+
 export const contactDetails = {
-  email: 'concierge@northshorenautical.com',
-  phoneDisplay: '(847) 555-0142',
-  phoneHref: 'tel:+18475550142',
+  email: contacts[0].email,
+  phoneDisplay: contacts[0].phoneDisplay,
+  phoneHref: contacts[0].phoneHref,
   responseExpectation:
     'Launch delivery reservations and service inquiries are reviewed promptly during business hours, with scheduling coordinated around stored-client readiness, requested timing, and launch destination.',
   urgentNote:

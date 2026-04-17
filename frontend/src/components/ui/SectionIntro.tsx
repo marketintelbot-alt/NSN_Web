@@ -20,9 +20,11 @@ export function SectionIntro({
       }`}
     >
       <span className={inverse ? 'eyebrow' : 'section-label'}>{label}</span>
-      <h2 className={inverse ? 'display-title-inverse' : 'section-title'}>{title}</h2>
+      <h2 className={inverse ? 'section-title-inverse' : 'section-title'}>{title}</h2>
       <p
-        className={`mt-5 ${inverse ? 'mx-auto max-w-2xl text-base leading-8 text-white/70 md:text-lg' : 'section-copy'}`}
+        className={`mt-5 ${inverse ? 'section-copy-inverse' : 'section-copy'} ${
+          inverse && align === 'center' ? 'mx-auto' : ''
+        }`}
       >
         {copy}
       </p>

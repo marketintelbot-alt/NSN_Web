@@ -4,7 +4,7 @@ import { Seo } from '../components/seo/Seo'
 import { PageHero } from '../components/ui/PageHero'
 import { FadeIn } from '../components/ui/FadeIn'
 import { CtaBanner } from '../components/ui/CtaBanner'
-import { contactDetails } from '../content/site'
+import { contactDetails, contacts } from '../content/site'
 
 export function ContactPage() {
   return (
@@ -29,36 +29,37 @@ export function ContactPage() {
               details, reach out directly using the contact information below.
             </p>
             <div className="mt-8 grid gap-5">
-              <a
-                className="soft-panel flex items-center justify-between p-5 hover:border-lake/40"
-                href={`mailto:${contactDetails.email}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Mail className="h-5 w-5 text-lake" />
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate">
-                      Email
-                    </p>
-                    <p className="mt-1 text-lg font-semibold text-ink">{contactDetails.email}</p>
+              {contacts.map((contact) => (
+                <div key={contact.email} className="soft-panel p-5">
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-5 w-5 text-lake" />
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate">
+                        {contact.role}
+                      </p>
+                      <p className="mt-1 text-lg font-semibold text-ink">{contact.name}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-4">
+                    <a
+                      className="inline-flex items-center gap-3 font-semibold text-ink hover:text-navy"
+                      href={`mailto:${contact.email}`}
+                    >
+                      <Mail className="h-5 w-5 text-lake" />
+                      {contact.email}
+                    </a>
+                    {contact.phoneDisplay && contact.phoneHref ? (
+                      <a
+                        className="inline-flex items-center gap-3 font-semibold text-ink hover:text-navy"
+                        href={contact.phoneHref}
+                      >
+                        <Phone className="h-5 w-5 text-lake" />
+                        {contact.phoneDisplay}
+                      </a>
+                    ) : null}
                   </div>
                 </div>
-              </a>
-              <a
-                className="soft-panel flex items-center justify-between p-5 hover:border-lake/40"
-                href={contactDetails.phoneHref}
-              >
-                <div className="flex items-center gap-3">
-                  <Phone className="h-5 w-5 text-lake" />
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate">
-                      Phone
-                    </p>
-                    <p className="mt-1 text-lg font-semibold text-ink">
-                      {contactDetails.phoneDisplay}
-                    </p>
-                  </div>
-                </div>
-              </a>
+              ))}
             </div>
           </FadeIn>
 

@@ -104,8 +104,18 @@
     @apply font-display text-3xl font-normal leading-tight tracking-[-0.02em] text-ink md:text-4xl;
   }
 
+  .section-title-inverse {
+    @apply font-display text-3xl font-normal leading-tight tracking-[-0.02em] text-white md:text-4xl;
+    text-shadow: 0 10px 28px rgba(4, 13, 22, 0.28);
+  }
+
   .section-copy {
     @apply max-w-2xl text-base leading-8 text-slate md:text-lg;
+  }
+
+  .section-copy-inverse {
+    @apply max-w-2xl text-base leading-8 md:text-lg;
+    color: rgba(255, 255, 255, 0.78);
   }
 
   .panel {

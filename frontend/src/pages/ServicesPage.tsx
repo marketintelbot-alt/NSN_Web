@@ -41,6 +41,7 @@ export function ServicesPage() {
       <section className="section-pad">
         <div className="container">
           <SectionIntro
+            inverse
             label="Service Overview"
             title="A premium local marine service should feel clear, capable, and complete."
             copy="The service menu now spans storage, detailing, waxing, and launch support, with both full-service work and narrower add-ons available when a boat needs something specific."

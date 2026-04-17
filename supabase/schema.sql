@@ -45,7 +45,7 @@ create table if not exists public.client_accounts (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint client_accounts_preferred_launch_location_check
-    check (preferred_launch_location in ('Lloyd Boat Launch', 'Evanston Boat Launch')),
+    check (preferred_launch_location in ('Lloyd Boat Launch', 'Evanston Boat Launch', 'Not needed')),
   constraint client_accounts_boat_length_check
     check (boat_length_feet is null or (boat_length_feet > 0 and boat_length_feet <= 120)),
   constraint client_accounts_notes_length
@@ -54,6 +54,13 @@ create table if not exists public.client_accounts (
 
 create unique index if not exists client_accounts_email_idx
   on public.client_accounts (lower(email));
+
+alter table public.client_accounts
+  drop constraint if exists client_accounts_preferred_launch_location_check;
+
+alter table public.client_accounts
+  add constraint client_accounts_preferred_launch_location_check
+  check (preferred_launch_location in ('Lloyd Boat Launch', 'Evanston Boat Launch', 'Not needed'));
 
 create table if not exists public.client_service_entitlements (
   id uuid primary key default gen_random_uuid(),

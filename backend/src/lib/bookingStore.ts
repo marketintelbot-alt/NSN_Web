@@ -18,6 +18,7 @@ import {
   formatStoredDateTime,
   has24HourLeadTime,
   launchLocations,
+  noTransportLaunchLocation,
   reservationWindowMessage,
   serviceTimeZone,
 } from './time.js'
@@ -450,7 +451,11 @@ export async function listClientBookings(clientAccountId: string) {
 
 export async function listClientPortal(clientAccount: ClientAccount) {
   const [availableSlots, bookings, refreshedClientAccount] = await Promise.all([
-    listAvailableSlots(clientAccount.preferredLaunchLocation),
+    listAvailableSlots(
+      clientAccount.preferredLaunchLocation === noTransportLaunchLocation
+        ? undefined
+        : clientAccount.preferredLaunchLocation,
+    ),
     listClientBookings(clientAccount.id),
     readClientAccountById(clientAccount.id),
   ])
@@ -518,7 +523,10 @@ export async function createClientBooking(clientAccount: ClientAccount, input: C
   const supabaseAdmin = getSupabaseAdminClient()
   const slot = await ensureSlotIsBookable(input.slotId)
 
-  if (slot.launch_location !== clientAccount.preferredLaunchLocation) {
+  if (
+    clientAccount.preferredLaunchLocation !== noTransportLaunchLocation &&
+    slot.launch_location !== clientAccount.preferredLaunchLocation
+  ) {
     throw new SlotConflictError(
       'This slot is not available for the saved launch location on your account.',
     )
@@ -600,7 +608,10 @@ export async function updateClientBooking(
   if (nextStatus === 'confirmed') {
     const slot = await ensureSlotIsBookable(nextSlotId)
 
-    if (slot.launch_location !== clientAccount.preferredLaunchLocation) {
+    if (
+      clientAccount.preferredLaunchLocation !== noTransportLaunchLocation &&
+      slot.launch_location !== clientAccount.preferredLaunchLocation
+    ) {
       throw new SlotConflictError(
         'This slot is not available for the saved launch location on your account.',
       )

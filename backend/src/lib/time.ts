@@ -3,6 +3,11 @@ import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
 
 export const serviceTimeZone = 'America/Chicago'
 export const launchLocations = ['Lloyd Boat Launch', 'Evanston Boat Launch'] as const
+export const noTransportLaunchLocation = 'Not needed' as const
+export const preferredLaunchLocationOptions = [
+  ...launchLocations,
+  noTransportLaunchLocation,
+] as const
 export const reservationWindowMessage =
   'This request falls outside our 24-hour scheduling window. Please choose a later launch time or contact us directly for urgent inquiries.'
 

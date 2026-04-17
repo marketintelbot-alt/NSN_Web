@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { launchLocations } from './time.js'
+import { launchLocations, preferredLaunchLocationOptions } from './time.js'
 import { normalizeMultilineText, normalizeText } from './sanitize.js'
 import { createLaunchDateTime, has24HourLeadTime, reservationWindowMessage } from './time.js'
 
@@ -144,7 +144,7 @@ export const clientProfileSchema = z.object({
   boatName: optionalText(120),
   boatMakeModel: optionalText(120),
   boatLengthFeet: optionalBoatLength,
-  preferredLaunchLocation: z.enum(launchLocations),
+  preferredLaunchLocation: z.enum(preferredLaunchLocationOptions),
   notes: optionalNotes,
 })
 
@@ -222,7 +222,7 @@ export const adminClientAccountSchema = z
     boatName: optionalText(120),
     boatMakeModel: optionalText(120),
     boatLengthFeet: optionalBoatLength,
-    preferredLaunchLocation: z.enum(launchLocations),
+    preferredLaunchLocation: z.enum(preferredLaunchLocationOptions),
     notes: optionalNotes,
     isActive: z.boolean().default(true),
     services: z.array(clientServiceSchema).default([]),

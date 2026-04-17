@@ -33,6 +33,7 @@ import type {
 } from '../../types/booking'
 
 const launchLocations = ['Lloyd Boat Launch', 'Evanston Boat Launch'] as const
+const noTransportLaunchLocation = 'Not needed'
 
 type AdminDashboardProps = {
   accountSession: AccountSession
@@ -430,7 +431,11 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
     }
 
     const locationFiltered = bookingClient
-      ? availableSlots.filter((slot) => slot.launchLocation === bookingClient.preferredLaunchLocation)
+      ? bookingClient.preferredLaunchLocation === noTransportLaunchLocation
+        ? availableSlots
+        : availableSlots.filter(
+            (slot) => slot.launchLocation === bookingClient.preferredLaunchLocation,
+          )
       : availableSlots
 
     if (!selectedBooking) {
@@ -919,25 +924,67 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                   }
                 />
               </label>
-              <label className="field-label">
-                Desired launch location
-                <select
-                  className="input-field"
-                  value={clientForm.preferredLaunchLocation}
-                  onChange={(event) =>
-                    setClientForm((current) => ({
-                      ...current,
-                      preferredLaunchLocation: event.target.value,
-                    }))
-                  }
-                >
-                  {launchLocations.map((location) => (
-                    <option key={location} value={location}>
-                      {location}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <div className="field-label">
+                Transportation need
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <button
+                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      clientForm.preferredLaunchLocation === noTransportLaunchLocation
+                        ? 'border-lake bg-lake/10 text-ink'
+                        : 'border-ink/10 bg-white text-slate'
+                    }`}
+                    type="button"
+                    onClick={() =>
+                      setClientForm((current) => ({
+                        ...current,
+                        preferredLaunchLocation: noTransportLaunchLocation,
+                      }))
+                    }
+                  >
+                    Service client only
+                  </button>
+                  <button
+                    className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      clientForm.preferredLaunchLocation !== noTransportLaunchLocation
+                        ? 'border-lake bg-lake/10 text-ink'
+                        : 'border-ink/10 bg-white text-slate'
+                    }`}
+                    type="button"
+                    onClick={() =>
+                      setClientForm((current) => ({
+                        ...current,
+                        preferredLaunchLocation:
+                          current.preferredLaunchLocation === noTransportLaunchLocation
+                            ? launchLocations[0]
+                            : current.preferredLaunchLocation,
+                      }))
+                    }
+                  >
+                    Transportation needed
+                  </button>
+                </div>
+              </div>
+              {clientForm.preferredLaunchLocation !== noTransportLaunchLocation ? (
+                <label className="field-label">
+                  Desired launch location
+                  <select
+                    className="input-field"
+                    value={clientForm.preferredLaunchLocation}
+                    onChange={(event) =>
+                      setClientForm((current) => ({
+                        ...current,
+                        preferredLaunchLocation: event.target.value,
+                      }))
+                    }
+                  >
+                    {launchLocations.map((location) => (
+                      <option key={location} value={location}>
+                        {location}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               <label className="field-label md:col-span-2">
                 Profile status
                 <select
@@ -1099,7 +1146,10 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 <option value="">Choose a saved profile or enter manually</option>
                 {dashboard.clients.map((client) => (
                   <option key={client.id} value={client.id}>
-                    {client.fullName} · {client.preferredLaunchLocation}
+                    {client.fullName} ·{' '}
+                    {client.preferredLaunchLocation === noTransportLaunchLocation
+                      ? 'Service only'
+                      : client.preferredLaunchLocation}
                   </option>
                 ))}
               </select>
@@ -1471,7 +1521,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                       <p className="text-lg font-semibold text-ink">{client.fullName}</p>
                       <p className="mt-1 text-sm leading-7 text-slate">{client.email}</p>
                       <p className="text-sm leading-7 text-slate">
-                        {client.preferredLaunchLocation}
+                        {client.preferredLaunchLocation === noTransportLaunchLocation
+                          ? 'Service client only'
+                          : client.preferredLaunchLocation}
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -1631,7 +1683,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 <p className="mt-1 text-sm leading-7 text-slate">{selectedClient.email}</p>
                 <p className="text-sm leading-7 text-slate">{selectedClient.phone}</p>
                 <p className="text-sm leading-7 text-slate">
-                  Launch preference: {selectedClient.preferredLaunchLocation}
+                  {selectedClient.preferredLaunchLocation === noTransportLaunchLocation
+                    ? 'Transportation not needed'
+                    : `Launch preference: ${selectedClient.preferredLaunchLocation}`}
                 </p>
               </div>
               <button

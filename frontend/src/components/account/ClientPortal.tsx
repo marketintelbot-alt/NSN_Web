@@ -44,6 +44,9 @@ type ProfileFormState = {
   notes: string
 }
 
+const transportLaunchLocations = ['Lloyd Boat Launch', 'Evanston Boat Launch'] as const
+const noTransportLaunchLocation = 'Not needed'
+
 function emptyProfileForm(): ProfileFormState {
   return {
     fullName: '',
@@ -51,7 +54,7 @@ function emptyProfileForm(): ProfileFormState {
     boatName: '',
     boatMakeModel: '',
     boatLengthFeet: '',
-    preferredLaunchLocation: 'Lloyd Boat Launch',
+    preferredLaunchLocation: transportLaunchLocations[0],
     notes: '',
   }
 }
@@ -463,12 +466,16 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             </div>
             <div className="flex flex-wrap gap-3">
               <button
-                className="button-dark"
+                className="rounded-full border border-ink/10 px-5 py-3 text-sm font-semibold text-ink"
                 type="button"
-                onClick={() => beginReservation(selectedServiceEntitlementId)}
+                onClick={() => {
+                  setProfileExpanded((current) => !current)
+                  setProfileForm(buildProfileForm(portal))
+                  setProfileMessage('')
+                }}
               >
-                <ShipWheel className="h-4 w-4" />
-                Reserve a Time
+                <PencilLine className="h-4 w-4" />
+                {profileExpanded ? 'Close Profile' : 'Edit Profile'}
               </button>
               <button className="button-dark" type="button" onClick={() => void handleSignOut()}>
                 <LogOut className="h-4 w-4" />
@@ -511,10 +518,14 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
-                    Desired launch location
+                    {portal.client.preferredLaunchLocation === noTransportLaunchLocation
+                      ? 'Transportation'
+                      : 'Desired launch location'}
                   </p>
                   <p className="mt-3 text-lg font-semibold text-ink">
-                    {portal.client.preferredLaunchLocation}
+                    {portal.client.preferredLaunchLocation === noTransportLaunchLocation
+                      ? 'Not needed'
+                      : portal.client.preferredLaunchLocation}
                   </p>
                   <p className="mt-2 text-sm leading-7 text-slate">{portal.client.email}</p>
                   <p className="text-sm leading-7 text-slate">{portal.client.phone}</p>
@@ -536,149 +547,6 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                   </p>
                 </div>
               </div>
-
-              <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
-                      Edit profile
-                    </p>
-                    <p className="mt-2 text-sm leading-7 text-slate">
-                      Update any account details here if something on file needs to change.
-                    </p>
-                  </div>
-                  <button
-                    className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
-                    type="button"
-                    onClick={() => {
-                      setProfileExpanded((current) => !current)
-                      setProfileForm(buildProfileForm(portal))
-                      setProfileMessage('')
-                    }}
-                  >
-                    <PencilLine className="h-4 w-4" />
-                    {profileExpanded ? 'Close Profile' : 'Edit Profile'}
-                  </button>
-                </div>
-
-                {profileExpanded ? (
-                  <div className="mt-5 grid gap-4">
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <label className="field-label">
-                        Full name
-                        <input
-                          className="input-field"
-                          value={profileForm.fullName}
-                          onChange={(event) =>
-                            setProfileForm((current) => ({
-                              ...current,
-                              fullName: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                      <label className="field-label">
-                        Phone
-                        <input
-                          className="input-field"
-                          value={profileForm.phone}
-                          onChange={(event) =>
-                            setProfileForm((current) => ({
-                              ...current,
-                              phone: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                      <label className="field-label">
-                        Boat name
-                        <input
-                          className="input-field"
-                          value={profileForm.boatName}
-                          onChange={(event) =>
-                            setProfileForm((current) => ({
-                              ...current,
-                              boatName: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                      <label className="field-label">
-                        Make / model
-                        <input
-                          className="input-field"
-                          value={profileForm.boatMakeModel}
-                          onChange={(event) =>
-                            setProfileForm((current) => ({
-                              ...current,
-                              boatMakeModel: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                      <label className="field-label">
-                        Length (ft)
-                        <input
-                          className="input-field"
-                          inputMode="decimal"
-                          value={profileForm.boatLengthFeet}
-                          onChange={(event) =>
-                            setProfileForm((current) => ({
-                              ...current,
-                              boatLengthFeet: event.target.value,
-                            }))
-                          }
-                        />
-                      </label>
-                      <label className="field-label">
-                        Desired launch location
-                        <select
-                          className="input-field"
-                          value={profileForm.preferredLaunchLocation}
-                          onChange={(event) =>
-                            setProfileForm((current) => ({
-                              ...current,
-                              preferredLaunchLocation: event.target.value,
-                            }))
-                          }
-                        >
-                          <option value="Lloyd Boat Launch">Lloyd Boat Launch</option>
-                          <option value="Evanston Boat Launch">Evanston Boat Launch</option>
-                        </select>
-                      </label>
-                    </div>
-
-                    <label className="field-label">
-                      Notes
-                      <textarea
-                        className="text-area"
-                        value={profileForm.notes}
-                        onChange={(event) =>
-                          setProfileForm((current) => ({
-                            ...current,
-                            notes: event.target.value,
-                          }))
-                        }
-                      />
-                    </label>
-
-                    {profileMessage ? (
-                      <div className="rounded-3xl border border-ink/10 bg-white px-4 py-4 text-sm text-slate">
-                        {profileMessage}
-                      </div>
-                    ) : null}
-
-                    <button
-                      className="button-dark w-full justify-center md:w-fit"
-                      type="button"
-                      onClick={() => void handleSaveProfile()}
-                    >
-                      <Save className="h-4 w-4" />
-                      {profileState === 'saving' ? 'Saving...' : 'Save Profile'}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
             </div>
           ) : (
             <div className="mt-8 rounded-3xl border border-[#ead4bf] bg-[#fffaf4] px-5 py-5 text-sm text-[#6e4f38]">
@@ -693,9 +561,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             <h3 className="text-2xl font-semibold text-ink">Contracted services</h3>
           </div>
           <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <p className="text-sm leading-7 text-slate">
-              Select the service you want to use, then reserve a date and time for it.
-            </p>
+            <p className="text-sm leading-7 text-slate">Choose the service you want to book.</p>
             <button
               className="button-dark w-full justify-center md:w-fit"
               type="button"
@@ -716,6 +582,22 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 <div
                   key={service.id}
                   className={`rounded-3xl border px-5 py-5 text-left transition ${serviceCardClasses(service, selectedServiceEntitlementId)}`}
+                  role="button"
+                  tabIndex={service.remainingUnits === 0 ? -1 : 0}
+                  onClick={() => {
+                    if (service.remainingUnits > 0) {
+                      setSelectedServiceEntitlementId(service.id)
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      service.remainingUnits > 0 &&
+                      (event.key === 'Enter' || event.key === ' ')
+                    ) {
+                      event.preventDefault()
+                      setSelectedServiceEntitlementId(service.id)
+                    }
+                  }}
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -735,24 +617,8 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                     {service.id === selectedServiceEntitlementId ? (
                       <span className="status-pill status-pill-active">Selected for booking</span>
                     ) : (
-                      <span className="text-sm text-slate">Tap to select this service</span>
+                      <span className="text-sm text-slate">Tap the card to select this service.</span>
                     )}
-                    <button
-                      className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
-                      disabled={service.remainingUnits === 0}
-                      type="button"
-                      onClick={() => setSelectedServiceEntitlementId(service.id)}
-                    >
-                      {service.id === selectedServiceEntitlementId ? 'Selected' : 'Select Service'}
-                    </button>
-                    <button
-                      className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
-                      disabled={service.remainingUnits === 0}
-                      type="button"
-                      onClick={() => beginReservation(service.id)}
-                    >
-                      Reserve This Service
-                    </button>
                   </div>
                 </div>
               ))
@@ -842,6 +708,185 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
               </div>
             </div>
           </div>
+        ) : null}
+
+        {profileExpanded ? (
+          <FadeIn className="panel p-6 md:p-8" delay={0.02}>
+            <div className="flex items-center gap-3">
+              <PencilLine className="h-5 w-5 text-lake" />
+              <h3 className="text-2xl font-semibold text-ink">Edit profile</h3>
+            </div>
+
+            <div className="mt-6 grid gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="field-label">
+                  Full name
+                  <input
+                    className="input-field"
+                    value={profileForm.fullName}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        fullName: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="field-label">
+                  Phone
+                  <input
+                    className="input-field"
+                    value={profileForm.phone}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        phone: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="field-label">
+                  Boat name
+                  <input
+                    className="input-field"
+                    value={profileForm.boatName}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        boatName: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="field-label">
+                  Make / model
+                  <input
+                    className="input-field"
+                    value={profileForm.boatMakeModel}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        boatMakeModel: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <label className="field-label">
+                  Length (ft)
+                  <input
+                    className="input-field"
+                    inputMode="decimal"
+                    value={profileForm.boatLengthFeet}
+                    onChange={(event) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        boatLengthFeet: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+                <div className="field-label">
+                  Transportation need
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <button
+                      className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                        profileForm.preferredLaunchLocation === noTransportLaunchLocation
+                          ? 'border-lake bg-lake/10 text-ink'
+                          : 'border-ink/10 bg-white text-slate'
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          preferredLaunchLocation: noTransportLaunchLocation,
+                        }))
+                      }
+                    >
+                      Service only
+                    </button>
+                    <button
+                      className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                        profileForm.preferredLaunchLocation !== noTransportLaunchLocation
+                          ? 'border-lake bg-lake/10 text-ink'
+                          : 'border-ink/10 bg-white text-slate'
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          preferredLaunchLocation:
+                            current.preferredLaunchLocation === noTransportLaunchLocation
+                              ? transportLaunchLocations[0]
+                              : current.preferredLaunchLocation,
+                        }))
+                      }
+                    >
+                      Transportation needed
+                    </button>
+                  </div>
+                </div>
+                {profileForm.preferredLaunchLocation !== noTransportLaunchLocation ? (
+                  <label className="field-label md:col-span-2">
+                    Desired launch location
+                    <select
+                      className="input-field"
+                      value={profileForm.preferredLaunchLocation}
+                      onChange={(event) =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          preferredLaunchLocation: event.target.value,
+                        }))
+                      }
+                    >
+                      {transportLaunchLocations.map((location) => (
+                        <option key={location} value={location}>
+                          {location}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+
+              <label className="field-label">
+                Notes
+                <textarea
+                  className="text-area"
+                  value={profileForm.notes}
+                  onChange={(event) =>
+                    setProfileForm((current) => ({
+                      ...current,
+                      notes: event.target.value,
+                    }))
+                  }
+                />
+              </label>
+
+              {profileMessage ? (
+                <div className="rounded-3xl border border-ink/10 bg-white px-4 py-4 text-sm text-slate">
+                  {profileMessage}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className="button-dark w-full justify-center md:w-fit"
+                  type="button"
+                  onClick={() => void handleSaveProfile()}
+                >
+                  <Save className="h-4 w-4" />
+                  {profileState === 'saving' ? 'Saving...' : 'Save Profile'}
+                </button>
+                <button
+                  className="rounded-full border border-ink/10 px-5 py-3 text-sm font-semibold text-ink"
+                  type="button"
+                  onClick={() => setProfileExpanded(false)}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </FadeIn>
         ) : null}
 
         <FadeIn className="panel p-6 md:p-8" delay={0.04}>

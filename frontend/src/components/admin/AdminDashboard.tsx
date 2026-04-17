@@ -235,6 +235,13 @@ function toggleAddOnSelection(current: string[], addOnService: string) {
     : [...current, addOnService]
 }
 
+function buildSearchHaystack(values: Array<string | number | null | undefined>) {
+  return values
+    .filter((value) => value !== null && value !== undefined && String(value).trim().length > 0)
+    .join(' ')
+    .toLowerCase()
+}
+
 export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardProps) {
   const [dashboard, setDashboard] = useState<AdminDashboardResponse>({
     slots: [],
@@ -248,6 +255,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
   const [clientForm, setClientForm] = useState<ClientFormState>(emptyClientForm())
   const [selectedClientId, setSelectedClientId] = useState('')
   const [selectedBookingId, setSelectedBookingId] = useState('')
+  const [clientQuery, setClientQuery] = useState('')
+  const [bookingQuery, setBookingQuery] = useState('')
+  const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | BookingStatus>('all')
   const [savingState, setSavingState] = useState<'idle' | 'saving'>('idle')
   const [availabilityCutoffMs, setAvailabilityCutoffMs] = useState(() => Date.now())
 
@@ -343,6 +353,60 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
     () => dashboard.bookings.find((booking) => booking.id === selectedBookingId) || null,
     [dashboard.bookings, selectedBookingId],
   )
+
+  const clientLookup = useMemo(
+    () => new Map(dashboard.clients.map((client) => [client.id, client])),
+    [dashboard.clients],
+  )
+
+  const filteredClientSummaries = useMemo(() => {
+    const normalizedQuery = clientQuery.trim().toLowerCase()
+
+    if (!normalizedQuery) {
+      return clientSummaries
+    }
+
+    return clientSummaries.filter((client) =>
+      buildSearchHaystack([
+        client.fullName,
+        client.email,
+        client.phone,
+        client.boatName,
+        client.boatMakeModel,
+        client.preferredLaunchLocation,
+        ...client.services.map((service) => service.serviceName),
+      ]).includes(normalizedQuery),
+    )
+  }, [clientQuery, clientSummaries])
+
+  const filteredBookings = useMemo(() => {
+    const normalizedQuery = bookingQuery.trim().toLowerCase()
+
+    return dashboard.bookings.filter((booking) => {
+      if (bookingStatusFilter !== 'all' && booking.status !== bookingStatusFilter) {
+        return false
+      }
+
+      if (!normalizedQuery) {
+        return true
+      }
+
+      const linkedClient = booking.clientAccountId ? clientLookup.get(booking.clientAccountId) : null
+
+      return buildSearchHaystack([
+        booking.fullName,
+        booking.email,
+        booking.phone,
+        booking.slot.launchLocation,
+        booking.serviceName,
+        booking.notes,
+        booking.createdBy,
+        linkedClient?.fullName,
+        linkedClient?.email,
+        ...booking.addOnServices,
+      ]).includes(normalizedQuery)
+    })
+  }, [bookingQuery, bookingStatusFilter, clientLookup, dashboard.bookings])
 
   const bookingClient = useMemo(
     () => dashboard.clients.find((client) => client.id === bookingForm.clientAccountId) || null,
@@ -486,9 +550,10 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
   function applyClientToBookingForm(client: ClientAccount) {
     setBookingForm((current) => ({
       ...current,
-        clientAccountId: client.id,
-        serviceEntitlementId:
-          client.services.find((service) => service.remainingUnits > 0)?.id || current.serviceEntitlementId,
+      clientAccountId: client.id,
+      serviceEntitlementId:
+        client.services.find((service) => service.remainingUnits > 0)?.id ||
+        current.serviceEntitlementId,
       addOnServices: current.addOnServices,
       fullName: client.fullName,
       email: client.email,
@@ -1364,6 +1429,20 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
             <UserRound className="h-5 w-5 text-lake" />
             <h3 className="text-2xl font-semibold text-ink">Client profiles</h3>
           </div>
+          <div className="mt-6 grid gap-3 md:grid-cols-[1fr_auto]">
+            <label className="field-label">
+              Search clients
+              <input
+                className="input-field"
+                placeholder="Search by name, email, launch spot, boat, or contracted service"
+                value={clientQuery}
+                onChange={(event) => setClientQuery(event.target.value)}
+              />
+            </label>
+            <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-4 text-sm text-slate md:self-end">
+              Showing {filteredClientSummaries.length} of {clientSummaries.length}
+            </div>
+          </div>
           <div className="mt-6 grid gap-4">
             {dashboardLoading ? (
               <p className="text-sm text-slate">Loading client profiles...</p>
@@ -1371,8 +1450,12 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
               <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
                 No client profiles have been created yet.
               </p>
+            ) : filteredClientSummaries.length === 0 ? (
+              <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
+                No client profiles match that search yet.
+              </p>
             ) : (
-              clientSummaries.map((client) => (
+              filteredClientSummaries.map((client) => (
                 <button
                   key={client.id}
                   className={`rounded-3xl border px-5 py-5 text-left transition ${
@@ -1431,6 +1514,35 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
             <CalendarClock className="h-5 w-5 text-lake" />
             <h3 className="text-2xl font-semibold text-ink">Reservations on file</h3>
           </div>
+          <div className="mt-6 grid gap-3 md:grid-cols-[1fr_220px_auto]">
+            <label className="field-label">
+              Search reservations
+              <input
+                className="input-field"
+                placeholder="Search by client, service, launch spot, add-on, or note"
+                value={bookingQuery}
+                onChange={(event) => setBookingQuery(event.target.value)}
+              />
+            </label>
+            <label className="field-label">
+              Status filter
+              <select
+                className="input-field"
+                value={bookingStatusFilter}
+                onChange={(event) =>
+                  setBookingStatusFilter(event.target.value as 'all' | BookingStatus)
+                }
+              >
+                <option value="all">All reservations</option>
+                <option value="confirmed">Confirmed only</option>
+                <option value="completed">Completed only</option>
+                <option value="cancelled">Cancelled only</option>
+              </select>
+            </label>
+            <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-4 text-sm text-slate md:self-end">
+              Showing {filteredBookings.length} of {dashboard.bookings.length}
+            </div>
+          </div>
           <div className="mt-6 grid gap-4">
             {dashboardLoading ? (
               <p className="text-sm text-slate">Loading reservations...</p>
@@ -1438,8 +1550,12 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
               <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
                 No reservations have been created yet.
               </p>
+            ) : filteredBookings.length === 0 ? (
+              <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
+                No reservations match the current search or status filter.
+              </p>
             ) : (
-              dashboard.bookings.map((booking) => (
+              filteredBookings.map((booking) => (
                 <div key={booking.id} className="soft-panel p-5">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div>

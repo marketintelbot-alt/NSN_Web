@@ -14,9 +14,14 @@ import {
   SlotNotFoundError,
   createClientBooking,
   listClientPortal,
+  updateClientBooking,
 } from '../lib/bookingStore.js'
 import { sendBookingEmails } from '../lib/bookingEmailDelivery.js'
-import { clientBookingSchema, clientProfileSchema } from '../lib/bookingSchemas.js'
+import {
+  clientBookingSchema,
+  clientBookingUpdateSchema,
+  clientProfileSchema,
+} from '../lib/bookingSchemas.js'
 import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
 import { hasSupabaseAdminConfig } from '../lib/supabaseAdmin.js'
 
@@ -116,6 +121,32 @@ export async function createClientBookingHandler(request: Request, response: Res
       bookingId: booking.id,
       message: 'Booking confirmed.',
       slot: booking.slot,
+    })
+  } catch (error) {
+    return respondWithPortalError(error, response)
+  }
+}
+
+function getRouteParam(request: Request, key: string) {
+  const value = request.params[key]
+  return Array.isArray(value) ? value[0] || '' : value || ''
+}
+
+export async function updateClientBookingHandler(request: Request, response: Response) {
+  try {
+    const booking = await updateClientBooking(
+      getClientAccount(response),
+      getRouteParam(request, 'bookingId'),
+      clientBookingUpdateSchema.parse({
+        ...request.body,
+        bookingId: getRouteParam(request, 'bookingId'),
+      }),
+    )
+
+    return response.status(200).json({
+      bookingId: booking.id,
+      booking,
+      message: booking.status === 'cancelled' ? 'Reservation cancelled.' : 'Reservation updated.',
     })
   } catch (error) {
     return respondWithPortalError(error, response)

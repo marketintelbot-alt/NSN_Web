@@ -111,6 +111,25 @@ export const clientBookingSchema = z.object({
   notes: optionalNotes,
 })
 
+export const clientBookingUpdateSchema = z
+  .object({
+    bookingId: z.string().uuid().optional(),
+    slotId: optionalUuidField,
+    serviceEntitlementId: optionalUuidField,
+    addOnServices: addOnServicesSchema,
+    notes: optionalNotes,
+    status: z.enum(['confirmed', 'cancelled']).default('confirmed'),
+  })
+  .superRefine((value, context) => {
+    if (value.status === 'confirmed' && !value.slotId) {
+      context.addIssue({
+        code: 'custom',
+        path: ['slotId'],
+        message: 'Choose a new time slot to reschedule this reservation.',
+      })
+    }
+  })
+
 export const clientProfileSchema = z.object({
   fullName: requiredText('Full name', 80),
   phone: z
@@ -230,6 +249,7 @@ export const adminClientAccountSchema = z
 
 export type PublicBookingInput = z.infer<typeof publicBookingSchema>
 export type ClientBookingInput = z.infer<typeof clientBookingSchema>
+export type ClientBookingUpdateInput = z.infer<typeof clientBookingUpdateSchema>
 export type ClientProfileInput = z.infer<typeof clientProfileSchema>
 export type AdminSlotInput = z.infer<typeof adminSlotSchema>
 export type AdminBookingInput = z.infer<typeof adminBookingSchema>

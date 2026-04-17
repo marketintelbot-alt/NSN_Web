@@ -97,10 +97,50 @@ function toggleAddOnSelection(current: string[], addOnService: string) {
     : [...current, addOnService]
 }
 
+function getDefaultServiceEntitlementId(
+  portal: ClientPortalResponse | null,
+  currentId = '',
+) {
+  if (!portal) {
+    return ''
+  }
+
+  return (
+    portal.client.services.find((service) => service.id === currentId)?.id ||
+    portal.client.services.find((service) => service.remainingUnits > 0)?.id ||
+    ''
+  )
+}
+
+function buildBookingSlotChoices(
+  portal: ClientPortalResponse | null,
+  editingBookingId = '',
+) {
+  if (!portal) {
+    return [] as PublicSlot[]
+  }
+
+  if (!editingBookingId) {
+    return portal.availableSlots
+  }
+
+  const bookingBeingEdited =
+    portal.upcomingBookings.find((booking) => booking.id === editingBookingId) || null
+
+  if (!bookingBeingEdited) {
+    return portal.availableSlots
+  }
+
+  return portal.availableSlots.some((slot) => slot.id === bookingBeingEdited.slotId)
+    ? portal.availableSlots
+    : [bookingBeingEdited.slot, ...portal.availableSlots]
+}
+
 export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const [portal, setPortal] = useState<ClientPortalResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
+  const [editingBookingId, setEditingBookingId] = useState('')
   const [selectedSlotId, setSelectedSlotId] = useState('')
   const [selectedServiceEntitlementId, setSelectedServiceEntitlementId] = useState('')
   const [selectedAddOnServices, setSelectedAddOnServices] = useState<string[]>([])
@@ -111,6 +151,14 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const [profileExpanded, setProfileExpanded] = useState(false)
   const [profileState, setProfileState] = useState<'idle' | 'saving'>('idle')
   const [profileMessage, setProfileMessage] = useState('')
+
+  function resetBookingComposer(nextPortal: ClientPortalResponse | null) {
+    setEditingBookingId('')
+    setSelectedSlotId(nextPortal?.availableSlots[0]?.id || '')
+    setSelectedServiceEntitlementId(getDefaultServiceEntitlementId(nextPortal))
+    setSelectedAddOnServices([])
+    setBookingNotes('')
+  }
 
   useEffect(() => {
     let isMounted = true
@@ -137,11 +185,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       setPortal(response.payload)
       setProfileForm(buildProfileForm(response.payload))
       setSelectedSlotId(response.payload.availableSlots[0]?.id || '')
-
-      const firstRedeemableService = response.payload.client.services.find(
-        (service) => service.remainingUnits > 0,
-      )
-      setSelectedServiceEntitlementId(firstRedeemableService?.id || '')
+      setSelectedServiceEntitlementId(getDefaultServiceEntitlementId(response.payload))
     }
 
     void loadPortal()
@@ -171,22 +215,46 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
 
     setPortal(response.payload)
     setProfileForm(buildProfileForm(response.payload))
+    const nextBookingSlots = buildBookingSlotChoices(response.payload, editingBookingId)
+
     setSelectedSlotId((current) =>
-      response.payload.availableSlots.find((slot) => slot.id === current)?.id ||
-      response.payload.availableSlots[0]?.id ||
-      '',
+      nextBookingSlots.find((slot) => slot.id === current)?.id || nextBookingSlots[0]?.id || '',
     )
-
-    const firstRedeemableService = response.payload.client.services.find(
-      (service) => service.remainingUnits > 0,
-    )
-
     setSelectedServiceEntitlementId((current) =>
-      response.payload.client.services.find((service) => service.id === current)?.id ||
-      firstRedeemableService?.id ||
-      '',
+      getDefaultServiceEntitlementId(response.payload, current),
     )
-    setSelectedAddOnServices([])
+
+    return response.payload
+  }
+
+  function startEditingBooking(bookingId: string) {
+    if (!portal) {
+      return
+    }
+
+    const booking = portal.upcomingBookings.find((item) => item.id === bookingId)
+
+    if (!booking) {
+      return
+    }
+
+    setEditingBookingId(booking.id)
+    setSelectedSlotId(booking.slotId)
+    setSelectedServiceEntitlementId(booking.serviceEntitlementId || '')
+    setSelectedAddOnServices(booking.addOnServices)
+    setBookingNotes(booking.notes || '')
+    setMessage('')
+    setConfirmationMessage('')
+    document.getElementById('client-booking-composer')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
+  function stopEditingBooking() {
+    resetBookingComposer(portal)
+    setMessage('')
+    setConfirmationMessage('')
   }
 
   async function handleConfirmBooking() {
@@ -207,18 +275,20 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     setMessage('')
     setConfirmationMessage('')
 
-    const response = await adminApiRequest<{ slot?: PublicSlot; message?: string }>(
-      '/api/account/bookings',
-      {
-        method: 'POST',
-        body: JSON.stringify({
-          slotId: selectedSlotId,
-          serviceEntitlementId: selectedServiceEntitlementId,
-          addOnServices: selectedAddOnServices,
-          notes: bookingNotes,
-        }),
-      },
-    )
+    const response = await adminApiRequest<{
+      booking?: ClientPortalResponse['upcomingBookings'][number]
+      slot?: PublicSlot
+      message?: string
+    }>(editingBookingId ? `/api/account/bookings/${editingBookingId}` : '/api/account/bookings', {
+      method: editingBookingId ? 'PUT' : 'POST',
+      body: JSON.stringify({
+        slotId: selectedSlotId,
+        serviceEntitlementId: selectedServiceEntitlementId,
+        addOnServices: selectedAddOnServices,
+        notes: bookingNotes,
+        status: 'confirmed',
+      }),
+    })
 
     setBookingState('idle')
 
@@ -233,18 +303,81 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     }
 
     const confirmedSlot =
-      response.payload.slot || portal?.availableSlots.find((slot) => slot.id === selectedSlotId) || null
+      response.payload.booking?.slot ||
+      response.payload.slot ||
+      buildBookingSlotChoices(portal, editingBookingId).find((slot) => slot.id === selectedSlotId) ||
+      null
     const selectedService =
-      portal?.client.services.find((service) => service.id === selectedServiceEntitlementId) || null
+      response.payload.booking?.serviceName ||
+      portal?.client.services.find((service) => service.id === selectedServiceEntitlementId)
+        ?.serviceName ||
+      null
+    const confirmedAddOns = response.payload.booking?.addOnServices || selectedAddOnServices
 
     setConfirmationMessage(
       confirmedSlot
-        ? `${selectedService ? `${selectedService.serviceName} reserved for ` : ''}${formatSlotDateTime(confirmedSlot.startsAt)}${selectedAddOnServices.length > 0 ? ` with ${selectedAddOnServices.join(', ')}` : ''}.`
-        : 'Your reservation is confirmed and on file.',
+        ? `${
+            selectedService ? `${selectedService} ${editingBookingId ? 'moved to' : 'reserved for'} ` : editingBookingId ? 'Your reservation is now set for ' : ''
+          }${formatSlotDateTime(confirmedSlot.startsAt)}${confirmedAddOns.length > 0 ? ` with ${confirmedAddOns.join(', ')}` : ''}.`
+        : editingBookingId
+          ? 'Your reservation has been updated.'
+          : 'Your reservation is confirmed and on file.',
     )
-    setBookingNotes('')
-    setSelectedAddOnServices([])
-    await refreshPortal()
+    const refreshedPortal = await refreshPortal()
+    resetBookingComposer(refreshedPortal || portal)
+  }
+
+  async function handleCancelBooking(bookingId: string) {
+    if (!portal) {
+      return
+    }
+
+    const booking = portal.upcomingBookings.find((item) => item.id === bookingId)
+
+    if (!booking || bookingState === 'submitting') {
+      return
+    }
+
+    const shouldCancel = window.confirm(
+      `Cancel the reservation for ${formatSlotDateTime(booking.slot.startsAt)}?`,
+    )
+
+    if (!shouldCancel) {
+      return
+    }
+
+    setBookingState('submitting')
+    setMessage('')
+    setConfirmationMessage('')
+
+    const response = await adminApiRequest<{ message?: string }>(`/api/account/bookings/${booking.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        serviceEntitlementId: booking.serviceEntitlementId,
+        addOnServices: booking.addOnServices,
+        notes: booking.notes || '',
+        status: 'cancelled',
+      }),
+    })
+
+    setBookingState('idle')
+
+    if (response.status === 401) {
+      onSignedOut()
+      return
+    }
+
+    if (!response.ok) {
+      setMessage(response.payload.message || 'Unable to cancel your reservation right now.')
+      return
+    }
+
+    setConfirmationMessage(`Your reservation for ${formatSlotDateTime(booking.slot.startsAt)} was cancelled.`)
+    const refreshedPortal = await refreshPortal()
+
+    if (editingBookingId === booking.id) {
+      resetBookingComposer(refreshedPortal || portal)
+    }
   }
 
   async function handleSaveProfile() {
@@ -282,19 +415,23 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     await refreshPortal()
   }
 
-  const groupedSlots = useMemo(() => {
-    if (!portal) {
-      return {}
-    }
+  const editingBooking =
+    portal?.upcomingBookings.find((booking) => booking.id === editingBookingId) || null
 
-    return portal.availableSlots.reduce<Record<string, PublicSlot[]>>((groups, slot) => {
+  const bookingSlotChoices = useMemo(
+    () => buildBookingSlotChoices(portal, editingBookingId),
+    [editingBookingId, portal],
+  )
+
+  const groupedSlots = useMemo(() => {
+    return bookingSlotChoices.reduce<Record<string, PublicSlot[]>>((groups, slot) => {
       const key = formatSlotDate(slot.startsAt)
       groups[key] = [...(groups[key] || []), slot]
       return groups
     }, {})
-  }, [portal])
+  }, [bookingSlotChoices])
 
-  const selectedSlot = portal?.availableSlots.find((slot) => slot.id === selectedSlotId) || null
+  const selectedSlot = bookingSlotChoices.find((slot) => slot.id === selectedSlotId) || null
 
   return (
     <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr]">
@@ -323,6 +460,30 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             </div>
           ) : portal ? (
             <div className="mt-8 grid gap-4">
+              {portal.client.services.length > 0 ? (
+                <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 md:hidden">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
+                    Remaining services
+                  </p>
+                  <div className="mt-4 grid gap-3">
+                    {portal.client.services.map((service) => (
+                      <div
+                        key={service.id}
+                        className="rounded-3xl border border-ink/10 bg-white px-4 py-4"
+                      >
+                        <p className="text-sm font-semibold text-ink">{service.serviceName}</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="status-pill status-pill-active">
+                            {service.remainingUnits} remaining
+                          </span>
+                          <span className="status-pill">{service.totalUnits} total</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
@@ -557,11 +718,21 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
               </p>
             ) : (
               portal.upcomingBookings.map((booking) => (
-                <div key={booking.id} className="soft-panel p-5">
-                  <p className="text-lg font-semibold text-ink">
-                    {formatSlotDateTime(booking.slot.startsAt)}
-                  </p>
-                  <p className="mt-1 text-sm leading-7 text-slate">{booking.slot.launchLocation}</p>
+                <div
+                  key={booking.id}
+                  className={`soft-panel p-5 ${editingBookingId === booking.id ? 'border-lake bg-lake/10' : ''}`}
+                >
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <p className="text-lg font-semibold text-ink">
+                        {formatSlotDateTime(booking.slot.startsAt)}
+                      </p>
+                      <p className="mt-1 text-sm leading-7 text-slate">{booking.slot.launchLocation}</p>
+                    </div>
+                    {editingBookingId === booking.id ? (
+                      <span className="status-pill status-pill-active">Editing</span>
+                    ) : null}
+                  </div>
                   {booking.serviceName ? (
                     <p className="text-sm leading-7 text-slate">Service: {booking.serviceName}</p>
                   ) : null}
@@ -573,6 +744,24 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                   {booking.notes ? (
                     <p className="mt-2 text-sm leading-7 text-slate">{booking.notes}</p>
                   ) : null}
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                      type="button"
+                      disabled={bookingState === 'submitting'}
+                      onClick={() => startEditingBooking(booking.id)}
+                    >
+                      {editingBookingId === booking.id ? 'Editing Reservation' : 'Reschedule'}
+                    </button>
+                    <button
+                      className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                      type="button"
+                      disabled={bookingState === 'submitting'}
+                      onClick={() => void handleCancelBooking(booking.id)}
+                    >
+                      Cancel Reservation
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -592,7 +781,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             <div className="flex items-start gap-3">
               <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-[#2c7d57]" />
               <div>
-                <p className="font-semibold text-[#174731]">Reservation confirmed</p>
+                <p className="font-semibold text-[#174731]">Reservation update</p>
                 <p className="mt-1 leading-7">{confirmationMessage}</p>
               </div>
             </div>
@@ -602,11 +791,40 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
         <FadeIn className="panel p-6 md:p-8" delay={0.04}>
           <div className="flex items-center gap-3">
             <ShipWheel className="h-5 w-5 text-lake" />
-            <h3 className="text-2xl font-semibold text-ink">Redeem a service</h3>
+            <h3 id="client-booking-composer" className="text-2xl font-semibold text-ink">
+              {editingBooking ? 'Reschedule your reservation' : 'Redeem a service'}
+            </h3>
           </div>
           <p className="mt-4 text-base leading-8 text-slate">
-            Pick the contracted service you want to use, then choose a day and a time. Only reservations at least 24 hours out appear here.
+            {editingBooking
+              ? 'Adjust the date, time, add-ons, or notes for the reservation you already have on file.'
+              : 'Pick the contracted service you want to use, then choose a day and a time. Only reservations at least 24 hours out appear here.'}
           </p>
+
+          {editingBooking ? (
+            <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
+                    Reservation being updated
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-ink">
+                    {formatSlotDateTime(editingBooking.slot.startsAt)}
+                  </p>
+                  <p className="mt-1 text-sm leading-7 text-slate">
+                    {editingBooking.slot.launchLocation}
+                  </p>
+                </div>
+                <button
+                  className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                  type="button"
+                  onClick={stopEditingBooking}
+                >
+                  Cancel Edit
+                </button>
+              </div>
+            </div>
+          ) : null}
 
           {selectedSlot ? (
             <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5">
@@ -621,33 +839,44 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           ) : null}
 
           <div className="mt-6 grid gap-5">
-            {Object.entries(groupedSlots).map(([dateLabel, slots]) => (
-              <div key={dateLabel} className="rounded-3xl border border-ink/10 bg-[#f9fbfc] px-4 py-4">
-                <p className="text-sm font-semibold uppercase tracking-[0.16em] text-lake">
-                  {dateLabel}
-                </p>
-                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                  {slots.map((slot) => (
-                    <button
-                      key={slot.id}
-                      className={`slot-button ${slot.id === selectedSlotId ? 'slot-button-active' : ''}`}
-                      type="button"
-                      onClick={() => setSelectedSlotId(slot.id)}
-                    >
-                      <span>
-                        <span className="block text-base font-semibold text-ink">
-                          {formatSlotTime(slot.startsAt)}
-                        </span>
-                        <span className="mt-1 block text-sm text-slate">{slot.launchLocation}</span>
-                      </span>
-                      {slot.id === selectedSlotId ? (
-                        <CheckCircle2 className="h-5 w-5 shrink-0 text-lake" />
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
+            {Object.entries(groupedSlots).length === 0 ? (
+              <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
+                No booking times are open right now beyond the 24-hour notice window.
               </div>
-            ))}
+            ) : (
+              Object.entries(groupedSlots).map(([dateLabel, slots]) => (
+                <div
+                  key={dateLabel}
+                  className="rounded-3xl border border-ink/10 bg-[#f9fbfc] px-4 py-4"
+                >
+                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-lake">
+                    {dateLabel}
+                  </p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-2">
+                    {slots.map((slot) => (
+                      <button
+                        key={slot.id}
+                        className={`slot-button ${slot.id === selectedSlotId ? 'slot-button-active' : ''}`}
+                        type="button"
+                        onClick={() => setSelectedSlotId(slot.id)}
+                      >
+                        <span>
+                          <span className="block text-base font-semibold text-ink">
+                            {formatSlotTime(slot.startsAt)}
+                          </span>
+                          <span className="mt-1 block text-sm text-slate">
+                            {slot.launchLocation}
+                          </span>
+                        </span>
+                        {slot.id === selectedSlotId ? (
+                          <CheckCircle2 className="h-5 w-5 shrink-0 text-lake" />
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
 
           <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f8fbfc] px-5 py-5">
@@ -702,8 +931,15 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             className="button-dark mt-6 w-full justify-center"
             type="button"
             onClick={() => void handleConfirmBooking()}
+            disabled={bookingState === 'submitting'}
           >
-            {bookingState === 'submitting' ? 'Confirming...' : 'Reserve My Service'}
+            {bookingState === 'submitting'
+              ? editingBooking
+                ? 'Saving Changes...'
+                : 'Confirming...'
+              : editingBooking
+                ? 'Save Reservation Changes'
+                : 'Reserve My Service'}
           </button>
         </FadeIn>
 

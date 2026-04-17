@@ -16,6 +16,7 @@ import {
   createClientBookingHandler,
   readClientPortalHandler,
   requireClientSession,
+  updateClientBookingHandler,
   updateClientProfileHandler,
 } from './routes/accountPortal.js'
 import { getPrimaryAdminEmail } from './lib/adminSession.js'
@@ -129,6 +130,7 @@ app.put('/api/admin/clients/:clientId', requireAdminSession, updateAdminClientAc
 
 app.get('/api/account/portal', requireClientSession, readClientPortalHandler)
 app.post('/api/account/bookings', requireClientSession, createClientBookingHandler)
+app.put('/api/account/bookings/:bookingId', requireClientSession, updateClientBookingHandler)
 app.put('/api/account/profile', requireClientSession, updateClientProfileHandler)
 
 app.get('/api/booking-slots', publicBookingRouter.listSlots)

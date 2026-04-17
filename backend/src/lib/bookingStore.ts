@@ -4,6 +4,7 @@ import type {
   AdminBookingInput,
   AdminSlotInput,
   ClientBookingInput,
+  ClientBookingUpdateInput,
   PublicBookingInput,
 } from './bookingSchemas.js'
 import type { ClientAccount } from './clientAccounts.js'
@@ -268,6 +269,10 @@ async function readBookingById(bookingId: string) {
   }
 
   return (data as StoredBookingRow | null) ?? null
+}
+
+function getBookingStartsAt(booking: StoredBookingRow) {
+  return new Date(extractJoinedSlot(booking.booking_slots).starts_at).getTime()
 }
 
 async function ensureSlotIsBookable(slotId: string) {
@@ -566,6 +571,78 @@ export async function createClientBooking(clientAccount: ClientAccount, input: C
   }
 
   return normalizeBookingRow(booking)
+}
+
+export async function updateClientBooking(
+  clientAccount: ClientAccount,
+  bookingId: string,
+  input: ClientBookingUpdateInput,
+) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const existingBooking = await readBookingById(bookingId)
+
+  if (!existingBooking || existingBooking.client_account_id !== clientAccount.id) {
+    throw new Error('That reservation could not be found on this client account.')
+  }
+
+  if (existingBooking.status === 'completed') {
+    throw new Error('Completed reservations cannot be changed from the client dashboard.')
+  }
+
+  if (getBookingStartsAt(existingBooking) < Date.now()) {
+    throw new Error('Past reservations cannot be changed from the client dashboard.')
+  }
+
+  const nextStatus = input.status
+  const nextSlotId =
+    nextStatus === 'cancelled' ? existingBooking.slot_id : input.slotId || existingBooking.slot_id
+
+  if (nextStatus === 'confirmed') {
+    const slot = await ensureSlotIsBookable(nextSlotId)
+
+    if (slot.launch_location !== clientAccount.preferredLaunchLocation) {
+      throw new SlotConflictError(
+        'This slot is not available for the saved launch location on your account.',
+      )
+    }
+  }
+
+  const requestedServiceEntitlementId =
+    input.serviceEntitlementId || existingBooking.service_entitlement_id || ''
+
+  const serviceSelection = await resolveServiceSelection(
+    clientAccount.id,
+    requestedServiceEntitlementId,
+    existingBooking,
+  )
+
+  const { error } = await supabaseAdmin
+    .from('launch_bookings')
+    .update({
+      slot_id: nextSlotId,
+      service_entitlement_id: serviceSelection.serviceEntitlementId,
+      service_name: serviceSelection.serviceName,
+      add_on_services: input.addOnServices,
+      notes: input.notes || null,
+      status: nextStatus,
+    })
+    .eq('id', bookingId)
+
+  if (isUniqueConstraintError(error)) {
+    throw new SlotConflictError()
+  }
+
+  if (error) {
+    throw error
+  }
+
+  const updatedBooking = await readBookingById(bookingId)
+
+  if (!updatedBooking) {
+    throw new Error('That reservation was updated, but it could not be reloaded.')
+  }
+
+  return normalizeBookingRow(updatedBooking)
 }
 
 export async function upsertAdminSlot(input: AdminSlotInput) {

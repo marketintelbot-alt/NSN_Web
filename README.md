@@ -8,12 +8,12 @@ North Shore Nautical is a mobile-first booking site and lightweight API for a sm
 - enter a few details
 - get a confirmation email
 
-Admin management lives behind a single protected `/admin` dashboard.
+Admin management lives behind a protected `/admin` dashboard.
 
 ## What this build includes
 
-- public slot-based booking flow with a minimal form
-- secure single-admin sign-in with bcrypt-hashed password verification
+- client-facing booking flow with a minimal form
+- secure multi-admin sign-in with bcrypt-hashed password verification
 - HTTP-only cookie sessions for admin access
 - protected admin dashboard for slots, bookings, and email status
 - Resend transactional emails:
@@ -36,7 +36,7 @@ Admin management lives behind a single protected `/admin` dashboard.
 
 ## Booking behavior
 
-### Public booking
+### Booking flow
 
 - `GET /api/booking-slots`
   - returns future active slots that are not already booked
@@ -49,7 +49,7 @@ Admin management lives behind a single protected `/admin` dashboard.
 ### Admin dashboard
 
 - `POST /api/admin/session`
-  - validates the single admin login
+  - validates configured admin logins
   - sets a secure HTTP-only cookie
 - `GET /api/admin/dashboard`
   - returns all relevant slots and bookings
@@ -107,7 +107,7 @@ TRUST_PROXY_HOPS=1
 SUPABASE_URL=
 SUPABASE_SECRET_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-ADMIN_EMAIL=
+ADMIN_EMAILS=
 ADMIN_PASSWORD_HASH=
 ADMIN_SESSION_SECRET=
 ADMIN_SESSION_TTL_HOURS=12
@@ -122,7 +122,7 @@ VITE_SITE_URL=https://www.northshorenautical.com
 
 Notes:
 
-- `BUSINESS_NOTIFICATION_EMAIL` can match `ADMIN_EMAIL` if one inbox should receive internal notifications.
+- `BUSINESS_NOTIFICATION_EMAIL` can match one of the configured `ADMIN_EMAILS` if one inbox should receive internal notifications.
 - `FROM_EMAIL` must be a verified Resend sender, for example `North Shore Nautical <bookings@yourdomain.com>`.
 - `ADMIN_PASSWORD_HASH` must be a bcrypt hash, not a plaintext password.
 - `ADMIN_SESSION_TTL_HOURS` is optional and defaults to `12`.
@@ -141,7 +141,7 @@ npm run hash:admin-password -- "replace-with-a-strong-password"
 
 Copy the printed hash into `ADMIN_PASSWORD_HASH`, then set:
 
-- `ADMIN_EMAIL`
+- `ADMIN_EMAILS`
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_SESSION_SECRET`
 
@@ -224,7 +224,7 @@ You can use `render.yaml` as a Blueprint or match the same settings manually in 
   - `SUPABASE_URL`
   - `SUPABASE_SECRET_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY`
-  - `ADMIN_EMAIL`
+  - `ADMIN_EMAILS`
   - `ADMIN_PASSWORD_HASH`
   - `ADMIN_SESSION_SECRET`
   - `ADMIN_SESSION_TTL_HOURS=12`

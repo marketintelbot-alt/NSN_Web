@@ -44,7 +44,7 @@ export async function createAdminSession(request: Request, response: Response) {
 
   if (!config) {
     return response.status(503).json({
-      message: 'Admin login is not configured yet. Add ADMIN_EMAIL, ADMIN_PASSWORD_HASH, and ADMIN_SESSION_SECRET.',
+      message: 'Sign-in is temporarily unavailable right now.',
     })
   }
 
@@ -54,7 +54,7 @@ export async function createAdminSession(request: Request, response: Response) {
 
   if (!authenticatedConfig) {
     return response.status(401).json({
-      message: 'Invalid admin email or password.',
+      message: 'That email and password combination did not match our records.',
     })
   }
 
@@ -83,7 +83,7 @@ export function readAdminSession(request: Request, response: Response) {
 
   if (!config) {
     return response.status(503).json({
-      message: 'Admin login is not configured yet.',
+      message: 'Sign-in is temporarily unavailable right now.',
     })
   }
 

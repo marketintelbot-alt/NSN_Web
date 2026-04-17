@@ -6,7 +6,6 @@ import {
   ShipWheel,
   ShieldCheck,
   Sparkles,
-  Waves,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
@@ -30,7 +29,6 @@ const serviceIcons = {
   storage: Anchor,
   detailing: Sparkles,
   waxing: ShieldCheck,
-  'launch-coordination': Waves,
   'driver-reservation': CalendarClock,
 }
 
@@ -250,8 +248,8 @@ export function HomePage() {
       <CtaBanner
         title="Reserve early and keep launch day calm."
         copy="Launch delivery requests are reviewed manually so every timing request, destination, and cleaning preference can be coordinated with care. Submit at least 24 hours ahead to stay within the scheduling window."
-        primaryLabel="Reserve Launch"
-        primaryTo="/reserve-launch"
+        primaryLabel="Client Login"
+        primaryTo="/account"
         secondaryLabel="Contact North Shore Nautical"
         secondaryTo="/contact"
       />

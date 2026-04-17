@@ -14,11 +14,6 @@ const ServicesPage = lazy(() =>
 const StoragePage = lazy(() =>
   import('./pages/StoragePage').then((module) => ({ default: module.StoragePage })),
 )
-const ReserveDriverPage = lazy(() =>
-  import('./pages/ReserveDriverPage').then((module) => ({
-    default: module.ReserveDriverPage,
-  })),
-)
 const AboutPage = lazy(() =>
   import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })),
 )
@@ -69,8 +64,8 @@ function App() {
           <Route element={<HomePage />} path="/" />
           <Route element={<ServicesPage />} path="/services" />
           <Route element={<StoragePage />} path="/storage" />
-          <Route element={<ReserveDriverPage />} path="/reserve-launch" />
-          <Route element={<Navigate replace to="/reserve-launch" />} path="/reserve-driver" />
+          <Route element={<Navigate replace to="/account" />} path="/reserve-launch" />
+          <Route element={<Navigate replace to="/account" />} path="/reserve-driver" />
           <Route element={<AboutPage />} path="/about" />
           <Route element={<FaqPage />} path="/faq" />
           <Route element={<ContactPage />} path="/contact" />

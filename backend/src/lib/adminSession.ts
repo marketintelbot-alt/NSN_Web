@@ -13,6 +13,14 @@ type VerifiedAdminSession = {
   expiresAt: string
 }
 
+type AdminAuthConfig = {
+  emails: string[]
+  primaryEmail: string
+  passwordHash: string
+  sessionSecret: string
+  sessionDurationMs: number
+}
+
 const defaultSessionDurationHours = 12
 
 function base64UrlEncode(value: string) {
@@ -56,18 +64,41 @@ function getAdminPasswordHash() {
   return ''
 }
 
+function getConfiguredAdminEmails() {
+  const configuredEmails = `${process.env.ADMIN_EMAILS || ''}\n${process.env.ADMIN_EMAIL || ''}`
+    .split(/[,\n]/)
+    .map((email) => email.trim())
+    .filter(Boolean)
+
+  return configuredEmails.filter(
+    (email, index) =>
+      configuredEmails.findIndex(
+        (candidate) => candidate.toLowerCase() === email.toLowerCase(),
+      ) === index,
+  )
+}
+
+function hasConfiguredAdminEmail(emails: string[], targetEmail: string) {
+  return emails.some((email) => secureStringEquals(email.toLowerCase(), targetEmail.toLowerCase()))
+}
+
+export function getPrimaryAdminEmail() {
+  return getConfiguredAdminEmails()[0] || ''
+}
+
 export function getAdminAuthConfig() {
-  const email = process.env.ADMIN_EMAIL?.trim()
+  const emails = getConfiguredAdminEmails()
   const passwordHash = getAdminPasswordHash()
   const sessionSecret = getAdminSessionSecret()
   const sessionDurationHours = Number(process.env.ADMIN_SESSION_TTL_HOURS || defaultSessionDurationHours)
 
-  if (!email || !passwordHash || !sessionSecret) {
+  if (!emails.length || !passwordHash || !sessionSecret) {
     return null
   }
 
-  return {
-    email,
+  const config: AdminAuthConfig = {
+    emails,
+    primaryEmail: emails[0],
     passwordHash,
     sessionSecret,
     sessionDurationMs:
@@ -76,6 +107,8 @@ export function getAdminAuthConfig() {
       60 *
       1000,
   }
+
+  return config
 }
 
 function createSignature(payloadSegment: string, sessionSecret: string) {
@@ -89,7 +122,12 @@ export async function authenticateAdminCredentials(email: string, password: stri
     return null
   }
 
-  if (!secureStringEquals(email.trim().toLowerCase(), config.email.toLowerCase())) {
+  const normalizedEmail = email.trim().toLowerCase()
+  const matchedEmail = config.emails.find((configuredEmail) =>
+    secureStringEquals(configuredEmail.toLowerCase(), normalizedEmail),
+  )
+
+  if (!matchedEmail) {
     return null
   }
 
@@ -99,7 +137,10 @@ export async function authenticateAdminCredentials(email: string, password: stri
     return null
   }
 
-  return config
+  return {
+    ...config,
+    email: matchedEmail,
+  }
 }
 
 export function createAdminSessionToken(email: string, sessionDurationMs: number, sessionSecret: string) {
@@ -145,7 +186,7 @@ export function verifyAdminSessionToken(token: string): VerifiedAdminSession | n
       return null
     }
 
-    if (!secureStringEquals(payload.email.toLowerCase(), config.email.toLowerCase())) {
+    if (!hasConfiguredAdminEmail(config.emails, payload.email)) {
       return null
     }
 

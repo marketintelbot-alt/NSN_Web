@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
-import { LockKeyhole, ShieldCheck } from 'lucide-react'
+import { CircleAlert, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
 import { AdminDashboard } from '../components/admin/AdminDashboard'
@@ -17,6 +17,18 @@ export function AdminPage() {
   const [password, setPassword] = useState('')
   const [authState, setAuthState] = useState<'idle' | 'submitting'>('idle')
   const [message, setMessage] = useState('')
+
+  function formatLoginMessage(status: number, responseMessage: string) {
+    if (status === 401) {
+      return 'That email and password combination did not match our records. Please try again.'
+    }
+
+    if (status === 503) {
+      return 'Sign-in is temporarily unavailable right now. Please try again in a moment.'
+    }
+
+    return responseMessage || 'Unable to sign in right now. Please try again shortly.'
+  }
 
   useEffect(() => {
     readAdminSession()
@@ -40,7 +52,7 @@ export function AdminPage() {
     setAuthState('idle')
 
     if (!response.ok || !response.session) {
-      setMessage(response.message || 'Unable to sign in right now.')
+      setMessage(formatLoginMessage(response.status, response.message))
       return
     }
 
@@ -123,8 +135,17 @@ export function AdminPage() {
                   </label>
 
                   {message ? (
-                    <div className="rounded-2xl border border-[#d7b0ac] bg-[#fff7f6] px-4 py-4 text-sm text-[#7f2f29]">
-                      {message}
+                    <div
+                      aria-live="polite"
+                      className="rounded-3xl border border-[#ead4bf] bg-[#fffaf4] px-5 py-4 text-sm text-[#6e4f38] shadow-soft"
+                    >
+                      <div className="flex items-start gap-3">
+                        <CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-[#c88854]" />
+                        <div>
+                          <p className="font-semibold text-[#5f4129]">We couldn&apos;t sign you in.</p>
+                          <p className="mt-1 leading-7">{message}</p>
+                        </div>
+                      </div>
                     </div>
                   ) : null}
 

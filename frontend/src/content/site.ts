@@ -15,7 +15,6 @@ export const navigation = [
   { label: 'Home', to: '/' },
   { label: 'Services', to: '/services' },
   { label: 'Storage', to: '/storage' },
-  { label: 'Reserve Launch', to: '/reserve-launch' },
   { label: 'About', to: '/about' },
   { label: 'FAQ', to: '/faq' },
   { label: 'Contact', to: '/contact' },
@@ -43,14 +42,14 @@ export const serviceAreas = [
 
 export const contacts = [
   {
-    name: 'Carter',
+    name: 'Carter Ellis',
     role: 'President',
     email: 'carter@ellismarinegroup.com',
     phoneDisplay: '(314) 606-2112',
     phoneHref: 'tel:+13146062112',
   },
   {
-    name: 'Johnny',
+    name: 'Johnny Maris',
     role: 'Vice President',
     email: 'johnny@ellismarinegroup.com',
     phoneDisplay: '(847) 331-0927',
@@ -100,17 +99,6 @@ export const services = [
       'Single-stage polish with wax or sealant application',
       'Oxidation removal and multi-stage compounding when needed',
       'Stainless and aluminum hand polishing for finished details',
-    ],
-  },
-  {
-    slug: 'launch-coordination',
-    name: 'Launch Coordination',
-    summary:
-      'A polished scheduling process for boats already stored with North Shore Nautical, timed around clean delivery to the launch.',
-    bullets: [
-      'Advance scheduling and timing review',
-      'Delivery coordination to Lloyd or Evanston Boat Launch',
-      'Contingency-minded planning around lake conditions',
     ],
   },
   {

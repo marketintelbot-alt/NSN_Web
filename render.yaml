@@ -25,7 +25,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
-      - key: ADMIN_EMAIL
+      - key: ADMIN_EMAILS
         sync: false
       - key: ADMIN_PASSWORD_HASH
         sync: false

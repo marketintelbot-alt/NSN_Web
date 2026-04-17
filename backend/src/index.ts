@@ -12,6 +12,7 @@ import {
   destroyAdminSession,
   readAdminSession,
 } from './routes/adminSession.js'
+import { getPrimaryAdminEmail } from './lib/adminSession.js'
 import {
   createAdminBookingHandler,
   createAdminSlot,
@@ -51,8 +52,7 @@ const reservationLimiter = rateLimit({
 const publicBookingRouter = createPublicBookingRouter({
   resendApiKey: process.env.RESEND_API_KEY,
   fromEmail: process.env.FROM_EMAIL,
-  businessNotificationEmail:
-    process.env.BUSINESS_NOTIFICATION_EMAIL?.trim() || process.env.ADMIN_EMAIL?.trim(),
+  businessNotificationEmail: process.env.BUSINESS_NOTIFICATION_EMAIL?.trim() || getPrimaryAdminEmail(),
 })
 
 app.disable('x-powered-by')

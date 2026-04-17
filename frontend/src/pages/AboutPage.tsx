@@ -86,8 +86,8 @@ export function AboutPage() {
         copy="If you would like to discuss storage, service expectations, or a future launch request, North Shore Nautical welcomes direct outreach."
         primaryLabel="Contact North Shore Nautical"
         primaryTo="/contact"
-        secondaryLabel="Reserve Launch"
-        secondaryTo="/reserve-launch"
+        secondaryLabel="Client Login"
+        secondaryTo="/account"
       />
     </>
   )

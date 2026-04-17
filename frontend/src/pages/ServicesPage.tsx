@@ -3,7 +3,6 @@ import {
   CalendarClock,
   ShieldCheck,
   Sparkles,
-  Waves,
   Wrench,
 } from 'lucide-react'
 
@@ -18,11 +17,10 @@ const serviceIcons = {
   storage: Anchor,
   detailing: Sparkles,
   waxing: ShieldCheck,
-  'launch-coordination': Waves,
   'driver-reservation': CalendarClock,
 }
 
-const menuIcons = [Sparkles, ShieldCheck, Anchor, Waves, Wrench]
+const menuIcons = [Sparkles, ShieldCheck, Anchor, CalendarClock, Wrench]
 
 export function ServicesPage() {
   return (

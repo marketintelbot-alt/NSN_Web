@@ -3,7 +3,7 @@ import type { NextFunction, Request, Response } from 'express'
 import { ZodError } from 'zod'
 
 import { clearAdminSessionCookie, readAdminSessionCookie } from '../lib/adminCookie.js'
-import { verifyAdminSessionToken } from '../lib/adminSession.js'
+import { getPrimaryAdminEmail, verifyAdminSessionToken } from '../lib/adminSession.js'
 import { sendBookingEmails } from '../lib/bookingEmailDelivery.js'
 import {
   SlotConflictError,
@@ -33,8 +33,7 @@ function getEmailOptions(): EmailOptions {
   return {
     resendApiKey: process.env.RESEND_API_KEY,
     fromEmail: process.env.FROM_EMAIL,
-    businessNotificationEmail:
-      process.env.BUSINESS_NOTIFICATION_EMAIL?.trim() || process.env.ADMIN_EMAIL?.trim(),
+    businessNotificationEmail: process.env.BUSINESS_NOTIFICATION_EMAIL?.trim() || getPrimaryAdminEmail(),
   }
 }
 

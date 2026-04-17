@@ -109,6 +109,18 @@ create table if not exists public.launch_bookings (
     check (notes is null or char_length(notes) <= 1000)
 );
 
+alter table public.launch_bookings
+  add column if not exists client_account_id uuid references public.client_accounts (id) on delete set null;
+
+alter table public.launch_bookings
+  add column if not exists service_entitlement_id uuid references public.client_service_entitlements (id) on delete set null;
+
+alter table public.launch_bookings
+  add column if not exists service_name varchar(120);
+
+alter table public.launch_bookings
+  add column if not exists add_on_services text[] not null default '{}';
+
 create unique index if not exists launch_bookings_active_slot_idx
   on public.launch_bookings (slot_id)
   where status <> 'cancelled';
@@ -124,18 +136,6 @@ create index if not exists launch_bookings_client_account_idx
 
 create index if not exists launch_bookings_service_entitlement_idx
   on public.launch_bookings (service_entitlement_id);
-
-alter table public.launch_bookings
-  add column if not exists client_account_id uuid references public.client_accounts (id) on delete set null;
-
-alter table public.launch_bookings
-  add column if not exists service_entitlement_id uuid references public.client_service_entitlements (id) on delete set null;
-
-alter table public.launch_bookings
-  add column if not exists service_name varchar(120);
-
-alter table public.launch_bookings
-  add column if not exists add_on_services text[] not null default '{}';
 
 alter table public.booking_slots enable row level security;
 alter table public.client_accounts enable row level security;

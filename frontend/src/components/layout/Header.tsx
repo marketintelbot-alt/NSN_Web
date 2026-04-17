@@ -4,11 +4,9 @@ import { Menu, X } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 
 import { navigation } from '../../content/site'
-import { useAuth } from '../account/useAuth'
 import { LogoMark } from '../ui/LogoMark'
 
 export function Header() {
-  const { session } = useAuth()
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -52,9 +50,7 @@ export function Header() {
             {navigation.map((item) => (
               <NavLink
                 key={item.to}
-                className={({ isActive }) =>
-                  `nav-link ${isActive ? 'nav-link-active' : ''}`
-                }
+                className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
                 to={item.to}
               >
                 {item.label}
@@ -63,11 +59,8 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link className="nav-link hidden lg:inline-flex" to="/account">
-              {session ? 'Account' : 'Client Login'}
-            </Link>
             <Link className="button-primary hidden lg:inline-flex" to="/reserve-launch">
-              Reserve Launch
+              Book a Time
             </Link>
             <button
               aria-expanded={open}
@@ -98,18 +91,11 @@ export function Header() {
                 </NavLink>
               ))}
               <Link
-                className="rounded-2xl px-4 py-3 text-base font-semibold text-white/70 transition hover:bg-white/10"
-                to="/account"
-                onClick={() => setOpen(false)}
-              >
-                {session ? 'Account' : 'Client Login'}
-              </Link>
-              <Link
                 className="button-primary mt-2"
                 to="/reserve-launch"
                 onClick={() => setOpen(false)}
               >
-                Reserve Launch
+                Book a Time
               </Link>
             </nav>
           </div>

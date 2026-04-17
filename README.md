@@ -1,72 +1,65 @@
 # North Shore Nautical
 
-North Shore Nautical is a production-ready website and lightweight backend for a premium boat care business serving Chicago's North Shore. The project includes a polished multi-page frontend, a secure launch reservation flow, optional secure client accounts for saved boats, and a lightweight Express API for reservation email delivery.
+North Shore Nautical is a mobile-first booking site and lightweight API for a small seasonal client list. The app is tuned for the simplest reliable flow:
 
-## What is included
+- clients open the site
+- see available time slots
+- choose one
+- enter a few details
+- get a confirmation email
 
-- Premium React + Vite + TypeScript frontend with Tailwind CSS and subtle Framer Motion
-- Homepage hero wired to the supplied Lake Michigan photo at `frontend/public/images/north-shore-hero.jpeg`
-- Reservation flow designed for stored-client boats being delivered to:
-  - Lloyd Boat Launch
-  - Evanston Boat Launch
-- Optional pre-launch cleaning selection
-- 24-hour reservation rule enforced on both frontend and backend
-- Resend business notification and customer confirmation emails
-- Optional secure client accounts with Supabase Auth and row-level security for saved boats
-- Local SEO basics:
-  - page titles
-  - meta descriptions
-  - Open Graph tags
-  - sitemap
-  - robots.txt
-- Render-ready deployment split:
-  - frontend as a Static Site
-  - backend as a Web Service
+Admin management lives behind a single protected `/admin` dashboard.
+
+## What this build includes
+
+- public slot-based booking flow with a minimal form
+- secure single-admin sign-in with bcrypt-hashed password verification
+- HTTP-only cookie sessions for admin access
+- protected admin dashboard for slots, bookings, and email status
+- Resend transactional emails:
+  - customer confirmation
+  - internal admin notification
+- server-side validation, rate limiting, and double-booking protection
+- Render-compatible deployment without changing platforms
+- PWA-ready manifest, install metadata, and placeholder icons
 
 ## Architecture
 
 - `frontend/`
-  - React marketing site, reservation form, account experience
+  - Vite + React + TypeScript site and booking UI
 - `backend/`
-  - Express API with validation, abuse protection, and Resend integration
+  - Express API for auth, booking, slot management, and email delivery
 - `supabase/schema.sql`
-  - secure table + RLS policies for saved client boats
-- `scripts/sync-site-copy.sh`
-  - mirrors the project into a maintained sibling copy
+  - tables and constraints for booking slots and launch bookings
+- `render.yaml`
+  - Render Blueprint for the frontend static site and backend web service
 
-Reservations do not require a database. Supabase is only used when client accounts are enabled.
+## Booking behavior
 
-## Security posture
+### Public booking
 
-The project is hardened for a free-to-run deployment model while staying maintainable:
+- `GET /api/booking-slots`
+  - returns future active slots that are not already booked
+- `POST /api/bookings`
+  - validates and sanitizes user input
+  - blocks double-booking on the server
+  - saves the booking before email delivery
+  - keeps the booking even if email delivery fails
 
-- Strict frontend and backend validation with Zod
-- Server-side enforcement of the 24-hour rule
-- Rate limiting on the reservation API
-- `helmet` security headers on the backend
-- Tight CORS allowlist instead of wildcard CORS
-- `Cache-Control: no-store` on API responses
-- Honeypot spam field on the reservation form
-- Supabase row-level security policies so clients only access their own saved boats
-- Account page excluded from search indexing
-- No secrets stored in the frontend bundle
+### Admin dashboard
 
-## Project structure
-
-```text
-.
-├── backend/
-├── frontend/
-├── scripts/
-├── supabase/
-├── .env.example
-├── package.json
-└── README.md
-```
+- `POST /api/admin/session`
+  - validates the single admin login
+  - sets a secure HTTP-only cookie
+- `GET /api/admin/dashboard`
+  - returns all relevant slots and bookings
+- admin can:
+  - add, edit, and delete available slots
+  - create or edit bookings manually
+  - review customer and admin email delivery state
+  - retry booking confirmation emails
 
 ## Local development
-
-Open two terminals from the project root.
 
 Frontend:
 
@@ -86,12 +79,7 @@ cp ../.env.example .env
 npm run dev
 ```
 
-Local URLs:
-
-- Frontend: `http://localhost:5173`
-- Backend: `http://localhost:4000`
-
-Project-level helpers:
+Repo-level helpers:
 
 ```bash
 npm run build
@@ -99,7 +87,13 @@ npm run lint
 npm run sync:copy
 ```
 
-## Exact environment variables
+Local URLs:
+
+- frontend: `http://localhost:5173`
+- backend: `http://localhost:4000`
+- admin: `http://localhost:5173/admin`
+
+## Environment variables
 
 Backend `.env`:
 
@@ -110,6 +104,13 @@ BUSINESS_NOTIFICATION_EMAIL=
 FROM_EMAIL=
 CORS_ORIGIN=http://localhost:5173
 TRUST_PROXY_HOPS=1
+SUPABASE_URL=
+SUPABASE_SECRET_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+ADMIN_EMAIL=
+ADMIN_PASSWORD_HASH=
+ADMIN_SESSION_SECRET=
+ADMIN_SESSION_TTL_HOURS=12
 ```
 
 Frontend `.env`:
@@ -117,147 +118,145 @@ Frontend `.env`:
 ```env
 VITE_API_BASE_URL=http://localhost:4000
 VITE_SITE_URL=https://www.northshorenautical.com
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-VITE_ALLOW_SELF_SIGNUP=false
 ```
 
 Notes:
 
-- Leave `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` empty if you want the site to run without client accounts.
-- `VITE_ALLOW_SELF_SIGNUP=false` is the recommended default for North Shore Nautical so client logins are issued manually.
+- `BUSINESS_NOTIFICATION_EMAIL` can match `ADMIN_EMAIL` if one inbox should receive internal notifications.
+- `FROM_EMAIL` must be a verified Resend sender, for example `North Shore Nautical <bookings@yourdomain.com>`.
+- `ADMIN_PASSWORD_HASH` must be a bcrypt hash, not a plaintext password.
+- `ADMIN_SESSION_TTL_HOURS` is optional and defaults to `12`.
+- `SUPABASE_SECRET_KEY` is the preferred current Supabase server key.
+- `SUPABASE_SERVICE_ROLE_KEY` is supported as a legacy fallback.
+- Keep whichever server key you use backend-only and never expose it to the frontend.
 
-## Reservation behavior
+## One-time admin password setup
 
-`POST /api/reservations`
+Generate the bcrypt hash locally:
 
-Behavior:
+```bash
+cd backend
+npm run hash:admin-password -- "replace-with-a-strong-password"
+```
 
-- validates the payload with Zod
-- sanitizes incoming text fields
-- blocks requests inside the 24-hour scheduling window
-- drops obvious bot submissions through a honeypot field
-- rate-limits repeated abuse attempts
-- sends:
-  - a business notification email
-  - a client confirmation email
+Copy the printed hash into `ADMIN_PASSWORD_HASH`, then set:
 
-The reservation flow is intentionally not a live booking calendar. Requests are submitted for scheduling review and confirmation.
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD_HASH`
+- `ADMIN_SESSION_SECRET`
 
-## Supabase account setup
+Admin sign-in lives at `/admin`.
 
-If you want secure client logins and saved boats:
+## Supabase setup
+
+This app uses Supabase as the database layer for availability and bookings.
 
 1. Create a Supabase project.
-2. In the Supabase SQL editor, run `supabase/schema.sql`.
-3. Add the frontend environment variables:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-4. In Supabase Auth settings, enable these recommended protections:
-   - email confirmation
-   - leaked password protection
-   - bot / CAPTCHA protection if you want extra signup hardening
-5. Decide whether self-signup should be available:
-   - `VITE_ALLOW_SELF_SIGNUP=false` for the recommended invite-only model
-   - `VITE_ALLOW_SELF_SIGNUP=true` only if you intentionally want open signup
-6. For manual client setup:
-   - create the auth user in Supabase
-   - have the client set or reset their password through the secure Supabase flow
-   - insert their stored boat records into `client_boats` with that user's `id`
+2. Open the SQL editor.
+3. Run `supabase/schema.sql`.
+4. Add these backend environment variables:
+   - `SUPABASE_URL`
+   - `SUPABASE_SECRET_KEY`
+   - or `SUPABASE_SERVICE_ROLE_KEY` if you are using the legacy keys tab
 
-The saved-boat table is protected with row-level security, and all client-side boat queries are scoped to the signed-in user.
+There is also a short setup handoff at [supabase/SETUP.md](/Users/johnnymaris/Desktop/New%20project/NSN_Web/supabase/SETUP.md).
+
+The active booking flow uses:
+
+- `booking_slots`
+- `launch_bookings`
+
+Important behavior:
+
+- slot availability is always derived on the server
+- a database uniqueness constraint prevents double-booking
+- email delivery status is written back to each booking for admin follow-up
+
+## Resend setup
+
+1. Create a Resend account.
+2. Verify your sender domain or sender identity.
+3. Create a transactional API key.
+4. Set:
+   - `RESEND_API_KEY`
+   - `FROM_EMAIL`
+   - `BUSINESS_NOTIFICATION_EMAIL`
+
+The app sends two transactional emails per booking:
+
+- customer confirmation
+- internal admin notification
+
+If delivery fails, the booking still stays saved and the admin dashboard shows the failure state.
 
 ## Render deployment
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/marketintelbot-alt/NSN_Web)
+This repo is configured for two Render services:
 
-### Frontend: Render Static Site
+- `north-shore-nautical-site`
+  - Static Site
+  - root directory: `frontend`
+- `north-shore-nautical-api`
+  - Web Service
+  - root directory: `backend`
 
-Create a new Static Site with:
+You can use `render.yaml` as a Blueprint or match the same settings manually in the Render dashboard.
 
-- Root Directory: `frontend`
-- Build Command: `npm install && npm run build`
-- Publish Directory: `dist`
+### Frontend service
 
-Frontend environment variables:
+- build command: `npm install && npm run build`
+- publish directory: `dist`
+- env vars:
+  - `VITE_API_BASE_URL=https://YOUR-BACKEND.onrender.com`
+  - `VITE_SITE_URL=https://YOUR-LIVE-DOMAIN.com`
 
-- `VITE_API_BASE_URL=https://YOUR-BACKEND.onrender.com`
-- `VITE_SITE_URL=https://YOUR-FINAL-DOMAIN.com`
-- `VITE_SUPABASE_URL=...` if using accounts
-- `VITE_SUPABASE_ANON_KEY=...` if using accounts
-- `VITE_ALLOW_SELF_SIGNUP=true` or `false`
+### Backend service
 
-### Backend: Render Web Service
+- build command: `npm install && npm run build`
+- start command: `npm run start`
+- health check path: `/api/health`
+- env vars:
+  - `RESEND_API_KEY`
+  - `BUSINESS_NOTIFICATION_EMAIL`
+  - `FROM_EMAIL`
+  - `CORS_ORIGIN=https://YOUR-FRONTEND.onrender.com`
+  - `TRUST_PROXY_HOPS=1`
+  - `SUPABASE_URL`
+  - `SUPABASE_SECRET_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
+  - `ADMIN_EMAIL`
+  - `ADMIN_PASSWORD_HASH`
+  - `ADMIN_SESSION_SECRET`
+  - `ADMIN_SESSION_TTL_HOURS=12`
 
-Create a new Web Service with:
+Deployment notes:
 
-- Root Directory: `backend`
-- Build Command: `npm install && npm run build`
-- Start Command: `npm run start`
+- keep `CORS_ORIGIN` set to the exact frontend origin
+- after adding a custom domain, update both `CORS_ORIGIN` and `VITE_SITE_URL`
+- the admin cookie is configured for secure cross-origin use in production so the split Render frontend/API setup works cleanly
 
-Backend environment variables:
+## PWA and home screen readiness
 
-- `PORT=4000`
-- `RESEND_API_KEY=...`
-- `BUSINESS_NOTIFICATION_EMAIL=...`
-- `FROM_EMAIL=...`
-- `CORS_ORIGIN=https://YOUR-FRONTEND.onrender.com`
-- `TRUST_PROXY_HOPS=1`
+The frontend now includes:
 
-Render deployment notes:
+- `manifest.webmanifest`
+- standalone display metadata
+- Apple mobile web app tags
+- placeholder install icons in `frontend/public/icons/`
+- a minimal service worker for installability
 
-- Keep `CORS_ORIGIN` set to the exact frontend origin, never `*`
-- After adding a custom domain, update:
-  - `VITE_SITE_URL`
-  - `CORS_ORIGIN`
-- Render should serve the frontend over HTTPS; use the HTTPS site URL in all production env vars
+Replace the placeholder icons later if brand-ready artwork becomes available:
 
-## Custom domain later
+- `frontend/public/icons/icon-192.png`
+- `frontend/public/icons/icon-512.png`
+- `frontend/public/icons/icon-512-maskable.png`
+- `frontend/public/icons/apple-touch-icon.png`
 
-1. Add the custom domain to the Render frontend service.
-2. If the backend uses its own custom domain, add that to the backend service too.
-3. Update `VITE_SITE_URL` to the final public website URL.
-4. Update `CORS_ORIGIN` to the final frontend origin.
-5. If using Supabase email redirects, make sure the production account URL is allowed in Supabase Auth settings.
+## Quick production checklist
 
-## Mirrored copy workflow
-
-The project includes a sync script so you can keep a maintained copy alongside the main site:
-
-```bash
-npm run sync:copy
-```
-
-That command mirrors the project into:
-
-```text
-../NSN_Web_Copy
-```
-
-It excludes build output, local env files, and `node_modules` so the copy stays clean and manageable.
-
-## Files to update for real business details
-
-Public phone number, public email, service copy:
-
-- `frontend/src/content/site.ts`
-
-Backend email delivery config:
-
-- `.env.example`
-- `backend/.env`
-
-Hero image:
-
-- `frontend/public/images/north-shore-hero.jpeg`
-
-Saved boat database rules:
-
-- `supabase/schema.sql`
-
-## Quality notes
-
-- The site is responsive and keyboard-friendly
-- The reservation rule is enforced on both frontend and backend
-- The backend stays lightweight and free to run aside from domain and email usage
-- Email delivery cannot be fully tested end-to-end without valid Resend credentials
+1. Run `supabase/schema.sql` in the production Supabase project.
+2. Generate a bcrypt hash and set `ADMIN_PASSWORD_HASH`.
+3. Verify the Resend sender and API key.
+4. Set the backend and frontend environment variables in Render.
+5. Deploy both services.
+6. Visit `/admin`, sign in, create a slot, and complete one real booking test.

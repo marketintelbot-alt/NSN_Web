@@ -16,9 +16,9 @@ export function PageHero({
   children,
 }: PageHeroProps) {
   return (
-    <section className="relative overflow-hidden bg-ink pb-16 pt-32 text-white md:pb-24 md:pt-40">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(127,164,184,0.28),transparent_38%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-[#f5f8fa]" />
+    <section className="relative overflow-hidden pb-16 pt-32 text-white md:pb-24 md:pt-40">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,19,31,0.7),rgba(6,19,31,0.48))]" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white/10" />
       <div className="container relative">
         <FadeIn className="max-w-4xl">
           <span className="eyebrow">{eyebrow}</span>

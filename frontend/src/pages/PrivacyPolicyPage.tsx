@@ -6,7 +6,7 @@ export function PrivacyPolicyPage() {
     <>
       <Seo
         title="Privacy Policy"
-        description="Review the North Shore Nautical privacy policy for website usage, reservation submissions, secure client accounts, and email communications."
+        description="Review the North Shore Nautical privacy policy for website usage, booking submissions, and email communications."
         path="/privacy-policy"
       />
       <PageHero
@@ -24,10 +24,8 @@ export function PrivacyPolicyPage() {
               </h2>
               <p className="mt-3">
               North Shore Nautical collects information you submit directly through the
-              website, including reservation requests, contact details, boat details,
-              requested launch timing, cleaning preferences, and any special
-              instructions you choose to share. If client accounts are enabled, the
-              site also stores saved-boat information associated with your secure login.
+              website, including booking details, contact details, requested launch
+              timing, and any notes you choose to share.
               </p>
             </section>
             <section>
@@ -35,11 +33,9 @@ export function PrivacyPolicyPage() {
                 How Information Is Used
               </h2>
               <p className="mt-3">
-              Submitted information is used to review reservation requests, communicate
-              about scheduling, respond to inquiries, and maintain a clear service
-              record for operational follow-up. If client accounts are enabled,
-              account information is used to authenticate returning clients and keep
-              saved boat information available for future reservations.
+              Submitted information is used to confirm bookings, communicate about
+              scheduling, respond to inquiries, and maintain a clear service record
+              for operational follow-up.
               </p>
             </section>
             <section>
@@ -47,10 +43,9 @@ export function PrivacyPolicyPage() {
                 Email Communications
               </h2>
               <p className="mt-3">
-              When you submit a reservation request, a confirmation email may be sent
-              to the email address you provide. North Shore Nautical may also use that
-              address to follow up regarding scheduling, timing changes, or service
-              clarifications.
+              When you submit a booking, a confirmation email may be sent to the email
+              address you provide. North Shore Nautical may also use that address to
+              follow up regarding scheduling, timing changes, or service clarifications.
               </p>
             </section>
             <section>
@@ -58,10 +53,10 @@ export function PrivacyPolicyPage() {
                 Third-Party Services
               </h2>
               <p className="mt-3">
-              This website uses third-party services necessary for hosting, form
-              delivery, secure client authentication, and email transmission. These
-              providers may process limited information as required to operate the
-              website and deliver reservation communications.
+              This website uses third-party services necessary for hosting, booking
+              delivery, and email transmission. These providers may process limited
+              information as required to operate the website and deliver booking
+              communications.
               </p>
             </section>
             <section>

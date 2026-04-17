@@ -6,7 +6,23 @@ import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
 import morgan from 'morgan'
 
-import { createReservationsHandler } from './routes/reservations.js'
+import {
+  adminLoginLimiter,
+  createAdminSession,
+  destroyAdminSession,
+  readAdminSession,
+} from './routes/adminSession.js'
+import {
+  createAdminBookingHandler,
+  createAdminSlot,
+  readAdminDashboard,
+  requireAdminSession,
+  removeAdminSlot,
+  resendAdminBookingEmails,
+  updateAdminBookingHandler,
+  updateAdminSlot,
+} from './routes/adminDashboard.js'
+import { createPublicBookingRouter } from './routes/publicBooking.js'
 
 const app = express()
 const port = Number(process.env.PORT || 4000)
@@ -32,6 +48,13 @@ const reservationLimiter = rateLimit({
   },
 })
 
+const publicBookingRouter = createPublicBookingRouter({
+  resendApiKey: process.env.RESEND_API_KEY,
+  fromEmail: process.env.FROM_EMAIL,
+  businessNotificationEmail:
+    process.env.BUSINESS_NOTIFICATION_EMAIL?.trim() || process.env.ADMIN_EMAIL?.trim(),
+})
+
 app.disable('x-powered-by')
 app.set('trust proxy', Number.isNaN(trustProxyHops) ? 1 : trustProxyHops)
 app.use(
@@ -48,8 +71,9 @@ app.use(
 
       callback(new Error('Origin not allowed by CORS'))
     },
-    methods: ['GET', 'POST'],
-    allowedHeaders: ['Content-Type'],
+    credentials: true,
+    methods: ['DELETE', 'GET', 'POST', 'PUT'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
     maxAge: 86400,
   }),
 )
@@ -74,15 +98,19 @@ app.get('/api/health', (_request, response) => {
   })
 })
 
-app.post(
-  '/api/reservations',
-  reservationLimiter,
-  createReservationsHandler({
-    resendApiKey: process.env.RESEND_API_KEY,
-    fromEmail: process.env.FROM_EMAIL,
-    businessNotificationEmail: process.env.BUSINESS_NOTIFICATION_EMAIL,
-  }),
-)
+app.post('/api/admin/session', adminLoginLimiter, createAdminSession)
+app.get('/api/admin/session', readAdminSession)
+app.delete('/api/admin/session', destroyAdminSession)
+app.get('/api/admin/dashboard', requireAdminSession, readAdminDashboard)
+app.post('/api/admin/slots', requireAdminSession, createAdminSlot)
+app.put('/api/admin/slots/:slotId', requireAdminSession, updateAdminSlot)
+app.delete('/api/admin/slots/:slotId', requireAdminSession, removeAdminSlot)
+app.post('/api/admin/bookings', requireAdminSession, createAdminBookingHandler)
+app.put('/api/admin/bookings/:bookingId', requireAdminSession, updateAdminBookingHandler)
+app.post('/api/admin/bookings/:bookingId/resend-emails', requireAdminSession, resendAdminBookingEmails)
+
+app.get('/api/booking-slots', publicBookingRouter.listSlots)
+app.post('/api/bookings', reservationLimiter, publicBookingRouter.createBooking)
 
 app.use('/api', (_request, response) => {
   response.status(404).json({

@@ -1,24 +1,6 @@
 create extension if not exists pgcrypto;
 
-create table if not exists public.client_boats (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users (id) on delete cascade,
-  boat_name varchar(80) not null,
-  boat_type varchar(80) not null,
-  boat_length varchar(30) not null,
-  notes text,
-  is_primary boolean not null default false,
-  created_at timestamptz not null default timezone('utc', now()),
-  updated_at timestamptz not null default timezone('utc', now()),
-  constraint client_boats_notes_length check (notes is null or char_length(notes) <= 500)
-);
-
-create index if not exists client_boats_user_id_idx on public.client_boats (user_id);
-create unique index if not exists client_boats_one_primary_per_user
-  on public.client_boats (user_id)
-  where is_primary;
-
-create or replace function public.set_client_boats_updated_at()
+create or replace function public.set_updated_at_timestamp()
 returns trigger
 language plpgsql
 as $$
@@ -28,36 +10,76 @@ begin
 end;
 $$;
 
-drop trigger if exists set_client_boats_updated_at on public.client_boats;
+create table if not exists public.booking_slots (
+  id uuid primary key default gen_random_uuid(),
+  launch_location varchar(80) not null,
+  starts_at timestamptz not null,
+  notes text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint booking_slots_location_check
+    check (launch_location in ('Lloyd Boat Launch', 'Evanston Boat Launch')),
+  constraint booking_slots_notes_length
+    check (notes is null or char_length(notes) <= 500)
+);
 
-create trigger set_client_boats_updated_at
-before update on public.client_boats
+create unique index if not exists booking_slots_unique_idx
+  on public.booking_slots (launch_location, starts_at);
+
+create index if not exists booking_slots_starts_at_idx
+  on public.booking_slots (starts_at asc);
+
+create table if not exists public.launch_bookings (
+  id uuid primary key default gen_random_uuid(),
+  slot_id uuid not null references public.booking_slots (id) on delete restrict,
+  full_name varchar(80) not null,
+  email varchar(255) not null,
+  phone varchar(30) not null,
+  notes text,
+  status varchar(20) not null default 'confirmed',
+  created_by varchar(20) not null default 'public',
+  email_customer_status varchar(20) not null default 'pending',
+  email_customer_error text,
+  email_customer_sent_at timestamptz,
+  email_admin_status varchar(20) not null default 'pending',
+  email_admin_error text,
+  email_admin_sent_at timestamptz,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint launch_bookings_status_check
+    check (status in ('confirmed', 'completed', 'cancelled')),
+  constraint launch_bookings_created_by_check
+    check (created_by in ('public', 'admin')),
+  constraint launch_bookings_customer_email_status_check
+    check (email_customer_status in ('pending', 'sent', 'failed')),
+  constraint launch_bookings_admin_email_status_check
+    check (email_admin_status in ('pending', 'sent', 'failed')),
+  constraint launch_bookings_notes_length
+    check (notes is null or char_length(notes) <= 1000)
+);
+
+create unique index if not exists launch_bookings_active_slot_idx
+  on public.launch_bookings (slot_id)
+  where status <> 'cancelled';
+
+create index if not exists launch_bookings_created_at_idx
+  on public.launch_bookings (created_at desc);
+
+create index if not exists launch_bookings_status_idx
+  on public.launch_bookings (status);
+
+alter table public.booking_slots enable row level security;
+alter table public.launch_bookings enable row level security;
+
+drop trigger if exists set_booking_slots_updated_at on public.booking_slots;
+create trigger set_booking_slots_updated_at
+before update on public.booking_slots
 for each row
-execute function public.set_client_boats_updated_at();
+execute function public.set_updated_at_timestamp();
 
-alter table public.client_boats enable row level security;
-
-drop policy if exists "Users can view their own boats" on public.client_boats;
-create policy "Users can view their own boats"
-on public.client_boats
-for select
-using (auth.uid() = user_id);
-
-drop policy if exists "Users can create their own boats" on public.client_boats;
-create policy "Users can create their own boats"
-on public.client_boats
-for insert
-with check (auth.uid() = user_id);
-
-drop policy if exists "Users can update their own boats" on public.client_boats;
-create policy "Users can update their own boats"
-on public.client_boats
-for update
-using (auth.uid() = user_id)
-with check (auth.uid() = user_id);
-
-drop policy if exists "Users can delete their own boats" on public.client_boats;
-create policy "Users can delete their own boats"
-on public.client_boats
-for delete
-using (auth.uid() = user_id);
+drop trigger if exists set_launch_bookings_updated_at on public.launch_bookings;
+create trigger set_launch_bookings_updated_at
+before update on public.launch_bookings
+for each row
+execute function public.set_updated_at_timestamp();

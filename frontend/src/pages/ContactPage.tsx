@@ -11,7 +11,7 @@ export function ContactPage() {
     <>
       <Seo
         title="Contact"
-        description="Contact North Shore Nautical for storage inquiries, optional cleaning discussions, launch delivery questions, and client account support."
+        description="Contact North Shore Nautical for storage inquiries, launch delivery questions, and booking support."
         path="/contact"
       />
       <PageHero
@@ -95,8 +95,8 @@ export function ContactPage() {
 
       <CtaBanner
         title="Need launch coordination rather than a general inquiry?"
-        copy="Move directly to the launch reservation form if you are ready to share timing, destination, cleaning preference, and vessel details."
-        primaryLabel="Reserve Launch"
+        copy="Move directly to the booking page if you are ready to choose an available time and confirm it online."
+        primaryLabel="Book a Time"
         primaryTo="/reserve-launch"
       />
     </>

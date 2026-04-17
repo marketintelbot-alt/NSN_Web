@@ -28,7 +28,8 @@ import {
 
 const serviceIcons = {
   storage: Anchor,
-  care: Sparkles,
+  detailing: Sparkles,
+  waxing: ShieldCheck,
   'launch-coordination': Waves,
   'driver-reservation': CalendarClock,
 }
@@ -38,7 +39,7 @@ export function HomePage() {
     <>
       <Seo
         title="Premium Boat Care on Chicago's North Shore"
-        description="North Shore Nautical provides premium boat storage, launch delivery to Lloyd or Evanston Boat Launch, optional pre-launch cleaning, and secure client accounts across Chicago's North Shore."
+        description="North Shore Nautical provides premium boat storage, detailing, waxing, launch delivery, and a polished online booking flow for Chicago's North Shore."
         path="/"
         image={siteMeta.heroImage}
         structuredData={[
@@ -87,25 +88,18 @@ export function HomePage() {
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/75 md:text-xl">
               Most North Shore Nautical clients already keep their boats in storage
               with us. Reserve delivery to Lloyd Boat Launch or Evanston Boat Launch,
-              add cleaning if you want it, and let the details be handled with calm,
-              professional coordination.
+              add detailing or finish work when needed, and let the details be handled
+              with calm, professional coordination.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link className="button-primary" to="/reserve-launch">
-                Reserve Launch
+                Book a Time
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link className="button-secondary" to="/services">
                 Explore Services
               </Link>
             </div>
-            <p className="mt-5 text-sm uppercase tracking-[0.16em] text-white/70">
-              Invited clients can also use the{' '}
-              <Link className="border-b border-white/30 pb-0.5 text-white" to="/account">
-                client login
-              </Link>{' '}
-              to keep boats on file for faster reservations.
-            </p>
           </FadeIn>
 
           <FadeIn className="mt-20 panel p-6 md:mt-28 md:p-8" delay={0.15}>

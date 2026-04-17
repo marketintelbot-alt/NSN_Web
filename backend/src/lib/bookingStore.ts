@@ -1,0 +1,472 @@
+import { formatISO } from 'date-fns'
+
+import type { AdminBookingInput, AdminSlotInput, PublicBookingInput } from './bookingSchemas.js'
+import { createLaunchDateTime, formatStoredDateTime } from './time.js'
+import { getSupabaseAdminClient } from './supabaseAdmin.js'
+
+type StoredSlotRow = {
+  id: string
+  starts_at: string
+  launch_location: string
+  notes: string | null
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+type StoredBookingRow = {
+  id: string
+  slot_id: string
+  full_name: string
+  email: string
+  phone: string
+  notes: string | null
+  status: 'confirmed' | 'completed' | 'cancelled'
+  created_by: 'public' | 'admin'
+  email_customer_status: 'pending' | 'sent' | 'failed'
+  email_customer_error: string | null
+  email_customer_sent_at: string | null
+  email_admin_status: 'pending' | 'sent' | 'failed'
+  email_admin_error: string | null
+  email_admin_sent_at: string | null
+  created_at: string
+  updated_at: string
+  booking_slots?: StoredSlotRow | StoredSlotRow[] | null
+}
+
+export type PublicSlot = {
+  id: string
+  startsAt: string
+  launchLocation: string
+  notes: string | null
+  label: string
+}
+
+export type AdminSlot = PublicSlot & {
+  isActive: boolean
+}
+
+export type AdminBooking = {
+  id: string
+  slotId: string
+  fullName: string
+  email: string
+  phone: string
+  notes: string | null
+  status: 'confirmed' | 'completed' | 'cancelled'
+  createdBy: 'public' | 'admin'
+  emailCustomerStatus: 'pending' | 'sent' | 'failed'
+  emailCustomerError: string | null
+  emailCustomerSentAt: string | null
+  emailAdminStatus: 'pending' | 'sent' | 'failed'
+  emailAdminError: string | null
+  emailAdminSentAt: string | null
+  createdAt: string
+  updatedAt: string
+  slot: PublicSlot
+}
+
+type EmailStatusUpdate = {
+  emailCustomerStatus: 'pending' | 'sent' | 'failed'
+  emailCustomerError?: string | null
+  emailCustomerSentAt?: string | null
+  emailAdminStatus: 'pending' | 'sent' | 'failed'
+  emailAdminError?: string | null
+  emailAdminSentAt?: string | null
+}
+
+export class SlotConflictError extends Error {
+  constructor(message = 'That time slot is no longer available.') {
+    super(message)
+    this.name = 'SlotConflictError'
+  }
+}
+
+export class SlotNotFoundError extends Error {
+  constructor(message = 'That time slot could not be found.') {
+    super(message)
+    this.name = 'SlotNotFoundError'
+  }
+}
+
+function normalizeSlotRow(slot: StoredSlotRow): PublicSlot {
+  return {
+    id: slot.id,
+    startsAt: slot.starts_at,
+    launchLocation: slot.launch_location,
+    notes: slot.notes || null,
+    label: formatStoredDateTime(slot.starts_at),
+  }
+}
+
+function extractJoinedSlot(slot: StoredSlotRow | StoredSlotRow[] | null | undefined) {
+  if (!slot) {
+    throw new SlotNotFoundError('The slot tied to this booking could not be loaded.')
+  }
+
+  return Array.isArray(slot) ? slot[0] : slot
+}
+
+function normalizeBookingRow(booking: StoredBookingRow): AdminBooking {
+  const slot = extractJoinedSlot(booking.booking_slots)
+
+  return {
+    id: booking.id,
+    slotId: booking.slot_id,
+    fullName: booking.full_name,
+    email: booking.email,
+    phone: booking.phone,
+    notes: booking.notes || null,
+    status: booking.status,
+    createdBy: booking.created_by,
+    emailCustomerStatus: booking.email_customer_status,
+    emailCustomerError: booking.email_customer_error || null,
+    emailCustomerSentAt: booking.email_customer_sent_at || null,
+    emailAdminStatus: booking.email_admin_status,
+    emailAdminError: booking.email_admin_error || null,
+    emailAdminSentAt: booking.email_admin_sent_at || null,
+    createdAt: booking.created_at,
+    updatedAt: booking.updated_at,
+    slot: normalizeSlotRow(slot),
+  }
+}
+
+function isUniqueConstraintError(error: { code?: string; message?: string } | null) {
+  return (
+    error?.code === '23505' ||
+    error?.message?.toLowerCase().includes('duplicate key value violates unique constraint') ||
+    false
+  )
+}
+
+async function readSlotById(slotId: string) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { data, error } = await supabaseAdmin
+    .from('booking_slots')
+    .select('*')
+    .eq('id', slotId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return (data as StoredSlotRow | null) ?? null
+}
+
+async function readBookingById(bookingId: string) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { data, error } = await supabaseAdmin
+    .from('launch_bookings')
+    .select('*, booking_slots(*)')
+    .eq('id', bookingId)
+    .maybeSingle()
+
+  if (error) {
+    throw error
+  }
+
+  return (data as StoredBookingRow | null) ?? null
+}
+
+async function ensureSlotIsBookable(slotId: string) {
+  const slot = await readSlotById(slotId)
+
+  if (!slot || !slot.is_active) {
+    throw new SlotNotFoundError('That time slot is no longer available.')
+  }
+
+  if (new Date(slot.starts_at).getTime() <= Date.now()) {
+    throw new SlotConflictError('That time slot has already passed.')
+  }
+
+  return slot
+}
+
+export async function listAvailableSlots() {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const nowIso = new Date().toISOString()
+
+  const [{ data: slots, error: slotError }, { data: bookings, error: bookingError }] =
+    await Promise.all([
+      supabaseAdmin
+        .from('booking_slots')
+        .select('*')
+        .eq('is_active', true)
+        .gte('starts_at', nowIso)
+        .order('starts_at', { ascending: true }),
+      supabaseAdmin
+        .from('launch_bookings')
+        .select('slot_id, status')
+        .neq('status', 'cancelled'),
+    ])
+
+  if (slotError) {
+    throw slotError
+  }
+
+  if (bookingError) {
+    throw bookingError
+  }
+
+  const bookedSlotIds = new Set((bookings ?? []).map((booking: { slot_id: string }) => booking.slot_id))
+
+  return ((slots ?? []) as StoredSlotRow[])
+    .filter((slot) => !bookedSlotIds.has(slot.id))
+    .map(normalizeSlotRow)
+}
+
+export async function listAdminDashboard() {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const recentWindowIso = formatISO(new Date(Date.now() - 1000 * 60 * 60 * 24 * 14))
+
+  const [{ data: slots, error: slotError }, { data: bookings, error: bookingError }] =
+    await Promise.all([
+      supabaseAdmin
+        .from('booking_slots')
+        .select('*')
+        .gte('starts_at', recentWindowIso)
+        .order('starts_at', { ascending: true }),
+      supabaseAdmin
+        .from('launch_bookings')
+        .select('*, booking_slots(*)')
+        .order('created_at', { ascending: false }),
+    ])
+
+  if (slotError) {
+    throw slotError
+  }
+
+  if (bookingError) {
+    throw bookingError
+  }
+
+  const allBookings = ((bookings ?? []) as StoredBookingRow[]).map(normalizeBookingRow).sort((left, right) =>
+    new Date(left.slot.startsAt).getTime() - new Date(right.slot.startsAt).getTime(),
+  )
+
+  return {
+    slots: ((slots ?? []) as StoredSlotRow[]).map((slot) => ({
+      ...normalizeSlotRow(slot),
+      isActive: slot.is_active,
+    })),
+    bookings: allBookings,
+  }
+}
+
+export async function createPublicBooking(input: PublicBookingInput) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  await ensureSlotIsBookable(input.slotId)
+
+  const { data, error } = await supabaseAdmin
+    .from('launch_bookings')
+    .insert({
+      slot_id: input.slotId,
+      full_name: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      notes: input.notes || null,
+      status: 'confirmed',
+      created_by: 'public',
+      email_customer_status: 'pending',
+      email_admin_status: 'pending',
+    })
+    .select('id')
+    .single()
+
+  if (isUniqueConstraintError(error)) {
+    throw new SlotConflictError()
+  }
+
+  if (error) {
+    throw error
+  }
+
+  const booking = await readBookingById(data.id as string)
+
+  if (!booking) {
+    throw new Error('The booking was created, but it could not be loaded afterward.')
+  }
+
+  return normalizeBookingRow(booking)
+}
+
+export async function upsertAdminSlot(input: AdminSlotInput) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const startsAt = createLaunchDateTime(input.slotDate, input.slotTime).toISOString()
+
+  if (input.slotId) {
+    const { error } = await supabaseAdmin
+      .from('booking_slots')
+      .update({
+        starts_at: startsAt,
+        launch_location: input.launchLocation,
+        notes: input.notes || null,
+        is_active: input.isActive,
+      })
+      .eq('id', input.slotId)
+
+    if (isUniqueConstraintError(error)) {
+      throw new SlotConflictError('That slot already exists.')
+    }
+
+    if (error) {
+      throw error
+    }
+
+    return { slotId: input.slotId }
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from('booking_slots')
+    .insert({
+      starts_at: startsAt,
+      launch_location: input.launchLocation,
+      notes: input.notes || null,
+      is_active: input.isActive,
+    })
+    .select('id')
+    .single()
+
+  if (isUniqueConstraintError(error)) {
+    throw new SlotConflictError('That slot already exists.')
+  }
+
+  if (error) {
+    throw error
+  }
+
+  return { slotId: data.id as string }
+}
+
+export async function deleteAdminSlot(slotId: string) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { count, error: bookingLookupError } = await supabaseAdmin
+    .from('launch_bookings')
+    .select('*', { count: 'exact', head: true })
+    .eq('slot_id', slotId)
+
+  if (bookingLookupError) {
+    throw bookingLookupError
+  }
+
+  if ((count || 0) > 0) {
+    throw new Error('This slot already has booking history and cannot be deleted.')
+  }
+
+  const { error } = await supabaseAdmin.from('booking_slots').delete().eq('id', slotId)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function createAdminBooking(input: AdminBookingInput) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  await ensureSlotIsBookable(input.slotId)
+
+  const { data, error } = await supabaseAdmin
+    .from('launch_bookings')
+    .insert({
+      slot_id: input.slotId,
+      full_name: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      notes: input.notes || null,
+      status: input.status,
+      created_by: 'admin',
+      email_customer_status: 'pending',
+      email_admin_status: 'pending',
+    })
+    .select('id')
+    .single()
+
+  if (isUniqueConstraintError(error)) {
+    throw new SlotConflictError()
+  }
+
+  if (error) {
+    throw error
+  }
+
+  const booking = await readBookingById(data.id as string)
+
+  if (!booking) {
+    throw new Error('The booking was created, but it could not be loaded afterward.')
+  }
+
+  return normalizeBookingRow(booking)
+}
+
+export async function updateAdminBooking(bookingId: string, input: AdminBookingInput) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const existingBooking = await readBookingById(bookingId)
+
+  if (!existingBooking) {
+    throw new Error('That booking could not be found.')
+  }
+
+  const isSlotChanging = existingBooking.slot_id !== input.slotId
+  const shouldValidateSlot = input.status !== 'cancelled' && (isSlotChanging || existingBooking.status === 'cancelled')
+
+  if (shouldValidateSlot) {
+    await ensureSlotIsBookable(input.slotId)
+  }
+
+  const { error } = await supabaseAdmin
+    .from('launch_bookings')
+    .update({
+      slot_id: input.slotId,
+      full_name: input.fullName,
+      email: input.email,
+      phone: input.phone,
+      notes: input.notes || null,
+      status: input.status,
+    })
+    .eq('id', bookingId)
+
+  if (isUniqueConstraintError(error)) {
+    throw new SlotConflictError()
+  }
+
+  if (error) {
+    throw error
+  }
+
+  const booking = await readBookingById(bookingId)
+
+  if (!booking) {
+    throw new Error('That booking was updated, but it could not be reloaded.')
+  }
+
+  return normalizeBookingRow(booking)
+}
+
+export async function updateBookingEmailStatus(bookingId: string, status: EmailStatusUpdate) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { error } = await supabaseAdmin
+    .from('launch_bookings')
+    .update({
+      email_customer_status: status.emailCustomerStatus,
+      email_customer_error: status.emailCustomerError || null,
+      email_customer_sent_at: status.emailCustomerSentAt || null,
+      email_admin_status: status.emailAdminStatus,
+      email_admin_error: status.emailAdminError || null,
+      email_admin_sent_at: status.emailAdminSentAt || null,
+    })
+    .eq('id', bookingId)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function resendBookingEmails(bookingId: string) {
+  const booking = await readBookingById(bookingId)
+
+  if (!booking) {
+    throw new Error('That booking could not be found.')
+  }
+
+  return normalizeBookingRow(booking)
+}

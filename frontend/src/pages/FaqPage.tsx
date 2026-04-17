@@ -16,7 +16,7 @@ export function FaqPage() {
       />
       <PageHero
         eyebrow="FAQ"
-        title="Helpful answers for planning storage, launch delivery, and client accounts."
+        title="Helpful answers for planning storage, launch delivery, and online booking."
         description="A straightforward reference for the scheduling rules, service expectations, and practical details clients ask about most often."
       />
 
@@ -39,9 +39,9 @@ export function FaqPage() {
       </section>
 
       <CtaBanner
-        title="Ready to submit a launch request?"
-        copy="If you already have your preferred launch date and location in mind, move directly to the reservation form and submit the request for review."
-        primaryLabel="Reserve Launch"
+        title="Ready to book a time?"
+        copy="If you see an available slot that works, move directly to the booking page and confirm it online."
+        primaryLabel="Book a Time"
         primaryTo="/reserve-launch"
       />
     </>

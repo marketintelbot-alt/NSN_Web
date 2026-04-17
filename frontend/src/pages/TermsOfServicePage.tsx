@@ -11,8 +11,8 @@ export function TermsOfServicePage() {
       />
       <PageHero
         eyebrow="Terms of Service"
-        title="Terms governing website use and reservation requests."
-        description="Effective March 13, 2026. These terms describe the basic conditions for using the North Shore Nautical website and submitting service requests."
+        title="Terms governing website use and online bookings."
+        description="Effective March 13, 2026. These terms describe the basic conditions for using the North Shore Nautical website and confirming booking times."
       />
 
       <section className="section-pad">
@@ -24,30 +24,20 @@ export function TermsOfServicePage() {
               </h2>
               <p className="mt-3">
               The North Shore Nautical website is provided for informational purposes
-              and to facilitate service inquiries and reservation requests. Website
+              and to facilitate service inquiries and online bookings. Website
               content is intended to describe available services clearly, but it does
               not create a binding service agreement on its own.
               </p>
             </section>
             <section>
               <h2 className="font-display text-3xl font-semibold text-ink">
-                Reservation Requests
+                Bookings
               </h2>
               <p className="mt-3">
-              Launch delivery reservations submitted through the website are requests
-              for scheduling review. Submission does not guarantee acceptance,
-              confirmation, or delivery availability. Requests must be submitted at
-              least 24 hours before the desired launch time.
-              </p>
-            </section>
-            <section>
-              <h2 className="font-display text-3xl font-semibold text-ink">
-                Client Accounts
-              </h2>
-              <p className="mt-3">
-              If North Shore Nautical enables secure client accounts, each client is
-              responsible for maintaining the confidentiality of their login credentials
-              and for keeping saved account information accurate and current.
+              Launch delivery times shown on the website are presented as available
+              booking slots. Submitting a booking confirms the time selected, but
+              North Shore Nautical may still need to communicate about weather,
+              operational changes, or service details if circumstances change.
               </p>
             </section>
             <section>
@@ -56,7 +46,7 @@ export function TermsOfServicePage() {
               </h2>
               <p className="mt-3">
               You agree to provide accurate and current information when submitting a
-              reservation request or contacting North Shore Nautical. Inaccurate,
+              booking or contacting North Shore Nautical. Inaccurate,
               incomplete, or misleading information may affect the ability to review
               or coordinate the request.
               </p>
@@ -73,12 +63,12 @@ export function TermsOfServicePage() {
             </section>
             <section>
               <h2 className="font-display text-3xl font-semibold text-ink">
-                No Live Scheduling Guarantee
+                Scheduling Changes
               </h2>
               <p className="mt-3">
-              The website does not provide a live booking calendar or automatic launch
-              confirmation. Any timing shown or entered through the reservation form
-              is subject to manual review and confirmation.
+              North Shore Nautical may update available times, adjust operational
+              schedules, or contact clients about necessary changes related to weather,
+              safety, or logistics.
               </p>
             </section>
             <section>

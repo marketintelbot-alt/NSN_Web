@@ -12,9 +12,7 @@
   :root {
     font-family: 'Source Sans 3', sans-serif;
     color: #1d2f3f;
-    background:
-      radial-gradient(circle at top, rgba(127, 164, 184, 0.18), transparent 32%),
-      linear-gradient(180deg, #f9fbfc 0%, #f4f7f9 100%);
+    background: #06131f;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -53,7 +51,33 @@
 
 @layer components {
   .page-shell {
-    @apply relative overflow-hidden;
+    @apply relative min-h-screen overflow-hidden;
+  }
+
+  .site-backdrop {
+    @apply fixed inset-0;
+  }
+
+  .site-backdrop-image {
+    @apply absolute inset-0 bg-cover bg-center bg-no-repeat;
+    background-image: url('/images/north-shore-hero.jpeg');
+    background-position: center 52%;
+    transform: scale(1.04);
+  }
+
+  .site-backdrop-overlay {
+    @apply absolute inset-0;
+    background:
+      linear-gradient(180deg, rgba(4, 15, 25, 0.78) 0%, rgba(8, 22, 35, 0.64) 38%, rgba(10, 26, 40, 0.58) 100%),
+      radial-gradient(circle at top, rgba(130, 170, 190, 0.32), transparent 34%);
+    backdrop-filter: saturate(1.05);
+  }
+
+  .site-backdrop-vignette {
+    @apply absolute inset-0;
+    background:
+      radial-gradient(circle at center, transparent 46%, rgba(4, 13, 22, 0.22) 100%),
+      linear-gradient(180deg, rgba(5, 17, 27, 0.14) 0%, rgba(5, 17, 27, 0.34) 100%);
   }
 
   .section-pad {
@@ -118,5 +142,33 @@
 
   .text-area {
     @apply min-h-36 w-full rounded-2xl border border-ink/10 bg-white px-4 py-4 text-sm text-ink placeholder:text-slate/70 focus:border-lake focus:outline-none focus:ring-2 focus:ring-lake/25;
+  }
+
+  .field-label {
+    @apply grid gap-2 text-sm font-semibold text-ink;
+  }
+
+  .slot-button {
+    @apply flex items-start justify-between gap-4 rounded-3xl border border-ink/10 bg-white px-5 py-5 text-left transition hover:border-lake/40;
+  }
+
+  .slot-button-active {
+    @apply border-lake bg-lake/10;
+  }
+
+  .status-pill {
+    @apply inline-flex h-fit items-center rounded-full bg-[#eef4f6] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate;
+  }
+
+  .status-pill-active {
+    @apply bg-[#dfeff7] text-ink;
+  }
+
+  .status-pill-failed {
+    @apply bg-[#fff1ee] text-[#8a3b34];
+  }
+
+  .status-pill-neutral {
+    @apply bg-[#edf1f4] text-[#435868];
   }
 }

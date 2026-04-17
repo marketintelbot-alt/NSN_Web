@@ -889,10 +889,13 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           </FadeIn>
         ) : null}
 
-        <FadeIn className="panel p-6 md:p-8" delay={0.04}>
+        <section
+          id="client-booking-composer"
+          className="panel scroll-mt-36 p-6 md:scroll-mt-40 md:p-8"
+        >
           <div className="flex items-center gap-3">
             <ShipWheel className="h-5 w-5 text-lake" />
-            <h3 id="client-booking-composer" className="text-2xl font-semibold text-ink">
+            <h3 className="text-2xl font-semibold text-ink">
               {editingBooking ? 'Modify your reservation' : 'Reserve a time'}
             </h3>
           </div>
@@ -1042,7 +1045,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 ? 'Save Reservation Changes'
                 : 'Reserve My Service'}
           </button>
-        </FadeIn>
+        </section>
 
         <FadeIn className="panel p-6 md:p-8" delay={0.08}>
           <div className="flex items-center gap-3">

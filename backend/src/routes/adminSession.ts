@@ -2,10 +2,9 @@ import type { Request, Response } from 'express'
 import rateLimit from 'express-rate-limit'
 
 import {
-  authenticateAdminCredentials,
-  createAdminSessionToken,
-  getAdminAuthConfig,
-  verifyAdminSessionToken,
+  authenticateAccountCredentials,
+  createAccountSessionToken,
+  verifyAccountSessionToken,
 } from '../lib/adminSession.js'
 import {
   clearAdminSessionCookie,
@@ -13,9 +12,12 @@ import {
   writeAdminSessionCookie,
 } from '../lib/adminCookie.js'
 
-type AdminSessionResponse = {
+type AccountSessionResponse = {
   authenticated: boolean
+  role?: 'admin' | 'client'
   email?: string
+  clientAccountId?: string | null
+  fullName?: string | null
   expiresAt?: string
 }
 
@@ -26,7 +28,7 @@ function getVerifiedSession(request: Request) {
     return null
   }
 
-  return verifyAdminSessionToken(token)
+  return verifyAccountSessionToken(token)
 }
 
 export const adminLoginLimiter = rateLimit({
@@ -35,35 +37,27 @@ export const adminLoginLimiter = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: {
-    message: 'Too many admin login attempts. Please wait a few minutes and try again.',
+    message: 'Too many login attempts. Please wait a few minutes and try again.',
   },
 })
 
 export async function createAdminSession(request: Request, response: Response) {
-  const config = getAdminAuthConfig()
-
-  if (!config) {
-    return response.status(503).json({
-      message: 'Sign-in is temporarily unavailable right now.',
-    })
-  }
-
   const email = typeof request.body?.email === 'string' ? request.body.email : ''
   const password = typeof request.body?.password === 'string' ? request.body.password : ''
-  const authenticatedConfig = await authenticateAdminCredentials(email, password)
+  const authenticatedAccount = await authenticateAccountCredentials(email, password)
 
-  if (!authenticatedConfig) {
+  if (!authenticatedAccount) {
     return response.status(401).json({
       message: 'That email and password combination did not match our records.',
     })
   }
 
-  const token = createAdminSessionToken(
-    authenticatedConfig.email,
-    authenticatedConfig.sessionDurationMs,
-    authenticatedConfig.sessionSecret,
+  const token = createAccountSessionToken(
+    authenticatedAccount,
+    authenticatedAccount.sessionDurationMs,
+    authenticatedAccount.sessionSecret,
   )
-  const session = verifyAdminSessionToken(token)
+  const session = verifyAccountSessionToken(token)
 
   if (session) {
     writeAdminSessionCookie(response, token, session.expiresAt)
@@ -72,34 +66,32 @@ export async function createAdminSession(request: Request, response: Response) {
   return response.status(200).json({
     session: {
       authenticated: true,
-      email: authenticatedConfig.email,
+      role: authenticatedAccount.role,
+      email: authenticatedAccount.email,
+      clientAccountId: authenticatedAccount.clientAccountId,
+      fullName: authenticatedAccount.fullName,
       expiresAt: session?.expiresAt,
-    } satisfies AdminSessionResponse,
+    } satisfies AccountSessionResponse,
   })
 }
 
 export function readAdminSession(request: Request, response: Response) {
-  const config = getAdminAuthConfig()
-
-  if (!config) {
-    return response.status(503).json({
-      message: 'Sign-in is temporarily unavailable right now.',
-    })
-  }
-
   const session = getVerifiedSession(request)
 
   if (!session) {
     return response.status(401).json({
-      message: 'Admin session is not valid.',
+      message: 'Account session is not valid.',
     })
   }
 
   return response.status(200).json({
     authenticated: true,
+    role: session.role,
     email: session.email,
+    clientAccountId: session.clientAccountId,
+    fullName: session.fullName,
     expiresAt: session.expiresAt,
-  } satisfies AdminSessionResponse)
+  } satisfies AccountSessionResponse)
 }
 
 export function destroyAdminSession(_request: Request, response: Response) {

@@ -12,15 +12,24 @@ import {
   destroyAdminSession,
   readAdminSession,
 } from './routes/adminSession.js'
+import {
+  createClientBookingHandler,
+  readClientPortalHandler,
+  requireClientSession,
+  updateClientProfileHandler,
+} from './routes/accountPortal.js'
 import { getPrimaryAdminEmail } from './lib/adminSession.js'
+import { getBusinessNotificationEmails } from './lib/notificationEmails.js'
 import {
   createAdminBookingHandler,
+  createAdminClientAccount,
   createAdminSlot,
   readAdminDashboard,
   requireAdminSession,
   removeAdminSlot,
   resendAdminBookingEmails,
   updateAdminBookingHandler,
+  updateAdminClientAccount,
   updateAdminSlot,
 } from './routes/adminDashboard.js'
 import { createPublicBookingRouter } from './routes/publicBooking.js'
@@ -52,7 +61,7 @@ const reservationLimiter = rateLimit({
 const publicBookingRouter = createPublicBookingRouter({
   resendApiKey: process.env.RESEND_API_KEY,
   fromEmail: process.env.FROM_EMAIL,
-  businessNotificationEmail: process.env.BUSINESS_NOTIFICATION_EMAIL?.trim() || getPrimaryAdminEmail(),
+  businessNotificationEmails: getBusinessNotificationEmails(getPrimaryAdminEmail()),
 })
 
 app.disable('x-powered-by')
@@ -101,13 +110,26 @@ app.get('/api/health', (_request, response) => {
 app.post('/api/admin/session', adminLoginLimiter, createAdminSession)
 app.get('/api/admin/session', readAdminSession)
 app.delete('/api/admin/session', destroyAdminSession)
+app.post('/api/account/session', adminLoginLimiter, createAdminSession)
+app.get('/api/account/session', readAdminSession)
+app.delete('/api/account/session', destroyAdminSession)
 app.get('/api/admin/dashboard', requireAdminSession, readAdminDashboard)
 app.post('/api/admin/slots', requireAdminSession, createAdminSlot)
 app.put('/api/admin/slots/:slotId', requireAdminSession, updateAdminSlot)
 app.delete('/api/admin/slots/:slotId', requireAdminSession, removeAdminSlot)
 app.post('/api/admin/bookings', requireAdminSession, createAdminBookingHandler)
 app.put('/api/admin/bookings/:bookingId', requireAdminSession, updateAdminBookingHandler)
-app.post('/api/admin/bookings/:bookingId/resend-emails', requireAdminSession, resendAdminBookingEmails)
+app.post(
+  '/api/admin/bookings/:bookingId/resend-emails',
+  requireAdminSession,
+  resendAdminBookingEmails,
+)
+app.post('/api/admin/clients', requireAdminSession, createAdminClientAccount)
+app.put('/api/admin/clients/:clientId', requireAdminSession, updateAdminClientAccount)
+
+app.get('/api/account/portal', requireClientSession, readClientPortalHandler)
+app.post('/api/account/bookings', requireClientSession, createClientBookingHandler)
+app.put('/api/account/profile', requireClientSession, updateClientProfileHandler)
 
 app.get('/api/booking-slots', publicBookingRouter.listSlots)
 app.post('/api/bookings', reservationLimiter, publicBookingRouter.createBooking)

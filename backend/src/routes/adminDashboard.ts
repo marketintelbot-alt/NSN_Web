@@ -3,8 +3,10 @@ import type { NextFunction, Request, Response } from 'express'
 import { ZodError } from 'zod'
 
 import { clearAdminSessionCookie, readAdminSessionCookie } from '../lib/adminCookie.js'
-import { getPrimaryAdminEmail, verifyAdminSessionToken } from '../lib/adminSession.js'
+import { getPrimaryAdminEmail, verifyAccountSessionToken } from '../lib/adminSession.js'
 import { sendBookingEmails } from '../lib/bookingEmailDelivery.js'
+import { listClientAccounts, upsertClientAccount } from '../lib/clientAccounts.js'
+import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
 import {
   SlotConflictError,
   SlotNotFoundError,
@@ -15,13 +17,17 @@ import {
   updateAdminBooking,
   upsertAdminSlot,
 } from '../lib/bookingStore.js'
-import { adminBookingSchema, adminSlotSchema } from '../lib/bookingSchemas.js'
+import {
+  adminBookingSchema,
+  adminClientAccountSchema,
+  adminSlotSchema,
+} from '../lib/bookingSchemas.js'
 import { hasSupabaseAdminConfig } from '../lib/supabaseAdmin.js'
 
 type EmailOptions = {
   resendApiKey?: string
   fromEmail?: string
-  businessNotificationEmail?: string
+  businessNotificationEmails?: string[]
 }
 
 function getRouteParam(request: Request, key: string) {
@@ -33,15 +39,15 @@ function getEmailOptions(): EmailOptions {
   return {
     resendApiKey: process.env.RESEND_API_KEY,
     fromEmail: process.env.FROM_EMAIL,
-    businessNotificationEmail: process.env.BUSINESS_NOTIFICATION_EMAIL?.trim() || getPrimaryAdminEmail(),
+    businessNotificationEmails: getBusinessNotificationEmails(getPrimaryAdminEmail()),
   }
 }
 
 export function requireAdminSession(request: Request, response: Response, next: NextFunction) {
   const token = readAdminSessionCookie(request)
-  const session = token ? verifyAdminSessionToken(token) : null
+  const session = token ? verifyAccountSessionToken(token) : null
 
-  if (!session) {
+  if (!session || session.role !== 'admin') {
     clearAdminSessionCookie(response)
     return response.status(401).json({
       message: 'Admin authorization is required.',
@@ -90,8 +96,11 @@ function respondWithAdminError(error: unknown, response: Response) {
 
 export async function readAdminDashboard(_request: Request, response: Response) {
   try {
-    const dashboard = await listAdminDashboard()
-    return response.status(200).json(dashboard)
+    const [dashboard, clients] = await Promise.all([listAdminDashboard(), listClientAccounts()])
+    return response.status(200).json({
+      ...dashboard,
+      clients,
+    })
   } catch (error) {
     return respondWithAdminError(error, response)
   }
@@ -173,6 +182,36 @@ export async function resendAdminBookingEmails(request: Request, response: Respo
     return response.status(202).json({
       bookingId,
       message: 'Confirmation email retry queued.',
+    })
+  } catch (error) {
+    return respondWithAdminError(error, response)
+  }
+}
+
+export async function createAdminClientAccount(request: Request, response: Response) {
+  try {
+    const client = await upsertClientAccount(adminClientAccountSchema.parse(request.body))
+    return response.status(200).json({
+      client,
+      message: 'Client account saved.',
+    })
+  } catch (error) {
+    return respondWithAdminError(error, response)
+  }
+}
+
+export async function updateAdminClientAccount(request: Request, response: Response) {
+  try {
+    const client = await upsertClientAccount(
+      adminClientAccountSchema.parse({
+        ...request.body,
+        clientId: getRouteParam(request, 'clientId'),
+      }),
+    )
+
+    return response.status(200).json({
+      client,
+      message: 'Client account updated.',
     })
   } catch (error) {
     return respondWithAdminError(error, response)

@@ -1,4 +1,13 @@
-import type { AdminSession } from '../lib/adminSession'
+export type AccountRole = 'admin' | 'client'
+
+export type AccountSession = {
+  authenticated: boolean
+  role: AccountRole
+  email: string
+  clientAccountId?: string | null
+  fullName?: string | null
+  expiresAt?: string
+}
 
 export type PublicSlot = {
   id: string
@@ -15,15 +24,47 @@ export type AdminSlot = PublicSlot & {
 export type BookingStatus = 'confirmed' | 'completed' | 'cancelled'
 export type BookingEmailStatus = 'pending' | 'sent' | 'failed'
 
+export type ClientAccount = {
+  id: string
+  email: string
+  fullName: string
+  phone: string
+  boatName: string | null
+  boatMakeModel: string | null
+  boatLengthFeet: number | null
+  preferredLaunchLocation: string
+  notes: string | null
+  isActive: boolean
+  services: ClientServiceEntitlement[]
+  createdAt: string
+  updatedAt: string
+}
+
+export type ClientServiceEntitlement = {
+  id: string
+  clientAccountId: string
+  serviceKey: string
+  serviceName: string
+  totalUnits: number
+  reservedUnits: number
+  remainingUnits: number
+  notes: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export type AdminBooking = {
   id: string
   slotId: string
+  clientAccountId: string | null
+  serviceEntitlementId: string | null
+  serviceName: string | null
   fullName: string
   email: string
   phone: string
   notes: string | null
   status: BookingStatus
-  createdBy: 'public' | 'admin'
+  createdBy: 'public' | 'admin' | 'client'
   emailCustomerStatus: BookingEmailStatus
   emailCustomerError: string | null
   emailCustomerSentAt: string | null
@@ -38,9 +79,12 @@ export type AdminBooking = {
 export type AdminDashboardResponse = {
   slots: AdminSlot[]
   bookings: AdminBooking[]
+  clients: ClientAccount[]
 }
 
-export type AdminPageState = {
-  session: AdminSession | null
-  loading: boolean
+export type ClientPortalResponse = {
+  client: ClientAccount
+  availableSlots: PublicSlot[]
+  upcomingBookings: AdminBooking[]
+  bookingHistory: AdminBooking[]
 }

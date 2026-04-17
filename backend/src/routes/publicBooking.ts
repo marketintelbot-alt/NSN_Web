@@ -14,7 +14,7 @@ import { publicBookingSchema } from '../lib/bookingSchemas.js'
 type PublicBookingRouteOptions = {
   resendApiKey?: string
   fromEmail?: string
-  businessNotificationEmail?: string
+  businessNotificationEmails?: string[]
 }
 
 function respondWithBookingError(error: unknown, response: Response) {

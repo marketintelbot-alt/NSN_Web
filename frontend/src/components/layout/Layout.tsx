@@ -2,6 +2,7 @@ import type { PropsWithChildren } from 'react'
 
 import { Footer } from './Footer'
 import { Header } from './Header'
+import { InstallAppPrompt } from '../ui/InstallAppPrompt'
 
 export function Layout({ children }: PropsWithChildren) {
   return (
@@ -21,6 +22,7 @@ export function Layout({ children }: PropsWithChildren) {
         <Header />
         <main id="main-content">{children}</main>
         <Footer />
+        <InstallAppPrompt />
       </div>
     </div>
   )

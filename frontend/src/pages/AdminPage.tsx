@@ -3,15 +3,20 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { CircleAlert, LockKeyhole, ShieldCheck } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 
+import { ClientPortal } from '../components/account/ClientPortal'
 import { AdminDashboard } from '../components/admin/AdminDashboard'
 import { Seo } from '../components/seo/Seo'
 import { FadeIn } from '../components/ui/FadeIn'
 import { PageHero } from '../components/ui/PageHero'
-import { createAdminSession, readAdminSession, type AdminSession } from '../lib/adminSession'
+import {
+  createAccountSession,
+  readAccountSession,
+  type AccountSession,
+} from '../lib/adminSession'
 
 export function AdminPage() {
   const location = useLocation()
-  const [session, setSession] = useState<AdminSession | null>(null)
+  const [session, setSession] = useState<AccountSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -31,7 +36,7 @@ export function AdminPage() {
   }
 
   useEffect(() => {
-    readAdminSession()
+    readAccountSession()
       .then((response) => {
         if (response.ok && response.session) {
           setSession(response.session)
@@ -48,7 +53,7 @@ export function AdminPage() {
     setAuthState('submitting')
     setMessage('')
 
-    const response = await createAdminSession(email, password)
+    const response = await createAccountSession(email, password)
     setAuthState('idle')
 
     if (!response.ok || !response.session) {
@@ -63,26 +68,38 @@ export function AdminPage() {
   return (
     <>
       <Seo
-        title={session ? 'Admin Dashboard' : 'Client Login'}
+        title={
+          session
+            ? session.role === 'admin'
+              ? 'Admin Dashboard'
+              : 'Client Portal'
+            : 'Client Login'
+        }
         description={
           session
-            ? 'Secure booking administration for North Shore Nautical.'
+            ? session.role === 'admin'
+              ? 'Secure booking administration for North Shore Nautical.'
+              : 'Saved client booking access for North Shore Nautical.'
             : 'Secure client login for North Shore Nautical.'
         }
         path={location.pathname === '/admin' ? '/admin' : '/account'}
         noIndex
       />
       <PageHero
-        eyebrow={session ? 'Admin Access' : 'Client Login'}
+        eyebrow={session?.role === 'admin' ? 'Admin Access' : 'Client Login'}
         title={
-          session
+          session?.role === 'admin'
             ? 'Secure booking control for North Shore Nautical.'
-            : 'Secure access for North Shore Nautical clients.'
+            : session?.role === 'client'
+              ? 'Your saved launch account is ready to book.'
+              : 'Secure access for North Shore Nautical clients.'
         }
         description={
-          session
-            ? 'Manage open time slots, bookings, and confirmation-email reliability from one protected dashboard.'
-            : 'Use your North Shore Nautical login to access your account securely.'
+          session?.role === 'admin'
+            ? 'Manage clients, saved launch profiles, bookings, and scheduling from one protected dashboard.'
+            : session?.role === 'client'
+              ? 'Your stored launch details stay on file so booking from your phone can stay quick and simple.'
+              : 'Use your North Shore Nautical login to access your account securely.'
         }
       >
         <div className="inline-flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
@@ -100,7 +117,11 @@ export function AdminPage() {
               <p className="text-base leading-8 text-slate">Loading secure account access...</p>
             </FadeIn>
           ) : session ? (
-            <AdminDashboard adminSession={session} onSignedOut={() => setSession(null)} />
+            session.role === 'admin' ? (
+              <AdminDashboard accountSession={session} onSignedOut={() => setSession(null)} />
+            ) : (
+              <ClientPortal session={session} onSignedOut={() => setSession(null)} />
+            )
           ) : (
             <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
               <FadeIn className="panel p-8">
@@ -158,19 +179,19 @@ export function AdminPage() {
               <div className="grid gap-5">
                 {[
                   {
-                    title: 'Secure access',
+                    title: 'Saved launch profiles',
                     copy:
-                      'Account access is protected with secure sessions and server-managed credentials.',
+                      'Client accounts can keep the usual launch location, boat details, and contact information ready to go.',
                   },
                   {
-                    title: 'Booking details stay in one place',
+                    title: 'Mobile-first booking',
                     copy:
-                      'Once authenticated, the system can surface account-specific booking and scheduling tools.',
+                      'Once a client is signed in, they can focus on choosing a date and time instead of re-entering the same details each trip.',
                   },
                   {
                     title: 'Administrative tools appear after sign-in',
                     copy:
-                      'The elevated control panel is only shown after a successful authenticated login.',
+                      'The full control panel for managing clients, passwords, and bookings only appears after a successful admin login.',
                   },
                 ].map((item, index) => (
                   <FadeIn key={item.title} className="soft-panel p-7" delay={index * 0.08}>

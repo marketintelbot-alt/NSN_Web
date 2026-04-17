@@ -2,23 +2,43 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
 import bcrypt from 'bcryptjs'
 
-type AdminSessionPayload = {
-  sub: 'admin'
+import { authenticateClientCredentials } from './clientAccounts.js'
+
+export type AccountRole = 'admin' | 'client'
+
+type AccountSessionPayload = {
+  sub: 'account'
+  role: AccountRole
   email: string
+  clientAccountId: string | null
+  fullName: string | null
   exp: number
 }
 
-type VerifiedAdminSession = {
+export type VerifiedAccountSession = {
+  role: AccountRole
   email: string
+  clientAccountId: string | null
+  fullName: string | null
   expiresAt: string
 }
 
-type AdminAuthConfig = {
+type SessionConfig = {
+  sessionSecret: string
+  sessionDurationMs: number
+}
+
+type AdminAuthConfig = SessionConfig & {
   emails: string[]
   primaryEmail: string
   passwordHash: string
-  sessionSecret: string
-  sessionDurationMs: number
+}
+
+type AuthenticatedAccount = SessionConfig & {
+  role: AccountRole
+  email: string
+  clientAccountId: string | null
+  fullName: string | null
 }
 
 const defaultSessionDurationHours = 12
@@ -39,7 +59,7 @@ function secureStringEquals(left: string, right: string) {
   return timingSafeEqual(sha256(left), sha256(right))
 }
 
-function getAdminSessionSecret() {
+function getAccountSessionSecret() {
   const configuredSecret = process.env.ADMIN_SESSION_SECRET?.trim()
 
   if (configuredSecret) {
@@ -51,6 +71,28 @@ function getAdminSessionSecret() {
   }
 
   return ''
+}
+
+function getSessionConfig(): SessionConfig | null {
+  const sessionSecret = getAccountSessionSecret()
+  const sessionDurationHours = Number(
+    process.env.ADMIN_SESSION_TTL_HOURS || defaultSessionDurationHours,
+  )
+
+  if (!sessionSecret) {
+    return null
+  }
+
+  return {
+    sessionSecret,
+    sessionDurationMs:
+      (Number.isNaN(sessionDurationHours)
+        ? defaultSessionDurationHours
+        : sessionDurationHours) *
+      60 *
+      60 *
+      1000,
+  }
 }
 
 function getAdminPasswordHash() {
@@ -79,7 +121,9 @@ function getConfiguredAdminEmails() {
 }
 
 function hasConfiguredAdminEmail(emails: string[], targetEmail: string) {
-  return emails.some((email) => secureStringEquals(email.toLowerCase(), targetEmail.toLowerCase()))
+  return emails.some((email) =>
+    secureStringEquals(email.toLowerCase(), targetEmail.toLowerCase()),
+  )
 }
 
 export function getPrimaryAdminEmail() {
@@ -89,33 +133,25 @@ export function getPrimaryAdminEmail() {
 export function getAdminAuthConfig() {
   const emails = getConfiguredAdminEmails()
   const passwordHash = getAdminPasswordHash()
-  const sessionSecret = getAdminSessionSecret()
-  const sessionDurationHours = Number(process.env.ADMIN_SESSION_TTL_HOURS || defaultSessionDurationHours)
+  const sessionConfig = getSessionConfig()
 
-  if (!emails.length || !passwordHash || !sessionSecret) {
+  if (!emails.length || !passwordHash || !sessionConfig) {
     return null
   }
 
-  const config: AdminAuthConfig = {
+  return {
     emails,
     primaryEmail: emails[0],
     passwordHash,
-    sessionSecret,
-    sessionDurationMs:
-      (Number.isNaN(sessionDurationHours) ? defaultSessionDurationHours : sessionDurationHours) *
-      60 *
-      60 *
-      1000,
-  }
-
-  return config
+    ...sessionConfig,
+  } satisfies AdminAuthConfig
 }
 
 function createSignature(payloadSegment: string, sessionSecret: string) {
   return createHmac('sha256', sessionSecret).update(payloadSegment).digest('base64url')
 }
 
-export async function authenticateAdminCredentials(email: string, password: string) {
+async function authenticateAdminCredentials(email: string, password: string) {
   const config = getAdminAuthConfig()
 
   if (!config) {
@@ -138,15 +174,55 @@ export async function authenticateAdminCredentials(email: string, password: stri
   }
 
   return {
-    ...config,
+    role: 'admin' as const,
     email: matchedEmail,
-  }
+    clientAccountId: null,
+    fullName: matchedEmail,
+    sessionDurationMs: config.sessionDurationMs,
+    sessionSecret: config.sessionSecret,
+  } satisfies AuthenticatedAccount
 }
 
-export function createAdminSessionToken(email: string, sessionDurationMs: number, sessionSecret: string) {
-  const payload: AdminSessionPayload = {
-    sub: 'admin',
-    email,
+export async function authenticateAccountCredentials(email: string, password: string) {
+  const adminAccount = await authenticateAdminCredentials(email, password)
+
+  if (adminAccount) {
+    return adminAccount
+  }
+
+  const sessionConfig = getSessionConfig()
+
+  if (!sessionConfig) {
+    return null
+  }
+
+  const clientAccount = await authenticateClientCredentials(email, password)
+
+  if (!clientAccount) {
+    return null
+  }
+
+  return {
+    role: 'client' as const,
+    email: clientAccount.email,
+    clientAccountId: clientAccount.id,
+    fullName: clientAccount.fullName,
+    sessionDurationMs: sessionConfig.sessionDurationMs,
+    sessionSecret: sessionConfig.sessionSecret,
+  } satisfies AuthenticatedAccount
+}
+
+export function createAccountSessionToken(
+  account: Pick<AuthenticatedAccount, 'role' | 'email' | 'clientAccountId' | 'fullName'>,
+  sessionDurationMs: number,
+  sessionSecret: string,
+) {
+  const payload: AccountSessionPayload = {
+    sub: 'account',
+    role: account.role,
+    email: account.email,
+    clientAccountId: account.clientAccountId,
+    fullName: account.fullName,
     exp: Date.now() + sessionDurationMs,
   }
 
@@ -156,10 +232,10 @@ export function createAdminSessionToken(email: string, sessionDurationMs: number
   return `${payloadSegment}.${signature}`
 }
 
-export function verifyAdminSessionToken(token: string): VerifiedAdminSession | null {
-  const config = getAdminAuthConfig()
+export function verifyAccountSessionToken(token: string): VerifiedAccountSession | null {
+  const sessionConfig = getSessionConfig()
 
-  if (!config) {
+  if (!sessionConfig) {
     return null
   }
 
@@ -169,16 +245,21 @@ export function verifyAdminSessionToken(token: string): VerifiedAdminSession | n
     return null
   }
 
-  const expectedSignature = createSignature(payloadSegment, config.sessionSecret)
+  const expectedSignature = createSignature(payloadSegment, sessionConfig.sessionSecret)
 
   if (!secureStringEquals(signature, expectedSignature)) {
     return null
   }
 
   try {
-    const payload = JSON.parse(base64UrlDecode(payloadSegment)) as AdminSessionPayload
+    const payload = JSON.parse(base64UrlDecode(payloadSegment)) as AccountSessionPayload
 
-    if (payload.sub !== 'admin' || typeof payload.email !== 'string' || typeof payload.exp !== 'number') {
+    if (
+      payload.sub !== 'account' ||
+      (payload.role !== 'admin' && payload.role !== 'client') ||
+      typeof payload.email !== 'string' ||
+      typeof payload.exp !== 'number'
+    ) {
       return null
     }
 
@@ -186,12 +267,23 @@ export function verifyAdminSessionToken(token: string): VerifiedAdminSession | n
       return null
     }
 
-    if (!hasConfiguredAdminEmail(config.emails, payload.email)) {
+    if (payload.role === 'admin') {
+      const config = getAdminAuthConfig()
+
+      if (!config || !hasConfiguredAdminEmail(config.emails, payload.email)) {
+        return null
+      }
+    }
+
+    if (payload.role === 'client' && typeof payload.clientAccountId !== 'string') {
       return null
     }
 
     return {
+      role: payload.role,
       email: payload.email,
+      clientAccountId: payload.clientAccountId || null,
+      fullName: payload.fullName || null,
       expiresAt: new Date(payload.exp).toISOString(),
     }
   } catch {

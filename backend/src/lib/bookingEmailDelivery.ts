@@ -10,7 +10,7 @@ import { updateBookingEmailStatus } from './bookingStore.js'
 export type BookingEmailOptions = {
   resendApiKey?: string
   fromEmail?: string
-  businessNotificationEmail?: string
+  businessNotificationEmails?: string[]
 }
 
 function getResultErrorMessage(result: PromiseSettledResult<{ error: { message?: string } | null }>) {
@@ -27,7 +27,12 @@ export async function sendBookingEmails(
   options: BookingEmailOptions,
 ) {
   try {
-    if (!options.resendApiKey || !options.fromEmail || !options.businessNotificationEmail) {
+    if (
+      !options.resendApiKey ||
+      !options.fromEmail ||
+      !options.businessNotificationEmails ||
+      options.businessNotificationEmails.length === 0
+    ) {
       const configurationMessage = 'Email delivery is not configured on the server.'
 
       await updateBookingEmailStatus(bookingId, {
@@ -52,7 +57,7 @@ export async function sendBookingEmails(
     const [adminResult, customerResult] = await Promise.allSettled([
       resend.emails.send({
         from: options.fromEmail,
-        to: options.businessNotificationEmail,
+        to: options.businessNotificationEmails,
         replyTo: booking.email,
         subject: adminEmail.subject,
         html: adminEmail.html,
@@ -61,7 +66,7 @@ export async function sendBookingEmails(
       resend.emails.send({
         from: options.fromEmail,
         to: booking.email,
-        replyTo: options.businessNotificationEmail,
+        replyTo: options.businessNotificationEmails,
         subject: customerEmail.subject,
         html: customerEmail.html,
         text: customerEmail.text,

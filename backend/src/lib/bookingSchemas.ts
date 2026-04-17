@@ -25,6 +25,49 @@ const optionalNotes = z
     value && value.trim().length > 0 ? normalizeMultilineText(value).slice(0, 1000) : '',
   )
 
+const optionalText = (max: number) =>
+  z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim().length > 0 ? normalizeText(value).slice(0, max) : ''))
+
+const optionalBoatLength = z.preprocess((value) => {
+  if (value === '' || value === null || value === undefined) {
+    return undefined
+  }
+
+  if (typeof value === 'number') {
+    return value
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : value
+}, z.number().min(1, 'Boat length must be at least 1 foot.').max(120, 'Boat length must be 120 feet or fewer.').optional())
+
+const optionalUuidField = z.string().uuid().optional().or(z.literal(''))
+
+const clientServiceSchema = z.object({
+  serviceName: requiredText('Service name', 120),
+  totalUnits: z.preprocess((value) => {
+    if (value === '' || value === null || value === undefined) {
+      return 0
+    }
+
+    if (typeof value === 'number') {
+      return value
+    }
+
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : value
+  }, z.number().int('Service quantities must be whole numbers.').min(0, 'Service quantities cannot be negative.').max(1000, 'Service quantities must be 1000 or fewer.')),
+  notes: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value && value.trim().length > 0 ? normalizeMultilineText(value).slice(0, 500) : '',
+    ),
+})
+
 export const publicBookingSchema = z.object({
   slotId: z.string().uuid('Please choose a valid time slot.'),
   fullName: requiredText('Full name', 80),
@@ -44,6 +87,30 @@ export const publicBookingSchema = z.object({
     .optional()
     .transform((value) => (value ? normalizeText(value) : ''))
     .refine((value) => value.length === 0, 'Invalid request.'),
+})
+
+export const clientBookingSchema = z.object({
+  slotId: z.string().uuid('Please choose a valid time slot.'),
+  serviceEntitlementId: optionalUuidField,
+  notes: optionalNotes,
+})
+
+export const clientProfileSchema = z.object({
+  fullName: requiredText('Full name', 80),
+  phone: z
+    .string()
+    .transform(normalizeText)
+    .pipe(
+      z
+        .string()
+        .min(1, 'Phone number is required.')
+        .refine((value) => phonePattern.test(value), 'Enter a valid phone number.'),
+    ),
+  boatName: optionalText(120),
+  boatMakeModel: optionalText(120),
+  boatLengthFeet: optionalBoatLength,
+  preferredLaunchLocation: z.enum(launchLocations),
+  notes: optionalNotes,
 })
 
 export const adminSlotSchema = z
@@ -83,6 +150,8 @@ export const adminSlotSchema = z
 
 export const adminBookingSchema = z.object({
   bookingId: z.string().uuid().optional(),
+  clientAccountId: optionalUuidField,
+  serviceEntitlementId: optionalUuidField,
   slotId: z.string().uuid('Choose a valid time slot.'),
   fullName: requiredText('Client name', 80),
   email: z.string().trim().email('Enter a valid email address.'),
@@ -99,6 +168,52 @@ export const adminBookingSchema = z.object({
   status: z.enum(bookingStatuses),
 })
 
+export const adminClientAccountSchema = z
+  .object({
+    clientId: z.string().uuid().optional(),
+    email: z.string().trim().email('Enter a valid email address.'),
+    password: z.string().trim().optional(),
+    fullName: requiredText('Client name', 80),
+    phone: z
+      .string()
+      .transform(normalizeText)
+      .pipe(
+        z
+          .string()
+          .min(1, 'Phone number is required.')
+          .refine((value) => phonePattern.test(value), 'Enter a valid phone number.'),
+      ),
+    boatName: optionalText(120),
+    boatMakeModel: optionalText(120),
+    boatLengthFeet: optionalBoatLength,
+    preferredLaunchLocation: z.enum(launchLocations),
+    notes: optionalNotes,
+    isActive: z.boolean().default(true),
+    services: z.array(clientServiceSchema).default([]),
+  })
+  .superRefine((value, context) => {
+    const password = value.password?.trim() || ''
+
+    if (!value.clientId && password.length < 8) {
+      context.addIssue({
+        code: 'custom',
+        path: ['password'],
+        message: 'Passwords must be at least 8 characters long.',
+      })
+    }
+
+    if (value.clientId && password.length > 0 && password.length < 8) {
+      context.addIssue({
+        code: 'custom',
+        path: ['password'],
+        message: 'If you set a new password, it must be at least 8 characters long.',
+      })
+    }
+  })
+
 export type PublicBookingInput = z.infer<typeof publicBookingSchema>
+export type ClientBookingInput = z.infer<typeof clientBookingSchema>
+export type ClientProfileInput = z.infer<typeof clientProfileSchema>
 export type AdminSlotInput = z.infer<typeof adminSlotSchema>
 export type AdminBookingInput = z.infer<typeof adminBookingSchema>
+export type AdminClientAccountInput = z.infer<typeof adminClientAccountSchema>

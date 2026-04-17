@@ -152,6 +152,23 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const [profileState, setProfileState] = useState<'idle' | 'saving'>('idle')
   const [profileMessage, setProfileMessage] = useState('')
 
+  function scrollToBookingComposer() {
+    document.getElementById('client-booking-composer')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
+  function beginReservation(serviceId?: string) {
+    if (serviceId) {
+      setSelectedServiceEntitlementId(serviceId)
+    }
+
+    setMessage('')
+    setConfirmationMessage('')
+    scrollToBookingComposer()
+  }
+
   function resetBookingComposer(nextPortal: ClientPortalResponse | null) {
     setEditingBookingId('')
     setSelectedSlotId(nextPortal?.availableSlots[0]?.id || '')
@@ -245,10 +262,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     setBookingNotes(booking.notes || '')
     setMessage('')
     setConfirmationMessage('')
-    document.getElementById('client-booking-composer')?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
+    scrollToBookingComposer()
   }
 
   function stopEditingBooking() {
@@ -447,10 +461,20 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 Your launch location, boat details, and contracted services stay on file so booking from a phone stays simple.
               </p>
             </div>
-            <button className="button-dark" type="button" onClick={() => void handleSignOut()}>
-              <LogOut className="h-4 w-4" />
-              Log Out
-            </button>
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="button-dark"
+                type="button"
+                onClick={() => beginReservation(selectedServiceEntitlementId)}
+              >
+                <ShipWheel className="h-4 w-4" />
+                Reserve a Time
+              </button>
+              <button className="button-dark" type="button" onClick={() => void handleSignOut()}>
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -517,10 +541,10 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
-                      Profile corrections
+                      Edit profile
                     </p>
                     <p className="mt-2 text-sm leading-7 text-slate">
-                      If anything on file needs correcting, you can update it here without contacting North Shore first.
+                      Update any account details here if something on file needs to change.
                     </p>
                   </div>
                   <button
@@ -533,7 +557,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                     }}
                   >
                     <PencilLine className="h-4 w-4" />
-                    {profileExpanded ? 'Close' : 'Edit My Info'}
+                    {profileExpanded ? 'Close Profile' : 'Edit Profile'}
                   </button>
                 </div>
 
@@ -650,7 +674,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                       onClick={() => void handleSaveProfile()}
                     >
                       <Save className="h-4 w-4" />
-                      {profileState === 'saving' ? 'Saving...' : 'Save My Info'}
+                      {profileState === 'saving' ? 'Saving...' : 'Save Profile'}
                     </button>
                   </div>
                 ) : null}
@@ -668,6 +692,18 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             <Sparkles className="h-5 w-5 text-lake" />
             <h3 className="text-2xl font-semibold text-ink">Contracted services</h3>
           </div>
+          <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm leading-7 text-slate">
+              Select the service you want to use, then reserve a date and time for it.
+            </p>
+            <button
+              className="button-dark w-full justify-center md:w-fit"
+              type="button"
+              onClick={() => beginReservation(selectedServiceEntitlementId)}
+            >
+              Reserve a Time
+            </button>
+          </div>
           <div className="mt-6 grid gap-4">
             {loading ? (
               <p className="text-sm text-slate">Loading your service balances...</p>
@@ -677,12 +713,9 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
               </p>
             ) : (
               portal.client.services.map((service) => (
-                <button
+                <div
                   key={service.id}
                   className={`rounded-3xl border px-5 py-5 text-left transition ${serviceCardClasses(service, selectedServiceEntitlementId)}`}
-                  disabled={service.remainingUnits === 0}
-                  type="button"
-                  onClick={() => setSelectedServiceEntitlementId(service.id)}
                 >
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -698,7 +731,30 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                       <span className="status-pill">{service.totalUnits} total</span>
                     </div>
                   </div>
-                </button>
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {service.id === selectedServiceEntitlementId ? (
+                      <span className="status-pill status-pill-active">Selected for booking</span>
+                    ) : (
+                      <span className="text-sm text-slate">Tap to select this service</span>
+                    )}
+                    <button
+                      className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                      disabled={service.remainingUnits === 0}
+                      type="button"
+                      onClick={() => setSelectedServiceEntitlementId(service.id)}
+                    >
+                      {service.id === selectedServiceEntitlementId ? 'Selected' : 'Select Service'}
+                    </button>
+                    <button
+                      className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                      disabled={service.remainingUnits === 0}
+                      type="button"
+                      onClick={() => beginReservation(service.id)}
+                    >
+                      Reserve This Service
+                    </button>
+                  </div>
+                </div>
               ))
             )}
           </div>
@@ -792,13 +848,13 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           <div className="flex items-center gap-3">
             <ShipWheel className="h-5 w-5 text-lake" />
             <h3 id="client-booking-composer" className="text-2xl font-semibold text-ink">
-              {editingBooking ? 'Reschedule your reservation' : 'Redeem a service'}
+              {editingBooking ? 'Modify your reservation' : 'Reserve a time'}
             </h3>
           </div>
           <p className="mt-4 text-base leading-8 text-slate">
             {editingBooking
               ? 'Adjust the date, time, add-ons, or notes for the reservation you already have on file.'
-              : 'Pick the contracted service you want to use, then choose a day and a time. Only reservations at least 24 hours out appear here.'}
+              : 'Pick the contracted service you want to use, then choose an available day and time. Reserved slots are automatically blocked so no one else can take the same booking time.'}
           </p>
 
           {editingBooking ? (

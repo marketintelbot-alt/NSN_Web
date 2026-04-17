@@ -1638,12 +1638,32 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 className="button-dark w-full justify-center md:w-fit"
                 type="button"
                 onClick={() => {
+                  startEditingClient(selectedClient)
                   applyClientToBookingForm(selectedClient)
                   setSelectedClientId(selectedClient.id)
                 }}
               >
                 Use This Client In Reservation Form
               </button>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                  type="button"
+                  onClick={() => startEditingClient(selectedClient)}
+                >
+                  Edit Full Client Profile
+                </button>
+                <button
+                  className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                  type="button"
+                  onClick={() => startEditingClient(selectedClient)}
+                >
+                  Add More Services
+                </button>
+              </div>
+              <p className="text-sm leading-7 text-slate">
+                From the admin profile composer you can update the full client record, adjust launch preferences, change login details, and add more contracted services at any time.
+              </p>
               {selectedClient.upcomingBookings.length > 0 ? (
                 <div className="grid gap-3">
                   {selectedClient.upcomingBookings.slice(0, 4).map((booking) => (

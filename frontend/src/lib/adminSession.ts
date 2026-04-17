@@ -2,6 +2,8 @@ import type { AccountSession } from '../types/booking'
 
 const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:4000'
+const apiUnavailableMessage =
+  'We could not reach the secure booking service. Please try again in a moment.'
 
 type AccountSessionResponse = {
   session?: AccountSession
@@ -21,18 +23,28 @@ export async function adminApiRequest<T>(path: string, options: RequestInit = {}
     headers.set('Content-Type', 'application/json')
   }
 
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    credentials: 'include',
-    headers,
-  })
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      ...options,
+      credentials: 'include',
+      headers,
+    })
 
-  const payload = (await response.json().catch(() => ({}))) as T & { message?: string }
+    const payload = (await response.json().catch(() => ({}))) as T & { message?: string }
 
-  return {
-    ok: response.ok,
-    status: response.status,
-    payload,
+    return {
+      ok: response.ok,
+      status: response.status,
+      payload,
+    }
+  } catch {
+    return {
+      ok: false,
+      status: 503,
+      payload: {
+        message: apiUnavailableMessage,
+      } as T & { message?: string },
+    }
   }
 }
 

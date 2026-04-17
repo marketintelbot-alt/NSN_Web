@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   CalendarClock,
@@ -142,6 +142,8 @@ function buildBookingSlotChoices(
 export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const [portal, setPortal] = useState<ClientPortalResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [refreshingPortal, setRefreshingPortal] = useState(false)
+  const [portalMessage, setPortalMessage] = useState('')
   const [message, setMessage] = useState('')
   const [editingBookingId, setEditingBookingId] = useState('')
   const [selectedSlotId, setSelectedSlotId] = useState('')
@@ -180,10 +182,43 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     setBookingNotes('')
   }
 
+  const loadPortal = useCallback(async () => {
+    setRefreshingPortal(true)
+
+    const response = await adminApiRequest<ClientPortalResponse>('/api/account/portal')
+    setRefreshingPortal(false)
+
+    if (response.status === 401) {
+      onSignedOut()
+      return null
+    }
+
+    if (!response.ok) {
+      setPortalMessage(
+        response.payload.message || 'Unable to refresh your saved booking details right now.',
+      )
+      return null
+    }
+
+    setPortalMessage('')
+    setPortal(response.payload)
+    setProfileForm(buildProfileForm(response.payload))
+    const nextBookingSlots = buildBookingSlotChoices(response.payload, editingBookingId)
+
+    setSelectedSlotId((current) =>
+      nextBookingSlots.find((slot) => slot.id === current)?.id || nextBookingSlots[0]?.id || '',
+    )
+    setSelectedServiceEntitlementId((current) =>
+      getDefaultServiceEntitlementId(response.payload, current),
+    )
+
+    return response.payload
+  }, [editingBookingId, onSignedOut])
+
   useEffect(() => {
     let isMounted = true
 
-    async function loadPortal() {
+    async function loadInitialPortal() {
       const response = await adminApiRequest<ClientPortalResponse>('/api/account/portal')
 
       if (!isMounted) {
@@ -198,17 +233,18 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       }
 
       if (!response.ok) {
-        setMessage(response.payload.message || 'Unable to load your account right now.')
+        setPortalMessage(response.payload.message || 'Unable to load your account right now.')
         return
       }
 
+      setPortalMessage('')
       setPortal(response.payload)
       setProfileForm(buildProfileForm(response.payload))
       setSelectedSlotId(response.payload.availableSlots[0]?.id || '')
       setSelectedServiceEntitlementId(getDefaultServiceEntitlementId(response.payload))
     }
 
-    void loadPortal()
+    void loadInitialPortal()
 
     return () => {
       isMounted = false
@@ -221,30 +257,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   }
 
   async function refreshPortal() {
-    const response = await adminApiRequest<ClientPortalResponse>('/api/account/portal')
-
-    if (response.status === 401) {
-      onSignedOut()
-      return
-    }
-
-    if (!response.ok) {
-      setMessage(response.payload.message || 'Unable to refresh your account right now.')
-      return
-    }
-
-    setPortal(response.payload)
-    setProfileForm(buildProfileForm(response.payload))
-    const nextBookingSlots = buildBookingSlotChoices(response.payload, editingBookingId)
-
-    setSelectedSlotId((current) =>
-      nextBookingSlots.find((slot) => slot.id === current)?.id || nextBookingSlots[0]?.id || '',
-    )
-    setSelectedServiceEntitlementId((current) =>
-      getDefaultServiceEntitlementId(response.payload, current),
-    )
-
-    return response.payload
+    return loadPortal()
   }
 
   function startEditingBooking(bookingId: string) {
@@ -315,6 +328,10 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     }
 
     if (!response.ok) {
+      if (response.status === 404 || response.status === 409) {
+        await refreshPortal()
+      }
+
       setMessage(response.payload.message || 'Unable to confirm your booking just now.')
       return
     }
@@ -449,6 +466,15 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   }, [bookingSlotChoices])
 
   const selectedSlot = bookingSlotChoices.find((slot) => slot.id === selectedSlotId) || null
+  const requiresServiceSelection = Boolean(
+    portal?.client.services.some((service) => service.remainingUnits > 0),
+  )
+  const bookingActionDisabled =
+    bookingState === 'submitting' ||
+    loading ||
+    refreshingPortal ||
+    !selectedSlotId ||
+    (requiresServiceSelection && !selectedServiceEntitlementId)
 
   return (
     <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr]">
@@ -550,7 +576,14 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             </div>
           ) : (
             <div className="mt-8 rounded-3xl border border-[#ead4bf] bg-[#fffaf4] px-5 py-5 text-sm text-[#6e4f38]">
-              {message || 'Unable to load your account right now.'}
+              <p>{portalMessage || 'Unable to load your account right now.'}</p>
+              <button
+                className="mt-4 rounded-full border border-[#caa27f] px-4 py-2 text-sm font-semibold text-[#6e4f38] transition hover:bg-white/70"
+                type="button"
+                onClick={() => window.location.reload()}
+              >
+                Retry Loading
+              </button>
             </div>
           )}
         </FadeIn>
@@ -563,11 +596,12 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p className="text-sm leading-7 text-slate">Choose the service you want to book.</p>
             <button
-              className="button-dark w-full justify-center md:w-fit"
+              className="button-dark w-full justify-center disabled:cursor-not-allowed disabled:opacity-60 md:w-fit"
               type="button"
+              disabled={loading || refreshingPortal || !portal}
               onClick={() => beginReservation(selectedServiceEntitlementId)}
             >
-              Reserve a Time
+              {loading ? 'Loading...' : refreshingPortal ? 'Refreshing...' : 'Reserve a Time'}
             </button>
           </div>
           <div className="mt-6 grid gap-4">
@@ -692,6 +726,21 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       </div>
 
       <div className="grid gap-6">
+        {portalMessage && portal ? (
+          <div className="rounded-3xl border border-[#ead4bf] bg-[#fffaf4] px-5 py-5 text-sm text-[#6e4f38]">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <p>{portalMessage}</p>
+              <button
+                className="rounded-full border border-[#caa27f] px-4 py-2 text-sm font-semibold text-[#6e4f38] transition hover:bg-white/70"
+                type="button"
+                onClick={() => void refreshPortal()}
+              >
+                {refreshingPortal ? 'Refreshing...' : 'Retry'}
+              </button>
+            </div>
+          </div>
+        ) : null}
+
         {message ? (
           <div className="rounded-3xl border border-[#ead4bf] bg-[#fffaf4] px-5 py-5 text-sm text-[#6e4f38]">
             {message}
@@ -893,11 +942,21 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           id="client-booking-composer"
           className="panel scroll-mt-36 p-6 md:scroll-mt-40 md:p-8"
         >
-          <div className="flex items-center gap-3">
-            <ShipWheel className="h-5 w-5 text-lake" />
-            <h3 className="text-2xl font-semibold text-ink">
-              {editingBooking ? 'Modify your reservation' : 'Reserve a time'}
-            </h3>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-center gap-3">
+              <ShipWheel className="h-5 w-5 text-lake" />
+              <h3 className="text-2xl font-semibold text-ink">
+                {editingBooking ? 'Modify your reservation' : 'Reserve a time'}
+              </h3>
+            </div>
+            <button
+              className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink transition hover:border-lake/40 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              disabled={loading || refreshingPortal}
+              onClick={() => void refreshPortal()}
+            >
+              {refreshingPortal ? 'Refreshing...' : 'Refresh Times'}
+            </button>
           </div>
           <p className="mt-4 text-base leading-8 text-slate">
             {editingBooking
@@ -945,7 +1004,15 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           <div className="mt-6 grid gap-5">
             {Object.entries(groupedSlots).length === 0 ? (
               <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
-                No booking times are open right now beyond the 24-hour notice window.
+                <p>No booking times are open right now beyond the 24-hour notice window.</p>
+                <button
+                  className="mt-4 rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink transition hover:border-lake/40 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                  type="button"
+                  disabled={loading || refreshingPortal}
+                  onClick={() => void refreshPortal()}
+                >
+                  {refreshingPortal ? 'Refreshing...' : 'Check Again'}
+                </button>
               </div>
             ) : (
               Object.entries(groupedSlots).map(([dateLabel, slots]) => (
@@ -1032,10 +1099,10 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           </label>
 
           <button
-            className="button-dark mt-6 w-full justify-center"
+            className="button-dark mt-6 w-full justify-center disabled:cursor-not-allowed disabled:opacity-60"
             type="button"
             onClick={() => void handleConfirmBooking()}
-            disabled={bookingState === 'submitting'}
+            disabled={bookingActionDisabled}
           >
             {bookingState === 'submitting'
               ? editingBooking

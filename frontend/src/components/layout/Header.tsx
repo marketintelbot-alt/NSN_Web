@@ -59,8 +59,8 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link className="button-primary hidden lg:inline-flex" to="/reserve-launch">
-              Book a Time
+            <Link className="button-primary hidden lg:inline-flex" to="/account">
+              Client Login
             </Link>
             <button
               aria-expanded={open}
@@ -92,10 +92,10 @@ export function Header() {
               ))}
               <Link
                 className="button-primary mt-2"
-                to="/reserve-launch"
+                to="/account"
                 onClick={() => setOpen(false)}
               >
-                Book a Time
+                Client Login
               </Link>
             </nav>
           </div>

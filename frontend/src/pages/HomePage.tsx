@@ -92,8 +92,8 @@ export function HomePage() {
               with calm, professional coordination.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link className="button-primary" to="/reserve-launch">
-                Book a Time
+              <Link className="button-primary" to="/account">
+                Client Login
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link className="button-secondary" to="/services">

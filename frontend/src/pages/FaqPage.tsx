@@ -41,8 +41,8 @@ export function FaqPage() {
       <CtaBanner
         title="Ready to book a time?"
         copy="If you see an available slot that works, move directly to the booking page and confirm it online."
-        primaryLabel="Book a Time"
-        primaryTo="/reserve-launch"
+        primaryLabel="Client Login"
+        primaryTo="/account"
       />
     </>
   )

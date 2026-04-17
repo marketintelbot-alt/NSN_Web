@@ -155,8 +155,8 @@ export function ServicesPage() {
       <CtaBanner
         title="Need scheduled launch delivery?"
         copy="If your boat is already stored with North Shore Nautical and you see a time that works, book it online and receive confirmation right away."
-        primaryLabel="Book a Time"
-        primaryTo="/reserve-launch"
+        primaryLabel="Client Login"
+        primaryTo="/account"
         secondaryLabel="View Storage Service"
         secondaryTo="/storage"
       />

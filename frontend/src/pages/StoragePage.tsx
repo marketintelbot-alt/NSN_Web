@@ -23,7 +23,7 @@ export function StoragePage() {
 
       <section className="section-pad">
         <div className="container grid gap-12 lg:grid-cols-[0.92fr_1.08fr]">
-          <FadeIn>
+          <FadeIn className="panel self-start p-8 md:p-10">
             <SectionIntro
               label="Overview"
               title="Professionally managed from intake through launch planning."

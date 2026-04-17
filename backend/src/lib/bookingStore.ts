@@ -38,6 +38,7 @@ type StoredBookingRow = {
   client_account_id: string | null
   service_entitlement_id: string | null
   service_name: string | null
+  add_on_services: string[] | null
   full_name: string
   email: string
   phone: string
@@ -73,6 +74,7 @@ export type AdminBooking = {
   clientAccountId: string | null
   serviceEntitlementId: string | null
   serviceName: string | null
+  addOnServices: string[]
   fullName: string
   email: string
   phone: string
@@ -146,6 +148,7 @@ function normalizeBookingRow(booking: StoredBookingRow): AdminBooking {
     clientAccountId: booking.client_account_id || null,
     serviceEntitlementId: booking.service_entitlement_id || null,
     serviceName: booking.service_name || null,
+    addOnServices: booking.add_on_services || [],
     fullName: booking.full_name,
     email: booking.email,
     phone: booking.phone,
@@ -535,6 +538,7 @@ export async function createClientBooking(clientAccount: ClientAccount, input: C
       client_account_id: clientAccount.id,
       service_entitlement_id: serviceSelection.serviceEntitlementId,
       service_name: serviceSelection.serviceName,
+      add_on_services: input.addOnServices,
       full_name: clientAccount.fullName,
       email: clientAccount.email,
       phone: clientAccount.phone,
@@ -653,6 +657,7 @@ export async function createAdminBooking(input: AdminBookingInput) {
       client_account_id: clientAccountId,
       service_entitlement_id: serviceSelection.serviceEntitlementId,
       service_name: serviceSelection.serviceName,
+      add_on_services: input.addOnServices,
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,
@@ -716,6 +721,7 @@ export async function updateAdminBooking(bookingId: string, input: AdminBookingI
       client_account_id: clientAccountId,
       service_entitlement_id: serviceSelection.serviceEntitlementId,
       service_name: serviceSelection.serviceName,
+      add_on_services: input.addOnServices,
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,

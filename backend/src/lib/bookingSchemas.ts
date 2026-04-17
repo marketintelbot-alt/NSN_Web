@@ -68,6 +68,21 @@ const clientServiceSchema = z.object({
     ),
 })
 
+const addOnServicesSchema = z
+  .array(
+    z
+      .string()
+      .transform(normalizeText)
+      .pipe(z.string().min(1).max(120, 'Add-on services must be 120 characters or fewer.')),
+  )
+  .max(12, 'Choose 12 add-on services or fewer.')
+  .default([])
+  .transform((services) =>
+    services.filter(
+      (service, index) => services.findIndex((candidate) => candidate === service) === index,
+    ),
+  )
+
 export const publicBookingSchema = z.object({
   slotId: z.string().uuid('Please choose a valid time slot.'),
   fullName: requiredText('Full name', 80),
@@ -92,6 +107,7 @@ export const publicBookingSchema = z.object({
 export const clientBookingSchema = z.object({
   slotId: z.string().uuid('Please choose a valid time slot.'),
   serviceEntitlementId: optionalUuidField,
+  addOnServices: addOnServicesSchema,
   notes: optionalNotes,
 })
 
@@ -152,6 +168,7 @@ export const adminBookingSchema = z.object({
   bookingId: z.string().uuid().optional(),
   clientAccountId: optionalUuidField,
   serviceEntitlementId: optionalUuidField,
+  addOnServices: addOnServicesSchema,
   slotId: z.string().uuid('Choose a valid time slot.'),
   fullName: requiredText('Client name', 80),
   email: z.string().trim().email('Enter a valid email address.'),

@@ -49,6 +49,9 @@ export function createBusinessNotificationEmail(booking: AdminBooking) {
     ['Booked Time', formattedLaunchTime],
     ['Launch Location', booking.slot.launchLocation],
     ...(booking.serviceName ? [['Reserved Service', booking.serviceName]] : []),
+    ...(booking.addOnServices.length > 0
+      ? [['A La Carte Services', booking.addOnServices.join(', ')]]
+      : []),
     [
       'Booking Source',
       booking.createdBy === 'admin'
@@ -96,7 +99,7 @@ export function createCustomerConfirmationEmail(booking: AdminBooking) {
         <p style="margin:12px 0 0;color:#516474;font-size:14px;line-height:1.8;">
           Time: <strong style="color:#06131f;">${escapeHtml(formattedLaunchTime)}</strong><br />
           Launch Location: <strong style="color:#06131f;">${escapeHtml(booking.slot.launchLocation)}</strong><br />
-          Reserved For: <strong style="color:#06131f;">${escapeHtml(booking.fullName)}</strong>${booking.serviceName ? `<br />Service Reserved: <strong style="color:#06131f;">${escapeHtml(booking.serviceName)}</strong>` : ''}
+          Reserved For: <strong style="color:#06131f;">${escapeHtml(booking.fullName)}</strong>${booking.serviceName ? `<br />Service Reserved: <strong style="color:#06131f;">${escapeHtml(booking.serviceName)}</strong>` : ''}${booking.addOnServices.length > 0 ? `<br />A La Carte Services: <strong style="color:#06131f;">${escapeHtml(booking.addOnServices.join(', '))}</strong>` : ''}
         </p>
       </div>
       <p style="margin:24px 0 0;color:#516474;font-size:14px;line-height:1.8;">
@@ -112,6 +115,9 @@ export function createCustomerConfirmationEmail(booking: AdminBooking) {
     `Booked time: ${formattedLaunchTime}`,
     `Launch location: ${booking.slot.launchLocation}`,
     ...(booking.serviceName ? [`Reserved service: ${booking.serviceName}`] : []),
+    ...(booking.addOnServices.length > 0
+      ? [`A la carte services: ${booking.addOnServices.join(', ')}`]
+      : []),
     'Your reservation is confirmed and on file with North Shore Nautical.',
     'Reply to this email if anything needs to change.',
   ].join('\n')

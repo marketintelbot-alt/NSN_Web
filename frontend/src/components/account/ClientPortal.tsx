@@ -17,6 +17,7 @@ import {
   destroyAccountSession,
   type AccountSession,
 } from '../../lib/adminSession'
+import { serviceMenuSections } from '../../content/site'
 import {
   formatSlotDate,
   formatSlotDateTime,
@@ -83,12 +84,26 @@ function serviceCardClasses(service: ClientServiceEntitlement, selectedId: strin
   return 'border-ink/10 bg-white hover:border-lake/40'
 }
 
+const addOnServiceOptions = serviceMenuSections
+  .filter(
+    (section) =>
+      section.title.includes('A La Carte') || section.title.includes('Specialty & Add-On'),
+  )
+  .flatMap((section) => section.items)
+
+function toggleAddOnSelection(current: string[], addOnService: string) {
+  return current.includes(addOnService)
+    ? current.filter((item) => item !== addOnService)
+    : [...current, addOnService]
+}
+
 export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const [portal, setPortal] = useState<ClientPortalResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [selectedSlotId, setSelectedSlotId] = useState('')
   const [selectedServiceEntitlementId, setSelectedServiceEntitlementId] = useState('')
+  const [selectedAddOnServices, setSelectedAddOnServices] = useState<string[]>([])
   const [bookingNotes, setBookingNotes] = useState('')
   const [bookingState, setBookingState] = useState<'idle' | 'submitting'>('idle')
   const [confirmationMessage, setConfirmationMessage] = useState('')
@@ -171,6 +186,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       firstRedeemableService?.id ||
       '',
     )
+    setSelectedAddOnServices([])
   }
 
   async function handleConfirmBooking() {
@@ -198,6 +214,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
         body: JSON.stringify({
           slotId: selectedSlotId,
           serviceEntitlementId: selectedServiceEntitlementId,
+          addOnServices: selectedAddOnServices,
           notes: bookingNotes,
         }),
       },
@@ -222,10 +239,11 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
 
     setConfirmationMessage(
       confirmedSlot
-        ? `${selectedService ? `${selectedService.serviceName} reserved for ` : ''}${formatSlotDateTime(confirmedSlot.startsAt)}.`
+        ? `${selectedService ? `${selectedService.serviceName} reserved for ` : ''}${formatSlotDateTime(confirmedSlot.startsAt)}${selectedAddOnServices.length > 0 ? ` with ${selectedAddOnServices.join(', ')}` : ''}.`
         : 'Your reservation is confirmed and on file.',
     )
     setBookingNotes('')
+    setSelectedAddOnServices([])
     await refreshPortal()
   }
 
@@ -547,6 +565,11 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                   {booking.serviceName ? (
                     <p className="text-sm leading-7 text-slate">Service: {booking.serviceName}</p>
                   ) : null}
+                  {booking.addOnServices.length > 0 ? (
+                    <p className="text-sm leading-7 text-slate">
+                      A la carte: {booking.addOnServices.join(', ')}
+                    </p>
+                  ) : null}
                   {booking.notes ? (
                     <p className="mt-2 text-sm leading-7 text-slate">{booking.notes}</p>
                   ) : null}
@@ -627,6 +650,44 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             ))}
           </div>
 
+          <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f8fbfc] px-5 py-5">
+            <div className="flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-lake" />
+              <div>
+                <p className="text-lg font-semibold text-ink">A la carte add-ons</p>
+                <p className="text-sm leading-7 text-slate">
+                  Add any extra services you want included with this reservation.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {addOnServiceOptions.map((addOnService) => {
+                const selected = selectedAddOnServices.includes(addOnService)
+
+                return (
+                  <button
+                    key={addOnService}
+                    className={`rounded-3xl border px-4 py-4 text-left transition ${
+                      selected ? 'border-lake bg-lake/10' : 'border-ink/10 bg-white hover:border-lake/30'
+                    }`}
+                    type="button"
+                    onClick={() =>
+                      setSelectedAddOnServices((current) =>
+                        toggleAddOnSelection(current, addOnService),
+                      )
+                    }
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-sm font-semibold leading-7 text-ink">{addOnService}</span>
+                      {selected ? <CheckCircle2 className="h-5 w-5 shrink-0 text-lake" /> : null}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <label className="field-label mt-6">
             Reservation notes
             <textarea
@@ -672,6 +733,11 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                   </div>
                   {booking.serviceName ? (
                     <p className="mt-2 text-sm leading-7 text-slate">Service: {booking.serviceName}</p>
+                  ) : null}
+                  {booking.addOnServices.length > 0 ? (
+                    <p className="mt-2 text-sm leading-7 text-slate">
+                      A la carte: {booking.addOnServices.join(', ')}
+                    </p>
                   ) : null}
                   {booking.notes ? (
                     <p className="mt-2 text-sm leading-7 text-slate">{booking.notes}</p>

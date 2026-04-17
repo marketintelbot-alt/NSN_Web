@@ -82,6 +82,7 @@ create table if not exists public.launch_bookings (
   client_account_id uuid references public.client_accounts (id) on delete set null,
   service_entitlement_id uuid references public.client_service_entitlements (id) on delete set null,
   service_name varchar(120),
+  add_on_services text[] not null default '{}',
   full_name varchar(80) not null,
   email varchar(255) not null,
   phone varchar(30) not null,
@@ -132,6 +133,9 @@ alter table public.launch_bookings
 
 alter table public.launch_bookings
   add column if not exists service_name varchar(120);
+
+alter table public.launch_bookings
+  add column if not exists add_on_services text[] not null default '{}';
 
 alter table public.booking_slots enable row level security;
 alter table public.client_accounts enable row level security;

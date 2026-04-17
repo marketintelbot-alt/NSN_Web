@@ -59,6 +59,7 @@ export type AdminBooking = {
   clientAccountId: string | null
   serviceEntitlementId: string | null
   serviceName: string | null
+  addOnServices: string[]
   fullName: string
   email: string
   phone: string

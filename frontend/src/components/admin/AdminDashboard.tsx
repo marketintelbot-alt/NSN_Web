@@ -21,6 +21,7 @@ import {
   destroyAccountSession,
   type AccountSession,
 } from '../../lib/adminSession'
+import { serviceMenuSections } from '../../content/site'
 import { formatSlotDateTime } from '../../lib/reservation'
 import type {
   AdminBooking,
@@ -51,6 +52,7 @@ type BookingFormState = {
   bookingId: string
   clientAccountId: string
   serviceEntitlementId: string
+  addOnServices: string[]
   slotId: string
   fullName: string
   email: string
@@ -103,6 +105,7 @@ function emptyBookingForm(): BookingFormState {
     bookingId: '',
     clientAccountId: '',
     serviceEntitlementId: '',
+    addOnServices: [],
     slotId: '',
     fullName: '',
     email: '',
@@ -217,6 +220,19 @@ function statusLabel(status: BookingStatus) {
 
 function serviceOptionLabel(service: ClientServiceEntitlement) {
   return `${service.serviceName} · ${service.remainingUnits} remaining`
+}
+
+const addOnServiceOptions = serviceMenuSections
+  .filter(
+    (section) =>
+      section.title.includes('A La Carte') || section.title.includes('Specialty & Add-On'),
+  )
+  .flatMap((section) => section.items)
+
+function toggleAddOnSelection(current: string[], addOnService: string) {
+  return current.includes(addOnService)
+    ? current.filter((item) => item !== addOnService)
+    : [...current, addOnService]
 }
 
 export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardProps) {
@@ -457,6 +473,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
       bookingId: booking.id,
       clientAccountId: booking.clientAccountId || '',
       serviceEntitlementId: booking.serviceEntitlementId || '',
+      addOnServices: booking.addOnServices,
       slotId: booking.slotId,
       fullName: booking.fullName,
       email: booking.email,
@@ -469,9 +486,10 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
   function applyClientToBookingForm(client: ClientAccount) {
     setBookingForm((current) => ({
       ...current,
-      clientAccountId: client.id,
-      serviceEntitlementId:
-        client.services.find((service) => service.remainingUnits > 0)?.id || current.serviceEntitlementId,
+        clientAccountId: client.id,
+        serviceEntitlementId:
+          client.services.find((service) => service.remainingUnits > 0)?.id || current.serviceEntitlementId,
+      addOnServices: current.addOnServices,
       fullName: client.fullName,
       email: client.email,
       phone: client.phone,
@@ -579,6 +597,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
       body: JSON.stringify({
         clientAccountId: bookingForm.clientAccountId,
         serviceEntitlementId: bookingForm.serviceEntitlementId,
+        addOnServices: bookingForm.addOnServices,
         slotId: bookingForm.slotId,
         fullName: bookingForm.fullName,
         email: bookingForm.email,
@@ -1004,6 +1023,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                     ...current,
                     clientAccountId: nextClientId,
                     serviceEntitlementId: '',
+                    addOnServices: current.addOnServices,
                   }))
 
                   if (nextClient) {
@@ -1091,6 +1111,51 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 ))}
               </select>
             </label>
+
+            <div className="rounded-3xl border border-ink/10 bg-[#f8fbfc] px-5 py-5">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-lake" />
+                <div>
+                  <p className="text-lg font-semibold text-ink">A la carte add-ons</p>
+                  <p className="text-sm leading-7 text-slate">
+                    Attach extra services the client requested with this reservation.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {addOnServiceOptions.map((addOnService) => {
+                  const selected = bookingForm.addOnServices.includes(addOnService)
+
+                  return (
+                    <button
+                      key={addOnService}
+                      className={`rounded-3xl border px-4 py-4 text-left transition ${
+                        selected
+                          ? 'border-lake bg-lake/10'
+                          : 'border-ink/10 bg-white hover:border-lake/30'
+                      }`}
+                      type="button"
+                      onClick={() =>
+                        setBookingForm((current) => ({
+                          ...current,
+                          addOnServices: toggleAddOnSelection(current.addOnServices, addOnService),
+                        }))
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="text-sm font-semibold leading-7 text-ink">
+                          {addOnService}
+                        </span>
+                        {selected ? (
+                          <CheckCircle2 className="h-5 w-5 shrink-0 text-lake" />
+                        ) : null}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
             <label className="field-label">
               Date / time slot
@@ -1388,6 +1453,11 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                           Service reserved: {booking.serviceName}
                         </p>
                       ) : null}
+                      {booking.addOnServices.length > 0 ? (
+                        <p className="text-sm leading-7 text-slate">
+                          A la carte: {booking.addOnServices.join(', ')}
+                        </p>
+                      ) : null}
                       {booking.notes ? (
                         <p className="mt-2 text-sm leading-7 text-slate">{booking.notes}</p>
                       ) : null}
@@ -1467,6 +1537,11 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                       </p>
                       {booking.serviceName ? (
                         <p className="text-sm leading-7 text-slate">{booking.serviceName}</p>
+                      ) : null}
+                      {booking.addOnServices.length > 0 ? (
+                        <p className="text-sm leading-7 text-slate">
+                          {booking.addOnServices.join(', ')}
+                        </p>
                       ) : null}
                     </div>
                   ))}

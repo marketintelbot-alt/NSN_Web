@@ -75,7 +75,7 @@ function App() {
           <Route element={<FaqPage />} path="/faq" />
           <Route element={<ContactPage />} path="/contact" />
           <Route element={<AdminPage />} path="/admin" />
-          <Route element={<Navigate replace to="/admin" />} path="/account" />
+          <Route element={<AdminPage />} path="/account" />
           <Route element={<PrivacyPolicyPage />} path="/privacy-policy" />
           <Route element={<TermsOfServicePage />} path="/terms-of-service" />
           <Route element={<NotFoundPage />} path="*" />

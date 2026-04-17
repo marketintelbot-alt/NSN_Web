@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { LockKeyhole, ShieldCheck } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 
 import { AdminDashboard } from '../components/admin/AdminDashboard'
 import { Seo } from '../components/seo/Seo'
@@ -9,6 +10,7 @@ import { PageHero } from '../components/ui/PageHero'
 import { createAdminSession, readAdminSession, type AdminSession } from '../lib/adminSession'
 
 export function AdminPage() {
+  const location = useLocation()
   const [session, setSession] = useState<AdminSession | null>(null)
   const [loading, setLoading] = useState(true)
   const [email, setEmail] = useState('')
@@ -49,21 +51,32 @@ export function AdminPage() {
   return (
     <>
       <Seo
-        title="Admin Dashboard"
-        description="Secure booking administration for North Shore Nautical."
-        path="/admin"
+        title={session ? 'Admin Dashboard' : 'Client Login'}
+        description={
+          session
+            ? 'Secure booking administration for North Shore Nautical.'
+            : 'Secure client login for North Shore Nautical.'
+        }
+        path={location.pathname === '/admin' ? '/admin' : '/account'}
         noIndex
       />
       <PageHero
-        eyebrow="Admin"
-        title="Secure booking control for North Shore Nautical."
-        description="Manage open time slots, bookings, and confirmation-email reliability from one protected dashboard."
+        eyebrow={session ? 'Admin Access' : 'Client Login'}
+        title={
+          session
+            ? 'Secure booking control for North Shore Nautical.'
+            : 'Secure access for North Shore Nautical clients.'
+        }
+        description={
+          session
+            ? 'Manage open time slots, bookings, and confirmation-email reliability from one protected dashboard.'
+            : 'Use your North Shore Nautical login to access your account securely.'
+        }
       >
         <div className="inline-flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
           <span>
-            Admin access is protected with environment-configured credentials and secure
-            cookie-based sessions.
+            Access is protected with secure, cookie-based sessions and environment-managed credentials.
           </span>
         </div>
       </PageHero>
@@ -72,7 +85,7 @@ export function AdminPage() {
         <div className="container">
           {loading ? (
             <FadeIn className="panel max-w-3xl p-8">
-              <p className="text-base leading-8 text-slate">Loading secure admin access...</p>
+              <p className="text-base leading-8 text-slate">Loading secure account access...</p>
             </FadeIn>
           ) : session ? (
             <AdminDashboard adminSession={session} onSignedOut={() => setSession(null)} />
@@ -81,11 +94,10 @@ export function AdminPage() {
               <FadeIn className="panel p-8">
                 <div className="flex items-center gap-3">
                   <LockKeyhole className="h-5 w-5 text-lake" />
-                  <h2 className="section-title text-3xl">Admin sign in</h2>
+                  <h2 className="section-title text-3xl">Client login</h2>
                 </div>
                 <p className="mt-4 text-base leading-8 text-slate">
-                  Use the single admin account configured on the server to manage bookings,
-                  available times, and email delivery.
+                  Sign in with your North Shore Nautical account credentials to continue.
                 </p>
 
                 <form className="mt-8 grid gap-5" onSubmit={handleSubmit}>
@@ -125,19 +137,19 @@ export function AdminPage() {
               <div className="grid gap-5">
                 {[
                   {
-                    title: 'Open and close time slots fast',
+                    title: 'Secure access',
                     copy:
-                      'Update availability in one place so clients only ever see bookable times.',
+                      'Account access is protected with secure sessions and server-managed credentials.',
                   },
                   {
-                    title: 'Confirmations are tracked for you',
+                    title: 'Booking details stay in one place',
                     copy:
-                      'Every booking keeps customer and internal email status visible for quick operational follow-up.',
+                      'Once authenticated, the system can surface account-specific booking and scheduling tools.',
                   },
                   {
-                    title: 'Manual bookings stay simple',
+                    title: 'Administrative tools appear after sign-in',
                     copy:
-                      'Create or edit bookings directly when a client calls, texts, or needs help.',
+                      'The elevated control panel is only shown after a successful authenticated login.',
                   },
                 ].map((item, index) => (
                   <FadeIn key={item.title} className="soft-panel p-7" delay={index * 0.08}>

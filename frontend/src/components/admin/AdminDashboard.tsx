@@ -60,6 +60,7 @@ type BookingFormState = {
 }
 
 type ServiceFormState = {
+  id: string
   serviceName: string
   totalUnits: string
   notes: string
@@ -111,6 +112,16 @@ function emptyBookingForm(): BookingFormState {
   }
 }
 
+function createServiceFormRow(overrides: Partial<Omit<ServiceFormState, 'id'>> = {}): ServiceFormState {
+  return {
+    id: `service-${Math.random().toString(36).slice(2, 10)}`,
+    serviceName: '',
+    totalUnits: '',
+    notes: '',
+    ...overrides,
+  }
+}
+
 function emptyClientForm(): ClientFormState {
   return {
     clientId: '',
@@ -124,13 +135,7 @@ function emptyClientForm(): ClientFormState {
     preferredLaunchLocation: launchLocations[0],
     notes: '',
     isActive: true,
-    services: [
-      {
-        serviceName: '',
-        totalUnits: '',
-        notes: '',
-      },
-    ],
+    services: [createServiceFormRow()],
   }
 }
 
@@ -394,7 +399,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
       isActive: client.isActive,
       services:
         client.services.length > 0
-          ? client.services.map((service) => ({
+          ? client.services.map((service) => createServiceFormRow({
               serviceName: service.serviceName,
               totalUnits: String(service.totalUnits),
               notes: service.notes || '',
@@ -407,34 +412,42 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
   function addServiceRow() {
     setClientForm((current) => ({
       ...current,
-      services: [
-        ...current.services,
-        {
-          serviceName: '',
-          totalUnits: '',
-          notes: '',
-        },
-      ],
+      services: [...current.services, createServiceFormRow()],
     }))
   }
 
-  function updateServiceRow(index: number, field: keyof ServiceFormState, value: string) {
+  function updateServiceRow(serviceId: string, field: keyof Omit<ServiceFormState, 'id'>, value: string) {
     setClientForm((current) => ({
       ...current,
-      services: current.services.map((service, serviceIndex) =>
-        serviceIndex === index ? { ...service, [field]: value } : service,
+      services: current.services.map((service) =>
+        service.id === serviceId ? { ...service, [field]: value } : service,
       ),
     }))
   }
 
-  function removeServiceRow(index: number) {
+  function removeServiceRow(serviceId: string) {
     setClientForm((current) => ({
       ...current,
       services:
         current.services.length === 1
-          ? emptyClientForm().services
-          : current.services.filter((_, serviceIndex) => serviceIndex !== index),
+          ? [createServiceFormRow()]
+          : current.services.filter((service) => service.id !== serviceId),
     }))
+  }
+
+  function findExistingClientByEmail(email: string, currentClientId = '') {
+    const normalizedEmail = email.trim().toLowerCase()
+
+    if (!normalizedEmail) {
+      return null
+    }
+
+    return (
+      dashboard.clients.find(
+        (client) =>
+          client.email.trim().toLowerCase() === normalizedEmail && client.id !== currentClientId,
+      ) || null
+    )
   }
 
   function startEditingBooking(booking: AdminBooking) {
@@ -481,9 +494,22 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
     setSavingState('saving')
     setDashboardMessage('')
 
-    const path = clientForm.clientId ? `/api/admin/clients/${clientForm.clientId}` : '/api/admin/clients'
+    const existingClient = findExistingClientByEmail(clientForm.email, clientForm.clientId)
+
+    if (existingClient) {
+      setSavingState('idle')
+      startEditingClient(existingClient)
+      setDashboardMessage(
+        'A client profile already exists for that email. The saved profile is open now so you can review or edit it instead of creating a duplicate.',
+      )
+      return
+    }
+
+    const path = clientForm.clientId
+      ? `/api/admin/clients/${clientForm.clientId}`
+      : '/api/admin/clients'
     const method = clientForm.clientId ? 'PUT' : 'POST'
-    const response = await adminApiRequest<{ message?: string }>(path, {
+    const response = await adminApiRequest<{ message?: string; client?: ClientAccount }>(path, {
       method,
       body: JSON.stringify({
         email: clientForm.email,
@@ -503,13 +529,38 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
     setSavingState('idle')
 
     if (!response.ok) {
+      const matchedExistingClient = findExistingClientByEmail(clientForm.email, clientForm.clientId)
+
+      if (
+        response.payload.message?.toLowerCase().includes('already exists') &&
+        matchedExistingClient
+      ) {
+        startEditingClient(matchedExistingClient)
+      }
+
       setDashboardMessage(response.payload.message || 'Unable to save the client profile.')
       return
     }
 
-    setDashboardMessage(clientForm.clientId ? 'Client profile updated.' : 'Client profile created.')
-    setClientForm(emptyClientForm())
-    setSelectedClientId('')
+    const savedClient = response.payload.client || null
+
+    if (savedClient) {
+      setDashboard((current) => ({
+        ...current,
+        clients: current.clients.some((client) => client.id === savedClient.id)
+          ? current.clients.map((client) => (client.id === savedClient.id ? savedClient : client))
+          : [...current.clients, savedClient].sort((left, right) =>
+              left.fullName.localeCompare(right.fullName),
+            ),
+      }))
+      startEditingClient(savedClient)
+    }
+
+    setDashboardMessage(
+      clientForm.clientId
+        ? `Client profile updated and saved to the admin portal. ${savedClient?.fullName || 'This client'} can use their email and password to sign in.`
+        : `Client profile created and saved. ${savedClient?.fullName || 'This client'} now has their own client login account.`,
+    )
     setDashboardLoading(true)
     await loadDashboard()
   }
@@ -855,8 +906,8 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
               </div>
 
               <div className="mt-5 grid gap-4">
-                {clientForm.services.map((service, index) => (
-                  <div key={`${service.serviceName}-${index}`} className="rounded-3xl border border-ink/10 bg-white px-4 py-4">
+                {clientForm.services.map((service) => (
+                  <div key={service.id} className="rounded-3xl border border-ink/10 bg-white px-4 py-4">
                     <div className="grid gap-4 md:grid-cols-[1.2fr_0.45fr_1fr_auto]">
                       <label className="field-label">
                         Service name
@@ -865,7 +916,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                           placeholder="Quick Reset"
                           value={service.serviceName}
                           onChange={(event) =>
-                            updateServiceRow(index, 'serviceName', event.target.value)
+                            updateServiceRow(service.id, 'serviceName', event.target.value)
                           }
                         />
                       </label>
@@ -877,7 +928,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                           placeholder="12"
                           value={service.totalUnits}
                           onChange={(event) =>
-                            updateServiceRow(index, 'totalUnits', event.target.value)
+                            updateServiceRow(service.id, 'totalUnits', event.target.value)
                           }
                         />
                       </label>
@@ -887,14 +938,16 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                           className="input-field"
                           placeholder="Optional contract note"
                           value={service.notes}
-                          onChange={(event) => updateServiceRow(index, 'notes', event.target.value)}
+                          onChange={(event) =>
+                            updateServiceRow(service.id, 'notes', event.target.value)
+                          }
                         />
                       </label>
                       <div className="flex items-end">
                         <button
                           className="rounded-full border border-ink/10 px-4 py-3 text-sm font-semibold text-ink"
                           type="button"
-                          onClick={() => removeServiceRow(index)}
+                          onClick={() => removeServiceRow(service.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                           Remove

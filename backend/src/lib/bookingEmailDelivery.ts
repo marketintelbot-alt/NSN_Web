@@ -2,10 +2,12 @@ import { Resend } from 'resend'
 
 import type { AdminBooking } from './bookingStore.js'
 import {
+  createBusinessReminderEmail,
   createBusinessNotificationEmail,
   createCustomerConfirmationEmail,
+  createCustomerReminderEmail,
 } from './emailTemplates.js'
-import { updateBookingEmailStatus } from './bookingStore.js'
+import { updateBookingEmailStatus, updateBookingReminderStatus } from './bookingStore.js'
 
 export type BookingEmailOptions = {
   resendApiKey?: string
@@ -114,6 +116,91 @@ export async function sendBookingEmails(
     console.error('Booking email delivery crashed.', {
       bookingId,
       error: failureMessage,
+    })
+  }
+}
+
+export async function sendDueBookingReminderEmails(
+  bookingId: string,
+  booking: AdminBooking,
+  options: BookingEmailOptions,
+) {
+  try {
+    if (
+      !options.resendApiKey ||
+      !options.fromEmail ||
+      !options.businessNotificationEmails ||
+      options.businessNotificationEmails.length === 0
+    ) {
+      console.error('Reminder email delivery skipped.', {
+        bookingId,
+        reason: 'Email delivery is not configured on the server.',
+      })
+      return
+    }
+
+    const resend = new Resend(options.resendApiKey)
+    const adminEmail = createBusinessReminderEmail(booking)
+    const customerEmail = createCustomerReminderEmail(booking)
+    const nowIso = new Date().toISOString()
+
+    const adminResult = booking.reminderAdminSentAt
+      ? ({ status: 'fulfilled', value: { error: null } } satisfies PromiseFulfilledResult<{
+          error: { message?: string } | null
+        }>)
+      : await Promise.resolve(
+          resend.emails.send({
+            from: options.fromEmail,
+            to: options.businessNotificationEmails,
+            replyTo: booking.email,
+            subject: adminEmail.subject,
+            html: adminEmail.html,
+            text: adminEmail.text,
+          }),
+        ).then(
+          (value) => ({ status: 'fulfilled', value }) as const,
+          (reason) => ({ status: 'rejected', reason }) as const,
+        )
+
+    const customerResult = booking.reminderCustomerSentAt
+      ? ({ status: 'fulfilled', value: { error: null } } satisfies PromiseFulfilledResult<{
+          error: { message?: string } | null
+        }>)
+      : await Promise.resolve(
+          resend.emails.send({
+            from: options.fromEmail,
+            to: booking.email,
+            replyTo: options.businessNotificationEmails,
+            subject: customerEmail.subject,
+            html: customerEmail.html,
+            text: customerEmail.text,
+          }),
+        ).then(
+          (value) => ({ status: 'fulfilled', value }) as const,
+          (reason) => ({ status: 'rejected', reason }) as const,
+        )
+
+    const adminError = getResultErrorMessage(adminResult)
+    const customerError = getResultErrorMessage(customerResult)
+
+    await updateBookingReminderStatus(bookingId, {
+      reminderAdminSentAt: adminError ? booking.reminderAdminSentAt : booking.reminderAdminSentAt || nowIso,
+      reminderCustomerSentAt: customerError
+        ? booking.reminderCustomerSentAt
+        : booking.reminderCustomerSentAt || nowIso,
+    })
+
+    if (adminError || customerError) {
+      console.error('Booking reminder email delivery failed.', {
+        bookingId,
+        adminError,
+        customerError,
+      })
+    }
+  } catch (error) {
+    console.error('Booking reminder email delivery crashed.', {
+      bookingId,
+      error: error instanceof Error ? error.message : String(error),
     })
   }
 }

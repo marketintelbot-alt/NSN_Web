@@ -10,15 +10,19 @@ import {
   Waves,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 
+import { supportPhoneNumbers } from '../../content/site'
 import {
   formatSlotDate,
   formatSlotDateTime,
+  formatReturnTime,
   formatSlotTime,
   groupSlotsByDate,
   reservationInitialValues,
   reservationSchema,
+  returnTimeOptions,
+  suggestReturnTime,
   type ReservationFormValues,
 } from '../../lib/reservation'
 import type { PublicSlot } from '../../types/booking'
@@ -36,6 +40,8 @@ type SlotsResponse = {
   message?: string
 }
 
+const supportNumbersLine = supportPhoneNumbers.map((contact) => contact.phoneDisplay).join(' or ')
+
 export function ReservationForm() {
   const [slots, setSlots] = useState<PublicSlot[]>([])
   const [slotsState, setSlotsState] = useState<'loading' | 'ready' | 'empty' | 'error'>('loading')
@@ -48,10 +54,12 @@ export function ReservationForm() {
   const [confirmedSlot, setConfirmedSlot] = useState<PublicSlot | null>(null)
 
   const {
+    control,
     register,
     handleSubmit,
     reset,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<ReservationFormValues>({
     resolver: zodResolver(reservationSchema),
@@ -107,6 +115,24 @@ export function ReservationForm() {
       controller.abort()
     }
   }, [loadSlots])
+
+  const selectedReturnTime = useWatch({
+    control,
+    name: 'returnTime',
+  })
+
+  useEffect(() => {
+    const selectedSlot = slots.find((slot) => slot.id === selectedSlotId)
+
+    if (!selectedSlot || selectedReturnTime) {
+      return
+    }
+
+    setValue('returnTime', suggestReturnTime(selectedSlot.startsAt), {
+      shouldDirty: false,
+      shouldValidate: true,
+    })
+  }, [selectedReturnTime, selectedSlotId, setValue, slots])
 
   async function onSubmit(values: ReservationFormValues) {
     if (!selectedSlotId) {
@@ -290,6 +316,9 @@ export function ReservationForm() {
               <p className="mt-2 text-sm leading-7 text-slate">
                 {formatSlotDate(selectedSlot.startsAt)}
               </p>
+              <p className="mt-2 text-sm leading-7 text-slate">
+                Planned return: {formatReturnTime(selectedReturnTime)}
+              </p>
               {selectedSlot.notes ? (
                 <p className="mt-2 text-sm leading-7 text-slate">{selectedSlot.notes}</p>
               ) : null}
@@ -329,6 +358,39 @@ export function ReservationForm() {
               <input className="input-field" autoComplete="tel" type="tel" {...register('phone')} />
               {errors.phone ? <span className={fieldHintClass}>{errors.phone.message}</span> : null}
             </label>
+
+            <label className="field-label">
+              Planned return time
+              <select className="input-field" {...register('returnTime')}>
+                <option value="">Choose your return time</option>
+                {returnTimeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {errors.returnTime ? (
+                <span className={fieldHintClass}>{errors.returnTime.message}</span>
+              ) : null}
+            </label>
+
+            <div className="rounded-2xl border border-ink/10 bg-[#f7fbfc] px-4 py-4 text-sm leading-7 text-slate">
+              <p className="font-semibold text-ink">Need help booking or changing timing?</p>
+              <p className="mt-2">
+                If you plan to return earlier or later than this time, call or text support at {supportNumbersLine}.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                {supportPhoneNumbers.map((supportLine) => (
+                  <a
+                    key={supportLine.phoneHref}
+                    className="rounded-full border border-ink/10 bg-white px-4 py-2 font-semibold text-ink transition hover:border-lake/35 hover:bg-lake/5"
+                    href={supportLine.phoneHref}
+                  >
+                    {supportLine.phoneDisplay}
+                  </a>
+                ))}
+              </div>
+            </div>
 
             <label className="field-label">
               Notes

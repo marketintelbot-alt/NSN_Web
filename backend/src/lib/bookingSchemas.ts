@@ -1,10 +1,15 @@
 import { z } from 'zod'
 
-import { launchLocations, preferredLaunchLocationOptions } from './time.js'
+import {
+  isValidReturnTime,
+  launchLocations,
+  preferredLaunchLocationOptions,
+} from './time.js'
+import { operationalBookingStatuses } from './bookingDetails.js'
 import { normalizeMultilineText, normalizeText } from './sanitize.js'
 import { createLaunchDateTime, has24HourLeadTime, reservationWindowMessage } from './time.js'
 
-const bookingStatuses = ['confirmed', 'completed', 'cancelled'] as const
+const bookingStatuses = [...operationalBookingStatuses, 'cancelled'] as const
 const phonePattern = /^[0-9+().\-\s]{7,20}$/
 
 const requiredText = (label: string, max: number) =>
@@ -30,6 +35,17 @@ const optionalText = (max: number) =>
     .string()
     .optional()
     .transform((value) => (value && value.trim().length > 0 ? normalizeText(value).slice(0, max) : ''))
+
+const requiredReturnTime = z
+  .string()
+  .trim()
+  .refine((value) => isValidReturnTime(value), 'Choose a return time.')
+
+const optionalReturnTime = z
+  .string()
+  .optional()
+  .transform((value) => (value ? value.trim() : ''))
+  .refine((value) => value.length === 0 || isValidReturnTime(value), 'Choose a return time.')
 
 const optionalBoatLength = z.preprocess((value) => {
   if (value === '' || value === null || value === undefined) {
@@ -85,6 +101,7 @@ const addOnServicesSchema = z
 
 export const publicBookingSchema = z.object({
   slotId: z.string().uuid('Please choose a valid time slot.'),
+  returnTime: requiredReturnTime,
   fullName: requiredText('Full name', 80),
   email: z.string().trim().email('Enter a valid email address.'),
   phone: z
@@ -106,6 +123,7 @@ export const publicBookingSchema = z.object({
 
 export const clientBookingSchema = z.object({
   slotId: z.string().uuid('Please choose a valid time slot.'),
+  returnTime: requiredReturnTime,
   serviceEntitlementId: optionalUuidField,
   addOnServices: addOnServicesSchema,
   notes: optionalNotes,
@@ -115,6 +133,7 @@ export const clientBookingUpdateSchema = z
   .object({
     bookingId: z.string().uuid().optional(),
     slotId: optionalUuidField,
+    returnTime: optionalReturnTime,
     serviceEntitlementId: optionalUuidField,
     addOnServices: addOnServicesSchema,
     notes: optionalNotes,
@@ -126,6 +145,14 @@ export const clientBookingUpdateSchema = z
         code: 'custom',
         path: ['slotId'],
         message: 'Choose a new time slot to reschedule this reservation.',
+      })
+    }
+
+    if (value.status === 'confirmed' && !value.returnTime) {
+      context.addIssue({
+        code: 'custom',
+        path: ['returnTime'],
+        message: 'Choose a return time.',
       })
     }
   })
@@ -189,6 +216,7 @@ export const adminBookingSchema = z.object({
   serviceEntitlementId: optionalUuidField,
   addOnServices: addOnServicesSchema,
   slotId: z.string().uuid('Choose a valid time slot.'),
+  returnTime: requiredReturnTime,
   fullName: requiredText('Client name', 80),
   email: z.string().trim().email('Enter a valid email address.'),
   phone: z

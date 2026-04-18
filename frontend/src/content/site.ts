@@ -57,6 +57,11 @@ export const contacts = [
   },
 ]
 
+export const supportPhoneNumbers = contacts.map((contact) => ({
+  phoneDisplay: contact.phoneDisplay,
+  phoneHref: contact.phoneHref,
+}))
+
 export const contactDetails = {
   email: contacts[0].email,
   phoneDisplay: contacts[0].phoneDisplay,

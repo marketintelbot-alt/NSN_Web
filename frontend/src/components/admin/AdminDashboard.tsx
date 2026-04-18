@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 
-import { formatInTimeZone } from 'date-fns-tz'
+import { startOfWeek } from 'date-fns'
+import { formatInTimeZone, fromZonedTime, toZonedTime } from 'date-fns-tz'
 import {
   CalendarClock,
   CheckCircle2,
@@ -21,8 +22,15 @@ import {
   destroyAccountSession,
   type AccountSession,
 } from '../../lib/adminSession'
-import { serviceMenuSections } from '../../content/site'
-import { formatSlotDateTime } from '../../lib/reservation'
+import { serviceMenuSections, supportPhoneNumbers } from '../../content/site'
+import {
+  formatReturnTime,
+  formatSlotDateTime,
+  formatSlotTime,
+  returnTimeOptions,
+  serviceTimeZone,
+  suggestReturnTime,
+} from '../../lib/reservation'
 import type {
   AdminBooking,
   AdminDashboardResponse,
@@ -55,6 +63,7 @@ type BookingFormState = {
   serviceEntitlementId: string
   addOnServices: string[]
   slotId: string
+  returnTime: string
   fullName: string
   email: string
   phone: string
@@ -108,6 +117,7 @@ function emptyBookingForm(): BookingFormState {
     serviceEntitlementId: '',
     addOnServices: [],
     slotId: '',
+    returnTime: '',
     fullName: '',
     email: '',
     phone: '',
@@ -156,8 +166,12 @@ function bookingStatusClasses(status: BookingStatus) {
     return 'status-pill-failed'
   }
 
-  if (status === 'completed') {
+  if (status === 'returned') {
     return 'status-pill-neutral'
+  }
+
+  if (status === 'delayed') {
+    return 'status-pill-failed'
   }
 
   return 'status-pill-active'
@@ -190,7 +204,9 @@ function buildClientSummaries(clients: ClientAccount[], bookings: AdminBooking[]
       const upcomingBookings = [...clientBookings]
         .filter(
           (booking) =>
-            booking.status !== 'cancelled' && new Date(booking.slot.startsAt).getTime() >= Date.now(),
+            booking.status !== 'cancelled' &&
+            booking.status !== 'returned' &&
+            new Date(booking.slot.startsAt).getTime() >= Date.now(),
         )
         .sort(
           (left, right) =>
@@ -212,8 +228,16 @@ function statusLabel(status: BookingStatus) {
     return 'Cancelled'
   }
 
-  if (status === 'completed') {
-    return 'Completed'
+  if (status === 'returned') {
+    return 'Returned'
+  }
+
+  if (status === 'on_the_water') {
+    return 'On The Water'
+  }
+
+  if (status === 'delayed') {
+    return 'Delayed'
   }
 
   return 'Confirmed'
@@ -230,6 +254,9 @@ const addOnServiceOptions = serviceMenuSections
   )
   .flatMap((section) => section.items)
 
+const supportNumbersLine = supportPhoneNumbers.map((contact) => contact.phoneDisplay).join(' or ')
+const returnTimingReminder = `If the client will return earlier or later than planned, have them call or text support at ${supportNumbersLine}.`
+
 function toggleAddOnSelection(current: string[], addOnService: string) {
   return current.includes(addOnService)
     ? current.filter((item) => item !== addOnService)
@@ -241,6 +268,22 @@ function buildSearchHaystack(values: Array<string | number | null | undefined>) 
     .filter((value) => value !== null && value !== undefined && String(value).trim().length > 0)
     .join(' ')
     .toLowerCase()
+}
+
+function createWeekAnchor(reference = new Date()) {
+  const zonedReference = toZonedTime(reference, serviceTimeZone)
+  const weekStart = startOfWeek(zonedReference, { weekStartsOn: 1 })
+  return fromZonedTime(weekStart, serviceTimeZone)
+}
+
+function shiftServiceDays(anchor: Date, days: number) {
+  const zonedAnchor = toZonedTime(anchor, serviceTimeZone)
+  zonedAnchor.setDate(zonedAnchor.getDate() + days)
+  return fromZonedTime(zonedAnchor, serviceTimeZone)
+}
+
+function getServiceDayKey(date: Date | string) {
+  return formatInTimeZone(new Date(date), serviceTimeZone, 'yyyy-MM-dd')
 }
 
 export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardProps) {
@@ -256,6 +299,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
   const [clientForm, setClientForm] = useState<ClientFormState>(emptyClientForm())
   const [selectedClientId, setSelectedClientId] = useState('')
   const [selectedBookingId, setSelectedBookingId] = useState('')
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() => createWeekAnchor())
   const [clientQuery, setClientQuery] = useState('')
   const [bookingQuery, setBookingQuery] = useState('')
   const [bookingStatusFilter, setBookingStatusFilter] = useState<'all' | BookingStatus>('all')
@@ -325,18 +369,25 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
     [clientSummaries, selectedClientId],
   )
 
-  const activeBookingSlotIds = useMemo(
+  const blockedBookingSlotIds = useMemo(
     () =>
       new Set(
-        dashboard.bookings
-          .filter(
-            (booking) =>
-              booking.status !== 'cancelled' &&
-              (!selectedBookingId || booking.id !== selectedBookingId),
-          )
-          .map((booking) => booking.slotId),
+        dashboard.slots
+          .filter((slot) => {
+            const slotStartsAtMs = new Date(slot.startsAt).getTime()
+
+            return dashboard.bookings.some(
+              (booking) =>
+                booking.status !== 'cancelled' &&
+                booking.status !== 'returned' &&
+                (!selectedBookingId || booking.id !== selectedBookingId) &&
+                (new Date(booking.slot.startsAt).getTime() === slotStartsAtMs ||
+                  new Date(booking.slot.startsAt).getTime() + 30 * 60 * 1000 === slotStartsAtMs),
+            )
+          })
+          .map((slot) => slot.id),
       ),
-    [dashboard.bookings, selectedBookingId],
+    [dashboard.bookings, dashboard.slots, selectedBookingId],
   )
 
   const availableSlots = useMemo(
@@ -345,9 +396,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
         (slot) =>
           slot.isActive &&
           new Date(slot.startsAt).getTime() > availabilityCutoffMs &&
-          !activeBookingSlotIds.has(slot.id),
+          !blockedBookingSlotIds.has(slot.id),
       ),
-    [activeBookingSlotIds, availabilityCutoffMs, dashboard.slots],
+    [availabilityCutoffMs, blockedBookingSlotIds, dashboard.slots],
   )
 
   const selectedBooking = useMemo(
@@ -400,6 +451,10 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
         booking.phone,
         booking.slot.launchLocation,
         booking.serviceName,
+        booking.status,
+        statusLabel(booking.status),
+        booking.returnTime,
+        formatReturnTime(booking.returnTime),
         booking.notes,
         booking.createdBy,
         linkedClient?.fullName,
@@ -408,6 +463,34 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
       ]).includes(normalizedQuery)
     })
   }, [bookingQuery, bookingStatusFilter, clientLookup, dashboard.bookings])
+
+  const weeklyDays = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const date = shiftServiceDays(selectedWeekStart, index)
+
+        return {
+          date,
+          key: getServiceDayKey(date),
+          label: formatInTimeZone(date, serviceTimeZone, 'EEE, MMM d'),
+        }
+      }),
+    [selectedWeekStart],
+  )
+
+  const weeklyBookingBoard = useMemo(
+    () =>
+      weeklyDays.map((day) => ({
+        ...day,
+        bookings: filteredBookings.filter((booking) => getServiceDayKey(booking.slot.startsAt) === day.key),
+      })),
+    [filteredBookings, weeklyDays],
+  )
+
+  const weeklyBookingCount = useMemo(
+    () => weeklyBookingBoard.reduce((total, day) => total + day.bookings.length, 0),
+    [weeklyBookingBoard],
+  )
 
   const bookingClient = useMemo(
     () => dashboard.clients.find((client) => client.id === bookingForm.clientAccountId) || null,
@@ -449,6 +532,12 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
   }, [availableSlots, bookingClient, dashboard.slots, selectedBooking])
 
   const visibleAvailableSlots = useMemo(() => bookingSlotOptions.slice(0, 14), [bookingSlotOptions])
+  const selectedBookingSlot =
+    bookingSlotOptions.find((slot) => slot.id === bookingForm.slotId) ||
+    dashboard.slots.find((slot) => slot.id === bookingForm.slotId) ||
+    null
+  const effectiveBookingReturnTime =
+    bookingForm.returnTime || (selectedBookingSlot ? suggestReturnTime(selectedBookingSlot.startsAt) : '')
 
   async function handleSignOut() {
     await destroyAccountSession()
@@ -457,6 +546,13 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
 
   function jumpToClientComposer() {
     document.getElementById('client-profile-composer')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
+  function jumpToBookingComposer() {
+    document.getElementById('admin-booking-composer')?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     })
@@ -544,12 +640,14 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
       serviceEntitlementId: booking.serviceEntitlementId || '',
       addOnServices: booking.addOnServices,
       slotId: booking.slotId,
+      returnTime: booking.returnTime || '',
       fullName: booking.fullName,
       email: booking.email,
       phone: booking.phone,
       notes: booking.notes || '',
       status: booking.status,
     })
+    jumpToBookingComposer()
   }
 
   function applyClientToBookingForm(client: ClientAccount) {
@@ -658,6 +756,12 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
     setSavingState('saving')
     setDashboardMessage('')
 
+    if (!effectiveBookingReturnTime) {
+      setSavingState('idle')
+      setDashboardMessage('Choose a return time before saving the reservation.')
+      return
+    }
+
     const path = bookingForm.bookingId
       ? `/api/admin/bookings/${bookingForm.bookingId}`
       : '/api/admin/bookings'
@@ -669,6 +773,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
         serviceEntitlementId: bookingForm.serviceEntitlementId,
         addOnServices: bookingForm.addOnServices,
         slotId: bookingForm.slotId,
+        returnTime: effectiveBookingReturnTime,
         fullName: bookingForm.fullName,
         email: bookingForm.email,
         phone: bookingForm.phone,
@@ -803,7 +908,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
               {
                 label: 'Active Reservations',
                 value: dashboard.bookings
-                  .filter((booking) => booking.status !== 'cancelled')
+                  .filter(
+                    (booking) => booking.status !== 'cancelled' && booking.status !== 'returned',
+                  )
                   .length.toString(),
               },
               { label: 'Open Slots', value: availableSlots.length.toString() },
@@ -869,11 +976,15 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
               <label className="field-label">
                 Password
                 <input
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  autoCorrect="off"
                   className="input-field"
                   type="password"
                   placeholder={
                     clientForm.clientId ? 'Leave blank to keep current password' : 'Assign a password'
                   }
+                  spellCheck={false}
                   value={clientForm.password}
                   onChange={(event) =>
                     setClientForm((current) => ({ ...current, password: event.target.value }))
@@ -1121,7 +1232,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
             Use a saved client profile, attach one of their contracted services if needed, and place the reservation directly into the system.
           </p>
 
-          <form className="mt-6 grid gap-4" onSubmit={handleSaveBooking}>
+          <form id="admin-booking-composer" className="mt-6 grid gap-4" onSubmit={handleSaveBooking}>
             <label className="field-label">
               Client profile
               <select
@@ -1188,7 +1299,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 />
               </label>
               <label className="field-label">
-                Booking status
+                Reservation stage
                 <select
                   className="input-field"
                   value={bookingForm.status}
@@ -1200,7 +1311,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                   }
                 >
                   <option value="confirmed">Confirmed</option>
-                  <option value="completed">Completed</option>
+                  <option value="on_the_water">On The Water</option>
+                  <option value="delayed">Delayed</option>
+                  <option value="returned">Returned</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
               </label>
@@ -1289,6 +1402,42 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 ))}
               </select>
             </label>
+
+            <div className="grid gap-4 md:grid-cols-[0.78fr_1.22fr]">
+              <label className="field-label">
+                Planned return time
+                <select
+                  className="input-field"
+                  value={effectiveBookingReturnTime}
+                  onChange={(event) =>
+                    setBookingForm((current) => ({ ...current, returnTime: event.target.value }))
+                  }
+                >
+                  <option value="">Choose a return time</option>
+                  {returnTimeOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
+                <p className="font-semibold text-ink">Support contact numbers</p>
+                <p className="mt-2">{returnTimingReminder}</p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  {supportPhoneNumbers.map((supportLine) => (
+                    <a
+                      key={supportLine.phoneHref}
+                      className="rounded-full border border-ink/10 bg-white px-4 py-2 font-semibold text-ink transition hover:border-lake/35 hover:bg-lake/5"
+                      href={supportLine.phoneHref}
+                    >
+                      {supportLine.phoneDisplay}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             <label className="field-label">
               Notes
@@ -1561,6 +1710,116 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
           </div>
         </FadeIn>
 
+        <FadeIn className="panel p-8" delay={0.06}>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-center gap-3">
+              <CalendarClock className="h-5 w-5 text-lake" />
+              <div>
+                <h3 className="text-2xl font-semibold text-ink">Weekly booking board</h3>
+                <p className="mt-2 text-sm leading-7 text-slate">
+                  One week at a time so the crew can quickly see who is coming, where they want to launch, and when they expect to return.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                type="button"
+                onClick={() => setSelectedWeekStart((current) => shiftServiceDays(current, -7))}
+              >
+                Previous Week
+              </button>
+              <button
+                className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                type="button"
+                onClick={() => setSelectedWeekStart(createWeekAnchor())}
+              >
+                This Week
+              </button>
+              <button
+                className="rounded-full border border-ink/10 px-4 py-2 text-sm font-semibold text-ink"
+                type="button"
+                onClick={() => setSelectedWeekStart((current) => shiftServiceDays(current, 7))}
+              >
+                Next Week
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-4 text-sm text-slate">
+              Week of {formatInTimeZone(selectedWeekStart, serviceTimeZone, 'MMMM d, yyyy')}
+            </div>
+            <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-4 text-sm text-slate">
+              {weeklyBookingCount} reservation{weeklyBookingCount === 1 ? '' : 's'} in view
+            </div>
+          </div>
+
+          <div className="mt-6 overflow-x-auto pb-2">
+            <div className="grid min-w-[1120px] grid-cols-7 gap-4">
+              {weeklyBookingBoard.map((day) => (
+                <div key={day.key} className="rounded-3xl border border-ink/10 bg-[#f8fbfc] p-4">
+                  <div className="border-b border-ink/10 pb-3">
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-lake">
+                      {day.label}
+                    </p>
+                    <p className="mt-1 text-xs leading-6 text-slate">
+                      {day.bookings.length} booking{day.bookings.length === 1 ? '' : 's'}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 grid gap-3">
+                    {day.bookings.length === 0 ? (
+                      <p className="rounded-2xl border border-dashed border-ink/10 bg-white px-4 py-4 text-sm leading-7 text-slate">
+                        No reservations on file for this day.
+                      </p>
+                    ) : (
+                      day.bookings.map((booking) => (
+                        <button
+                          key={booking.id}
+                          className="rounded-2xl border border-ink/10 bg-white px-4 py-4 text-left transition hover:border-lake/35 hover:bg-lake/5"
+                          type="button"
+                          onClick={() => startEditingBooking(booking)}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-ink">{booking.fullName}</p>
+                              <p className="mt-1 text-sm leading-6 text-slate">
+                                {formatSlotTime(booking.slot.startsAt)} launch
+                              </p>
+                              <p className="text-sm leading-6 text-slate">
+                                {booking.returnTime
+                                  ? `Return by ${formatReturnTime(booking.returnTime)}`
+                                  : 'Return time not set yet'}
+                              </p>
+                            </div>
+                            <span className={`status-pill ${bookingStatusClasses(booking.status)}`}>
+                              {statusLabel(booking.status)}
+                            </span>
+                          </div>
+                          <p className="mt-3 text-sm leading-6 text-slate">
+                            {booking.slot.launchLocation}
+                          </p>
+                          {booking.serviceName ? (
+                            <p className="text-sm leading-6 text-slate">
+                              {booking.serviceName}
+                            </p>
+                          ) : null}
+                          {booking.addOnServices.length > 0 ? (
+                            <p className="text-sm leading-6 text-slate">
+                              {booking.addOnServices.join(', ')}
+                            </p>
+                          ) : null}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </FadeIn>
+
         <FadeIn className="panel p-8" delay={0.08}>
           <div className="flex items-center gap-3">
             <CalendarClock className="h-5 w-5 text-lake" />
@@ -1587,7 +1846,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
               >
                 <option value="all">All reservations</option>
                 <option value="confirmed">Confirmed only</option>
-                <option value="completed">Completed only</option>
+                <option value="on_the_water">On The Water only</option>
+                <option value="delayed">Delayed only</option>
+                <option value="returned">Returned only</option>
                 <option value="cancelled">Cancelled only</option>
               </select>
             </label>
@@ -1616,6 +1877,11 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                         {formatSlotDateTime(booking.slot.startsAt)}
                       </p>
                       <p className="text-sm leading-7 text-slate">{booking.slot.launchLocation}</p>
+                      <p className="text-sm leading-7 text-slate">
+                        {booking.returnTime
+                          ? `Return by ${formatReturnTime(booking.returnTime)}`
+                          : 'Return time not set yet'}
+                      </p>
                       {booking.serviceName ? (
                         <p className="text-sm leading-7 text-slate">
                           Service reserved: {booking.serviceName}
@@ -1646,6 +1912,13 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                     <span className="inline-flex items-center gap-2">
                       <Mail className="h-4 w-4 text-lake" />
                       Admin: {booking.emailAdminStatus}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-lake" />
+                      2-hour reminder:{' '}
+                      {booking.reminderCustomerSentAt && booking.reminderAdminSentAt
+                        ? 'sent'
+                        : 'pending'}
                     </span>
                   </div>
 
@@ -1724,6 +1997,11 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                     <div key={booking.id} className="soft-panel p-4">
                       <p className="font-semibold text-ink">
                         {formatSlotDateTime(booking.slot.startsAt)}
+                      </p>
+                      <p className="text-sm leading-7 text-slate">
+                        {booking.returnTime
+                          ? `Return by ${formatReturnTime(booking.returnTime)}`
+                          : 'Return time not set yet'}
                       </p>
                       {booking.serviceName ? (
                         <p className="text-sm leading-7 text-slate">{booking.serviceName}</p>

@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "hash:admin-password": "tsx src/scripts/hashAdminPassword.ts"
+    "hash:admin-password": "tsx src/scripts/hashAdminPassword.ts",
+    "reminders": "tsx src/scripts/sendDueBookingReminders.ts"
   },
   "keywords": [],
   "author": "",

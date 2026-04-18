@@ -22,6 +22,11 @@ import {
   reservationWindowMessage,
   serviceTimeZone,
 } from './time.js'
+import {
+  parseStoredBookingNotes,
+  serializeBookingNotes,
+  type OperationalBookingStatus,
+} from './bookingDetails.js'
 import { getSupabaseAdminClient } from './supabaseAdmin.js'
 
 type StoredSlotRow = {
@@ -76,6 +81,13 @@ export type AdminSlot = PublicSlot & {
   isActive: boolean
 }
 
+export type AdminBookingStatus =
+  | 'confirmed'
+  | 'on_the_water'
+  | 'delayed'
+  | 'returned'
+  | 'cancelled'
+
 export type AdminBooking = {
   id: string
   slotId: string
@@ -87,7 +99,8 @@ export type AdminBooking = {
   email: string
   phone: string
   notes: string | null
-  status: 'confirmed' | 'completed' | 'cancelled'
+  returnTime: string | null
+  status: AdminBookingStatus
   createdBy: 'public' | 'admin' | 'client'
   emailCustomerStatus: 'pending' | 'sent' | 'failed'
   emailCustomerError: string | null
@@ -95,6 +108,8 @@ export type AdminBooking = {
   emailAdminStatus: 'pending' | 'sent' | 'failed'
   emailAdminError: string | null
   emailAdminSentAt: string | null
+  reminderCustomerSentAt: string | null
+  reminderAdminSentAt: string | null
   createdAt: string
   updatedAt: string
   slot: PublicSlot
@@ -106,6 +121,7 @@ const slotGenerationEndHour = 19
 const slotGenerationIntervalMinutes = 30
 const slotGenerationChunkSize = 200
 const leadTimeMs = 24 * 60 * 60 * 1000
+const slotTravelBufferMs = 30 * 60 * 1000
 
 export class SlotConflictError extends Error {
   constructor(message = 'That time slot is no longer available.') {
@@ -147,8 +163,40 @@ function extractJoinedSlot(slot: StoredSlotRow | StoredSlotRow[] | null | undefi
   return Array.isArray(slot) ? slot[0] : slot
 }
 
+function mapStoredStatusToAdminStatus(
+  storedStatus: StoredBookingRow['status'],
+  operationalStatus: OperationalBookingStatus | null,
+): AdminBookingStatus {
+  if (storedStatus === 'cancelled') {
+    return 'cancelled'
+  }
+
+  if (operationalStatus) {
+    return operationalStatus
+  }
+
+  if (storedStatus === 'completed') {
+    return 'returned'
+  }
+
+  return 'confirmed'
+}
+
+function mapAdminStatusToStoredStatus(status: AdminBookingStatus) {
+  if (status === 'cancelled') {
+    return 'cancelled' as const
+  }
+
+  if (status === 'returned') {
+    return 'completed' as const
+  }
+
+  return 'confirmed' as const
+}
+
 function normalizeBookingRow(booking: StoredBookingRow): AdminBooking {
   const slot = extractJoinedSlot(booking.booking_slots)
+  const parsedDetails = parseStoredBookingNotes(booking.notes)
 
   return {
     id: booking.id,
@@ -160,8 +208,9 @@ function normalizeBookingRow(booking: StoredBookingRow): AdminBooking {
     fullName: booking.full_name,
     email: booking.email,
     phone: booking.phone,
-    notes: booking.notes || null,
-    status: booking.status,
+    notes: parsedDetails.notes,
+    returnTime: parsedDetails.returnTime,
+    status: mapStoredStatusToAdminStatus(booking.status, parsedDetails.operationalStatus),
     createdBy: booking.created_by,
     emailCustomerStatus: booking.email_customer_status,
     emailCustomerError: booking.email_customer_error || null,
@@ -169,6 +218,8 @@ function normalizeBookingRow(booking: StoredBookingRow): AdminBooking {
     emailAdminStatus: booking.email_admin_status,
     emailAdminError: booking.email_admin_error || null,
     emailAdminSentAt: booking.email_admin_sent_at || null,
+    reminderCustomerSentAt: parsedDetails.reminderCustomerSentAt,
+    reminderAdminSentAt: parsedDetails.reminderAdminSentAt,
     createdAt: booking.created_at,
     updatedAt: booking.updated_at,
     slot: normalizeSlotRow(slot),
@@ -289,7 +340,44 @@ function getBookingStartsAt(booking: StoredBookingRow) {
   return new Date(extractJoinedSlot(booking.booking_slots).starts_at).getTime()
 }
 
-async function ensureSlotIsBookable(slotId: string) {
+async function listBlockingBookings(excludeBookingId?: string) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  let query = supabaseAdmin
+    .from('launch_bookings')
+    .select('id, status, booking_slots(*)')
+    .eq('status', 'confirmed')
+
+  if (excludeBookingId) {
+    query = query.neq('id', excludeBookingId)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    throw error
+  }
+
+  return (data ?? []) as StoredBookingRow[]
+}
+
+async function ensureTravelBufferAvailability(slot: StoredSlotRow, excludeBookingId?: string) {
+  const blockingBookings = await listBlockingBookings(excludeBookingId)
+  const slotStartsAtMs = new Date(slot.starts_at).getTime()
+  const conflictingBooking = blockingBookings.find((booking) => {
+    const bookingStartsAtMs = getBookingStartsAt(booking)
+    return bookingStartsAtMs === slotStartsAtMs || bookingStartsAtMs + slotTravelBufferMs === slotStartsAtMs
+  })
+
+  if (conflictingBooking) {
+    const conflictingBookingTime = formatStoredDateTime(extractJoinedSlot(conflictingBooking.booking_slots).starts_at)
+
+    throw new SlotConflictError(
+      `That time is blocked because the ${conflictingBookingTime} booking requires a 30-minute travel buffer afterward.`,
+    )
+  }
+}
+
+async function ensureSlotIsBookable(slotId: string, excludeBookingId?: string) {
   const slot = await readSlotById(slotId)
 
   if (!slot || !slot.is_active) {
@@ -305,6 +393,8 @@ async function ensureSlotIsBookable(slotId: string) {
   if (startsAtMs - Date.now() < leadTimeMs) {
     throw new SlotConflictError(reservationWindowMessage)
   }
+
+  await ensureTravelBufferAvailability(slot, excludeBookingId)
 
   return slot
 }
@@ -389,7 +479,10 @@ export async function listAvailableSlots(launchLocation?: string) {
   const [{ data: slots, error: slotError }, { data: bookings, error: bookingError }] =
     await Promise.all([
       slotsQuery,
-      supabaseAdmin.from('launch_bookings').select('slot_id').neq('status', 'cancelled'),
+      supabaseAdmin
+        .from('launch_bookings')
+        .select('id, status, booking_slots(*)')
+        .eq('status', 'confirmed'),
     ])
 
   if (slotError) {
@@ -400,10 +493,15 @@ export async function listAvailableSlots(launchLocation?: string) {
     throw bookingError
   }
 
-  const bookedSlotIds = new Set((bookings ?? []).map((booking: { slot_id: string }) => booking.slot_id))
+  const blockedSlotStartsAtMs = new Set(
+    ((bookings ?? []) as StoredBookingRow[]).flatMap((booking) => {
+      const bookingStartsAtMs = getBookingStartsAt(booking)
+      return [bookingStartsAtMs, bookingStartsAtMs + slotTravelBufferMs]
+    }),
+  )
 
   return ((slots ?? []) as StoredSlotRow[])
-    .filter((slot) => !bookedSlotIds.has(slot.id))
+    .filter((slot) => !blockedSlotStartsAtMs.has(new Date(slot.starts_at).getTime()))
     .map(normalizeSlotRow)
 }
 
@@ -506,7 +604,11 @@ export async function createPublicBooking(input: PublicBookingInput) {
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,
-      notes: input.notes || null,
+      notes: serializeBookingNotes({
+        notes: input.notes,
+        operationalStatus: 'confirmed',
+        returnTime: input.returnTime,
+      }),
       status: 'confirmed',
       created_by: 'public',
       email_customer_status: 'pending',
@@ -566,7 +668,11 @@ export async function createClientBooking(clientAccount: ClientAccount, input: C
     full_name: clientAccount.fullName,
     email: clientAccount.email,
     phone: clientAccount.phone,
-    notes: input.notes || null,
+    notes: serializeBookingNotes({
+      notes: input.notes,
+      operationalStatus: 'confirmed',
+      returnTime: input.returnTime,
+    }),
     status: 'confirmed',
     email_customer_status: 'pending',
     email_admin_status: 'pending',
@@ -617,6 +723,7 @@ export async function updateClientBooking(
 ) {
   const supabaseAdmin = getSupabaseAdminClient()
   const existingBooking = await readBookingById(bookingId)
+  const existingBookingDetails = parseStoredBookingNotes(existingBooking?.notes)
 
   if (!existingBooking || existingBooking.client_account_id !== clientAccount.id) {
     throw new Error('That reservation could not be found on this client account.')
@@ -633,9 +740,17 @@ export async function updateClientBooking(
   const nextStatus = input.status
   const nextSlotId =
     nextStatus === 'cancelled' ? existingBooking.slot_id : input.slotId || existingBooking.slot_id
+  const nextReturnTime =
+    nextStatus === 'cancelled'
+      ? existingBookingDetails.returnTime
+      : input.returnTime || null
+  const shouldResetReminders =
+    nextStatus !== 'cancelled' &&
+    (nextSlotId !== existingBooking.slot_id ||
+      nextReturnTime !== existingBookingDetails.returnTime)
 
   if (nextStatus === 'confirmed') {
-    const slot = await ensureSlotIsBookable(nextSlotId)
+    const slot = await ensureSlotIsBookable(nextSlotId, bookingId)
 
     if (
       clientAccount.preferredLaunchLocation !== noTransportLaunchLocation &&
@@ -663,8 +778,18 @@ export async function updateClientBooking(
       service_entitlement_id: serviceSelection.serviceEntitlementId,
       service_name: serviceSelection.serviceName,
       add_on_services: input.addOnServices,
-      notes: input.notes || null,
-      status: nextStatus,
+      notes: serializeBookingNotes({
+        notes: input.notes,
+        operationalStatus: 'confirmed',
+        reminderAdminSentAt: shouldResetReminders
+          ? null
+          : existingBookingDetails.reminderAdminSentAt,
+        reminderCustomerSentAt: shouldResetReminders
+          ? null
+          : existingBookingDetails.reminderCustomerSentAt,
+        returnTime: nextReturnTime,
+      }),
+      status: nextStatus === 'cancelled' ? 'cancelled' : 'confirmed',
     })
     .eq('id', bookingId)
 
@@ -778,8 +903,12 @@ export async function createAdminBooking(input: AdminBookingInput) {
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,
-      notes: input.notes || null,
-      status: input.status,
+      notes: serializeBookingNotes({
+        notes: input.notes,
+        operationalStatus: input.status === 'cancelled' ? 'confirmed' : input.status,
+        returnTime: input.returnTime,
+      }),
+      status: mapAdminStatusToStoredStatus(input.status),
       created_by: 'admin',
       email_customer_status: 'pending',
       email_admin_status: 'pending',
@@ -807,6 +936,7 @@ export async function createAdminBooking(input: AdminBookingInput) {
 export async function updateAdminBooking(bookingId: string, input: AdminBookingInput) {
   const supabaseAdmin = getSupabaseAdminClient()
   const existingBooking = await readBookingById(bookingId)
+  const existingBookingDetails = parseStoredBookingNotes(existingBooking?.notes)
 
   if (!existingBooking) {
     throw new Error('That booking could not be found.')
@@ -816,9 +946,12 @@ export async function updateAdminBooking(bookingId: string, input: AdminBookingI
   const shouldValidateSlot =
     input.status !== 'cancelled' &&
     (isSlotChanging || existingBooking.status === 'cancelled')
+  const shouldResetReminders =
+    input.status !== 'cancelled' &&
+    (isSlotChanging || input.returnTime !== existingBookingDetails.returnTime)
 
   if (shouldValidateSlot) {
-    await ensureSlotIsBookable(input.slotId)
+    await ensureSlotIsBookable(input.slotId, bookingId)
   }
 
   const clientAccountId = await findMatchingClientAccountId(
@@ -842,8 +975,18 @@ export async function updateAdminBooking(bookingId: string, input: AdminBookingI
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,
-      notes: input.notes || null,
-      status: input.status,
+      notes: serializeBookingNotes({
+        notes: input.notes,
+        operationalStatus: input.status === 'cancelled' ? 'confirmed' : input.status,
+        reminderAdminSentAt: shouldResetReminders
+          ? null
+          : existingBookingDetails.reminderAdminSentAt,
+        reminderCustomerSentAt: shouldResetReminders
+          ? null
+          : existingBookingDetails.reminderCustomerSentAt,
+        returnTime: input.returnTime,
+      }),
+      status: mapAdminStatusToStoredStatus(input.status),
     })
     .eq('id', bookingId)
 
@@ -885,6 +1028,83 @@ export async function updateBookingEmailStatus(
       email_admin_status: status.emailAdminStatus,
       email_admin_error: status.emailAdminError || null,
       email_admin_sent_at: status.emailAdminSentAt || null,
+    })
+    .eq('id', bookingId)
+
+  if (error) {
+    throw error
+  }
+}
+
+export async function listDueReminderBookings(currentDate = new Date()) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { data, error } = await supabaseAdmin
+    .from('launch_bookings')
+    .select('*, booking_slots(*)')
+    .eq('status', 'confirmed')
+
+  if (error) {
+    throw error
+  }
+
+  const reminderWindowStartMs = currentDate.getTime() + 105 * 60 * 1000
+  const reminderWindowEndMs = currentDate.getTime() + 120 * 60 * 1000
+
+  return ((data ?? []) as StoredBookingRow[])
+    .map(normalizeBookingRow)
+    .filter((booking) => {
+      const bookingStartsAtMs = new Date(booking.slot.startsAt).getTime()
+      const reminderAlreadyDelivered =
+        Boolean(booking.reminderCustomerSentAt) && Boolean(booking.reminderAdminSentAt)
+
+      return (
+        !reminderAlreadyDelivered &&
+        booking.status !== 'returned' &&
+        booking.status !== 'cancelled' &&
+        bookingStartsAtMs >= reminderWindowStartMs &&
+        bookingStartsAtMs < reminderWindowEndMs
+      )
+    })
+}
+
+export async function updateBookingReminderStatus(
+  bookingId: string,
+  status: {
+    reminderCustomerSentAt?: string | null
+    reminderAdminSentAt?: string | null
+  },
+) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const existingBooking = await readBookingById(bookingId)
+
+  if (!existingBooking) {
+    throw new Error('That booking could not be found.')
+  }
+
+  const existingBookingDetails = parseStoredBookingNotes(existingBooking.notes)
+  const normalizedBooking = normalizeBookingRow(existingBooking)
+
+  const { error } = await supabaseAdmin
+    .from('launch_bookings')
+    .update({
+      notes: serializeBookingNotes({
+        notes: existingBookingDetails.notes,
+        operationalStatus:
+          normalizedBooking.status === 'cancelled'
+            ? 'confirmed'
+            : normalizedBooking.status === 'returned'
+              ? 'returned'
+              : normalizedBooking.status,
+        reminderAdminSentAt:
+          status.reminderAdminSentAt === undefined
+            ? existingBookingDetails.reminderAdminSentAt
+            : status.reminderAdminSentAt,
+        reminderCustomerSentAt:
+          status.reminderCustomerSentAt === undefined
+            ? existingBookingDetails.reminderCustomerSentAt
+            : status.reminderCustomerSentAt,
+        returnTime: existingBookingDetails.returnTime,
+      }),
     })
     .eq('id', bookingId)
 

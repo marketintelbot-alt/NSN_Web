@@ -21,7 +21,12 @@ export type AdminSlot = PublicSlot & {
   isActive: boolean
 }
 
-export type BookingStatus = 'confirmed' | 'completed' | 'cancelled'
+export type BookingStatus =
+  | 'confirmed'
+  | 'on_the_water'
+  | 'delayed'
+  | 'returned'
+  | 'cancelled'
 export type BookingEmailStatus = 'pending' | 'sent' | 'failed'
 
 export type ClientAccount = {
@@ -64,6 +69,7 @@ export type AdminBooking = {
   email: string
   phone: string
   notes: string | null
+  returnTime: string | null
   status: BookingStatus
   createdBy: 'public' | 'admin' | 'client'
   emailCustomerStatus: BookingEmailStatus
@@ -72,6 +78,8 @@ export type AdminBooking = {
   emailAdminStatus: BookingEmailStatus
   emailAdminError: string | null
   emailAdminSentAt: string | null
+  reminderCustomerSentAt?: string | null
+  reminderAdminSentAt?: string | null
   createdAt: string
   updatedAt: string
   slot: PublicSlot

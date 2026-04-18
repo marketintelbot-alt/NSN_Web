@@ -17,12 +17,15 @@ import {
   destroyAccountSession,
   type AccountSession,
 } from '../../lib/adminSession'
-import { serviceMenuSections } from '../../content/site'
+import { serviceMenuSections, supportPhoneNumbers } from '../../content/site'
 import {
   formatSlotDate,
   formatSlotDateTime,
+  formatReturnTime,
   formatSlotTime,
   groupSlotsByDate,
+  returnTimeOptions,
+  suggestReturnTime,
 } from '../../lib/reservation'
 import type {
   ClientPortalResponse,
@@ -95,6 +98,9 @@ const addOnServiceOptions = serviceMenuSections
   )
   .flatMap((section) => section.items)
 
+const supportNumbersLine = supportPhoneNumbers.map((contact) => contact.phoneDisplay).join(' or ')
+const returnTimingReminder = `If your return timing changes, call or text support at ${supportNumbersLine}.`
+
 function toggleAddOnSelection(current: string[], addOnService: string) {
   return current.includes(addOnService)
     ? current.filter((item) => item !== addOnService)
@@ -148,6 +154,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const [message, setMessage] = useState('')
   const [editingBookingId, setEditingBookingId] = useState('')
   const [selectedSlotId, setSelectedSlotId] = useState('')
+  const [selectedReturnTime, setSelectedReturnTime] = useState('')
   const [selectedServiceEntitlementId, setSelectedServiceEntitlementId] = useState('')
   const [selectedAddOnServices, setSelectedAddOnServices] = useState<string[]>([])
   const [bookingNotes, setBookingNotes] = useState('')
@@ -178,6 +185,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   function resetBookingComposer(nextPortal: ClientPortalResponse | null) {
     setEditingBookingId('')
     setSelectedSlotId(nextPortal?.availableSlots[0]?.id || '')
+    setSelectedReturnTime('')
     setSelectedServiceEntitlementId(getDefaultServiceEntitlementId(nextPortal))
     setSelectedAddOnServices([])
     setBookingNotes('')
@@ -242,6 +250,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       setPortal(response.payload)
       setProfileForm(buildProfileForm(response.payload))
       setSelectedSlotId(response.payload.availableSlots[0]?.id || '')
+      setSelectedReturnTime('')
       setSelectedServiceEntitlementId(getDefaultServiceEntitlementId(response.payload))
     }
 
@@ -274,6 +283,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
 
     setEditingBookingId(booking.id)
     setSelectedSlotId(booking.slotId)
+    setSelectedReturnTime(booking.returnTime || suggestReturnTime(booking.slot.startsAt))
     setSelectedServiceEntitlementId(booking.serviceEntitlementId || '')
     setSelectedAddOnServices(booking.addOnServices)
     setBookingNotes(booking.notes || '')
@@ -314,6 +324,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       method: editingBookingId ? 'PUT' : 'POST',
       body: JSON.stringify({
         slotId: selectedSlotId,
+        returnTime: effectiveSelectedReturnTime,
         serviceEntitlementId: selectedServiceEntitlementId,
         addOnServices: selectedAddOnServices,
         notes: bookingNotes,
@@ -348,12 +359,13 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
         ?.serviceName ||
       null
     const confirmedAddOns = response.payload.booking?.addOnServices || selectedAddOnServices
+    const confirmedReturnTime = response.payload.booking?.returnTime || effectiveSelectedReturnTime
 
     setConfirmationMessage(
       confirmedSlot
         ? `${
             selectedService ? `${selectedService} ${editingBookingId ? 'moved to' : 'reserved for'} ` : editingBookingId ? 'Your reservation is now set for ' : ''
-          }${formatSlotDateTime(confirmedSlot.startsAt)}${confirmedAddOns.length > 0 ? ` with ${confirmedAddOns.join(', ')}` : ''}.`
+          }${formatSlotDateTime(confirmedSlot.startsAt)} returning by ${formatReturnTime(confirmedReturnTime)}${confirmedAddOns.length > 0 ? ` with ${confirmedAddOns.join(', ')}` : ''}.`
         : editingBookingId
           ? 'Your reservation has been updated.'
           : 'Your reservation is confirmed and on file.',
@@ -388,6 +400,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     const response = await adminApiRequest<{ message?: string }>(`/api/account/bookings/${booking.id}`, {
       method: 'PUT',
       body: JSON.stringify({
+        returnTime: booking.returnTime || suggestReturnTime(booking.slot.startsAt),
         serviceEntitlementId: booking.serviceEntitlementId,
         addOnServices: booking.addOnServices,
         notes: booking.notes || '',
@@ -459,6 +472,8 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   )
 
   const selectedSlot = bookingSlotChoices.find((slot) => slot.id === selectedSlotId) || null
+  const effectiveSelectedReturnTime =
+    selectedReturnTime || (selectedSlot ? suggestReturnTime(selectedSlot.startsAt) : '')
   const slotDayGroups = useMemo(() => groupSlotsByDate(bookingSlotChoices), [bookingSlotChoices])
   const selectedSlotDayLabel = selectedSlot
     ? formatSlotDate(selectedSlot.startsAt)
@@ -474,6 +489,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     loading ||
     refreshingPortal ||
     !selectedSlotId ||
+    !effectiveSelectedReturnTime ||
     (requiresServiceSelection && !selectedServiceEntitlementId)
 
   return (
@@ -696,6 +712,11 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                         {formatSlotDateTime(booking.slot.startsAt)}
                       </p>
                       <p className="mt-1 text-sm leading-7 text-slate">{booking.slot.launchLocation}</p>
+                      <p className="text-sm leading-7 text-slate">
+                        {booking.returnTime
+                          ? `Return by ${formatReturnTime(booking.returnTime)}`
+                          : 'Return time not set yet'}
+                      </p>
                     </div>
                     {editingBookingId === booking.id ? (
                       <span className="status-pill status-pill-active">Editing</span>
@@ -1012,6 +1033,9 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 {formatSlotDateTime(selectedSlot.startsAt)}
               </p>
               <p className="mt-1 text-sm leading-7 text-slate">{selectedSlot.launchLocation}</p>
+              <p className="text-sm leading-7 text-slate">
+                Planned return: {formatReturnTime(effectiveSelectedReturnTime)}
+              </p>
             </div>
           ) : null}
 
@@ -1086,6 +1110,39 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 ) : null}
               </div>
             )}
+          </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-[0.8fr_1.2fr]">
+            <label className="field-label">
+              Planned return time
+              <select
+                className="input-field"
+                value={effectiveSelectedReturnTime}
+                onChange={(event) => setSelectedReturnTime(event.target.value)}
+              >
+                <option value="">Choose your return time</option>
+                {returnTimeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
+              <p className="font-semibold text-ink">Need help or running early or late?</p>
+              <p className="mt-2">{returnTimingReminder}</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                {supportPhoneNumbers.map((supportLine) => (
+                  <a
+                    key={supportLine.phoneHref}
+                    className="rounded-full border border-ink/10 bg-white px-4 py-2 font-semibold text-ink transition hover:border-lake/35 hover:bg-lake/5"
+                    href={supportLine.phoneHref}
+                  >
+                    {supportLine.phoneDisplay}
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f8fbfc] px-5 py-5">
@@ -1175,6 +1232,11 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                         {formatSlotDateTime(booking.slot.startsAt)}
                       </p>
                       <p className="text-sm leading-7 text-slate">{booking.slot.launchLocation}</p>
+                      <p className="text-sm leading-7 text-slate">
+                        {booking.returnTime
+                          ? `Return by ${formatReturnTime(booking.returnTime)}`
+                          : 'Return time not set yet'}
+                      </p>
                     </div>
                     <span className="status-pill status-pill-neutral">{booking.status}</span>
                   </div>

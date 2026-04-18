@@ -1,6 +1,8 @@
 import type { AdminBooking } from './bookingStore.js'
 import { escapeHtml } from './sanitize.js'
-import { formatStoredDateTime } from './time.js'
+import { formatReturnTimeLabel, formatStoredDateTime } from './time.js'
+
+const supportPhoneNumbers = ['(847) 331-0927', '(314) 606-2112'] as const
 
 function renderDetailRow(label: string, value: string) {
   return `<tr><td style="padding:10px 0;color:#5f7080;font-size:13px;vertical-align:top;width:220px;">${escapeHtml(label)}</td><td style="padding:10px 0;color:#06131f;font-size:14px;font-weight:600;">${escapeHtml(value)}</td></tr>`
@@ -10,13 +12,21 @@ function getSiteUrl() {
   return (
     process.env.SITE_URL?.replace(/\/$/, '') ||
     process.env.VITE_SITE_URL?.replace(/\/$/, '') ||
-    'https://north-shore-nautical.onrender.com'
+    'https://nsnautical.com'
   )
 }
 
 function getClientFirstName(fullName: string) {
   const [firstName] = fullName.trim().split(/\s+/)
   return firstName || fullName
+}
+
+function getReturnTimeLine(booking: AdminBooking) {
+  return booking.returnTime ? formatReturnTimeLabel(booking.returnTime) : 'Not provided yet'
+}
+
+function getSupportNumbersLine() {
+  return supportPhoneNumbers.join(' or ')
 }
 
 function renderEmailShell(title: string, intro: string, content: string) {
@@ -42,11 +52,13 @@ function renderEmailShell(title: string, intro: string, content: string) {
 
 export function createBusinessNotificationEmail(booking: AdminBooking) {
   const formattedLaunchTime = formatStoredDateTime(booking.slot.startsAt)
+  const formattedReturnTime = getReturnTimeLine(booking)
   const details = [
     ['Client', booking.fullName],
     ['Email Address', booking.email],
     ['Phone Number', booking.phone],
     ['Booked Time', formattedLaunchTime],
+    ['Requested Return Time', formattedReturnTime],
     ['Launch Location', booking.slot.launchLocation],
     ...(booking.serviceName ? [['Reserved Service', booking.serviceName]] : []),
     ...(booking.addOnServices.length > 0
@@ -88,6 +100,7 @@ export function createBusinessNotificationEmail(booking: AdminBooking) {
 
 export function createCustomerConfirmationEmail(booking: AdminBooking) {
   const formattedLaunchTime = formatStoredDateTime(booking.slot.startsAt)
+  const formattedReturnTime = getReturnTimeLine(booking)
   const firstName = getClientFirstName(booking.fullName)
 
   const html = renderEmailShell(
@@ -98,11 +111,15 @@ export function createCustomerConfirmationEmail(booking: AdminBooking) {
         <p style="margin:0;color:#06131f;font-size:14px;font-weight:700;">Booking Summary</p>
         <p style="margin:12px 0 0;color:#516474;font-size:14px;line-height:1.8;">
           Time: <strong style="color:#06131f;">${escapeHtml(formattedLaunchTime)}</strong><br />
+          Return Time: <strong style="color:#06131f;">${escapeHtml(formattedReturnTime)}</strong><br />
           Launch Location: <strong style="color:#06131f;">${escapeHtml(booking.slot.launchLocation)}</strong><br />
           Reserved For: <strong style="color:#06131f;">${escapeHtml(booking.fullName)}</strong>${booking.serviceName ? `<br />Service Reserved: <strong style="color:#06131f;">${escapeHtml(booking.serviceName)}</strong>` : ''}${booking.addOnServices.length > 0 ? `<br />A La Carte Services: <strong style="color:#06131f;">${escapeHtml(booking.addOnServices.join(', '))}</strong>` : ''}
         </p>
       </div>
       <p style="margin:24px 0 0;color:#516474;font-size:14px;line-height:1.8;">
+        If you plan to return earlier or later than this time, text support at ${escapeHtml(getSupportNumbersLine())} so the crew can adjust.
+      </p>
+      <p style="margin:18px 0 0;color:#516474;font-size:14px;line-height:1.8;">
         Thank you again for booking with North Shore Nautical. If any details change, simply reply to this email and the reservation can be updated for you.
       </p>
     `,
@@ -113,17 +130,104 @@ export function createCustomerConfirmationEmail(booking: AdminBooking) {
     '',
     `Thank you for booking with North Shore Nautical, ${firstName}.`,
     `Booked time: ${formattedLaunchTime}`,
+    `Requested return time: ${formattedReturnTime}`,
     `Launch location: ${booking.slot.launchLocation}`,
     ...(booking.serviceName ? [`Reserved service: ${booking.serviceName}`] : []),
     ...(booking.addOnServices.length > 0
       ? [`A la carte services: ${booking.addOnServices.join(', ')}`]
       : []),
     'Your reservation is confirmed and on file with North Shore Nautical.',
+    `If you will return earlier or later than planned, text support at ${getSupportNumbersLine()}.`,
     'Reply to this email if anything needs to change.',
   ].join('\n')
 
   return {
     subject: `Booking Confirmed: ${formattedLaunchTime} | North Shore Nautical`,
+    html,
+    text,
+  }
+}
+
+export function createBusinessReminderEmail(booking: AdminBooking) {
+  const formattedLaunchTime = formatStoredDateTime(booking.slot.startsAt)
+  const formattedReturnTime = getReturnTimeLine(booking)
+  const details = [
+    ['Client', booking.fullName],
+    ['Launch Time', formattedLaunchTime],
+    ['Requested Return Time', formattedReturnTime],
+    ['Launch Location', booking.slot.launchLocation],
+    ['Client Phone', booking.phone],
+    ['Client Email', booking.email],
+    ...(booking.serviceName ? [['Reserved Service', booking.serviceName]] : []),
+    ...(booking.addOnServices.length > 0
+      ? [['A La Carte Services', booking.addOnServices.join(', ')]]
+      : []),
+    ['Operations Status', booking.status.replace(/_/g, ' ')],
+    ['Client Notes', booking.notes || 'No notes provided.'],
+  ]
+
+  const html = renderEmailShell(
+    'Launch Reminder',
+    `${escapeHtml(booking.fullName)} is scheduled to launch in about two hours.`,
+    `
+      <table style="width:100%;border-collapse:collapse;margin-top:28px;">
+        ${details.map(([label, value]) => renderDetailRow(label, value)).join('')}
+      </table>
+      <p style="margin:24px 0 0;color:#516474;font-size:14px;line-height:1.8;">
+        Reminder emails were sent to both the client and support addresses for this booking.
+      </p>
+    `,
+  )
+
+  const text = [
+    'Launch Reminder | North Shore Nautical',
+    '',
+    ...details.map(([label, value]) => `${label}: ${value}`),
+    'Reminder emails were sent to both the client and support addresses for this booking.',
+  ].join('\n')
+
+  return {
+    subject: `Reminder: ${booking.fullName} launches at ${formattedLaunchTime}`,
+    html,
+    text,
+  }
+}
+
+export function createCustomerReminderEmail(booking: AdminBooking) {
+  const formattedLaunchTime = formatStoredDateTime(booking.slot.startsAt)
+  const formattedReturnTime = getReturnTimeLine(booking)
+  const firstName = getClientFirstName(booking.fullName)
+
+  const html = renderEmailShell(
+    'Your Launch Is Coming Up',
+    `<strong style="color:#06131f;">${escapeHtml(firstName)}</strong>, this is your reminder that your North Shore Nautical launch is about two hours away.`,
+    `
+      <div style="margin-top:28px;padding:22px 24px;border-radius:20px;background:#f4f8fa;border:1px solid rgba(6,19,31,0.08);">
+        <p style="margin:0;color:#06131f;font-size:14px;font-weight:700;">Reminder Summary</p>
+        <p style="margin:12px 0 0;color:#516474;font-size:14px;line-height:1.8;">
+          Launch Time: <strong style="color:#06131f;">${escapeHtml(formattedLaunchTime)}</strong><br />
+          Planned Return: <strong style="color:#06131f;">${escapeHtml(formattedReturnTime)}</strong><br />
+          Launch Location: <strong style="color:#06131f;">${escapeHtml(booking.slot.launchLocation)}</strong>
+        </p>
+      </div>
+      <p style="margin:24px 0 0;color:#516474;font-size:14px;line-height:1.8;">
+        Need help or running early or late? Call or text support at ${escapeHtml(getSupportNumbersLine())}.
+      </p>
+    `,
+  )
+
+  const text = [
+    'Your Launch Is Coming Up | North Shore Nautical',
+    '',
+    `${firstName}, your North Shore Nautical launch is about two hours away.`,
+    `Launch time: ${formattedLaunchTime}`,
+    `Planned return: ${formattedReturnTime}`,
+    `Launch location: ${booking.slot.launchLocation}`,
+    `Need help or running early or late? Call or text support at ${getSupportNumbersLine()}.`,
+  ].join('\n')
+
+  return {
+    subject: `Reminder: Your launch is at ${formattedLaunchTime}`,
     html,
     text,
   }

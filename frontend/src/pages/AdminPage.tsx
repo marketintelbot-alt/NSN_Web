@@ -8,6 +8,7 @@ import { AdminDashboard } from '../components/admin/AdminDashboard'
 import { Seo } from '../components/seo/Seo'
 import { FadeIn } from '../components/ui/FadeIn'
 import { PageHero } from '../components/ui/PageHero'
+import { supportPhoneNumbers } from '../content/site'
 import {
   createAccountSession,
   readAccountSession,
@@ -148,6 +149,21 @@ export function AdminPage() {
                 <p className="mt-4 text-base leading-8 text-slate">
                   Sign in with the email and password tied to your North Shore Nautical account.
                 </p>
+
+                <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
+                  <p className="font-semibold text-ink">Need help booking or signing in?</p>
+                  <div className="mt-3 flex flex-wrap gap-3">
+                    {supportPhoneNumbers.map((supportLine) => (
+                      <a
+                        key={supportLine.phoneHref}
+                        className="rounded-full border border-ink/10 bg-white px-4 py-2 font-semibold text-ink transition hover:border-lake/35 hover:bg-lake/5"
+                        href={supportLine.phoneHref}
+                      >
+                        {supportLine.phoneDisplay}
+                      </a>
+                    ))}
+                  </div>
+                </div>
 
                 {loading ? (
                   <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-4 py-4 text-sm text-slate">

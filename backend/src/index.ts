@@ -38,15 +38,54 @@ import { createPublicBookingRouter } from './routes/publicBooking.js'
 const app = express()
 const port = Number(process.env.PORT || 4000)
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1)
-const hasConfiguredOrigins = Boolean(process.env.CORS_ORIGIN?.trim())
 
-const allowedOrigins = (
-  process.env.CORS_ORIGIN ||
-  'http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173,http://127.0.0.1:4173'
-)
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean)
+const defaultAllowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:4173',
+  'http://127.0.0.1:4173',
+  'https://nsnautical.com',
+  'https://www.nsnautical.com',
+  'https://north-shore-nautical.onrender.com',
+  'https://north-shore-nautical-site.onrender.com',
+  'https://northshorenautical.com',
+  'https://www.northshorenautical.com',
+] as const
+
+function normalizeOrigin(origin: string) {
+  const trimmedOrigin = origin.trim()
+
+  if (!trimmedOrigin) {
+    return ''
+  }
+
+  try {
+    return new URL(trimmedOrigin).origin
+  } catch {
+    return trimmedOrigin.replace(/\/$/, '')
+  }
+}
+
+const allowedOrigins = [
+  ...new Set(
+    [...defaultAllowedOrigins, ...(process.env.CORS_ORIGIN || '').split(',')]
+      .map((origin) => normalizeOrigin(origin))
+      .filter(Boolean),
+  ),
+]
+
+function isAllowedOrigin(origin?: string) {
+  if (!origin) {
+    return true
+  }
+
+  const normalizedOrigin = normalizeOrigin(origin)
+  const isLocalPreviewOrigin = Boolean(
+    normalizedOrigin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/),
+  )
+
+  return isLocalPreviewOrigin || allowedOrigins.includes(normalizedOrigin)
+}
 
 const reservationLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -70,16 +109,7 @@ app.set('trust proxy', Number.isNaN(trustProxyHops) ? 1 : trustProxyHops)
 app.use(
   cors({
     origin(origin, callback) {
-      const isLocalPreviewOrigin =
-        !hasConfiguredOrigins &&
-        Boolean(origin?.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/))
-
-      if (!origin || allowedOrigins.includes(origin) || isLocalPreviewOrigin) {
-        callback(null, true)
-        return
-      }
-
-      callback(new Error('Origin not allowed by CORS'))
+      callback(null, isAllowedOrigin(origin))
     },
     credentials: true,
     methods: ['DELETE', 'GET', 'POST', 'PUT'],

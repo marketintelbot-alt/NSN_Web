@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -57,16 +57,22 @@ export function ReservationForm() {
     defaultValues: reservationInitialValues,
   })
 
-  useEffect(() => {
-    const controller = new AbortController()
+  const replaceSlots = useCallback((nextSlots: PublicSlot[]) => {
+    setSlots(nextSlots)
+    setSelectedSlotId((current) =>
+      nextSlots.some((slot) => slot.id === current) ? current : nextSlots[0]?.id || '',
+    )
+    setSlotsState(nextSlots.length > 0 ? 'ready' : 'empty')
+  }, [])
 
-    async function loadSlots() {
+  const loadSlots = useCallback(
+    async (signal?: AbortSignal) => {
       setSlotsState('loading')
       setSlotsMessage('')
 
       try {
         const response = await fetch(`${apiBaseUrl}/api/booking-slots`, {
-          signal: controller.signal,
+          signal,
         })
         const payload = (await response.json().catch(() => ({}))) as SlotsResponse
 
@@ -76,12 +82,7 @@ export function ReservationForm() {
           return
         }
 
-        const nextSlots = payload.slots ?? []
-        setSlots(nextSlots)
-        setSelectedSlotId((current) =>
-          nextSlots.some((slot) => slot.id === current) ? current : nextSlots[0]?.id || '',
-        )
-        setSlotsState(nextSlots.length > 0 ? 'ready' : 'empty')
+        replaceSlots(payload.slots ?? [])
       } catch (error) {
         if ((error as Error).name === 'AbortError') {
           return
@@ -90,12 +91,21 @@ export function ReservationForm() {
         setSlotsState('error')
         setSlotsMessage('Unable to load the available time slots right now.')
       }
+    },
+    [replaceSlots],
+  )
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const loadTimer = window.setTimeout(() => {
+      void loadSlots(controller.signal)
+    }, 0)
+
+    return () => {
+      window.clearTimeout(loadTimer)
+      controller.abort()
     }
-
-    void loadSlots()
-
-    return () => controller.abort()
-  }, [])
+  }, [loadSlots])
 
   async function onSubmit(values: ReservationFormValues) {
     if (!selectedSlotId) {
@@ -125,8 +135,7 @@ export function ReservationForm() {
 
       if (!response.ok) {
         if (response.status === 409 || response.status === 404) {
-          setSlots((current) => current.filter((slot) => slot.id !== selectedSlotId))
-          setSelectedSlotId('')
+          replaceSlots(slots.filter((slot) => slot.id !== selectedSlotId))
         }
 
         setSubmitStatus('error')
@@ -140,8 +149,7 @@ export function ReservationForm() {
       setSubmitMessage(
         'Your time is reserved. If you do not see a confirmation email shortly, your booking is still safely on file with North Shore Nautical.',
       )
-      setSlots((current) => current.filter((slot) => slot.id !== selectedSlotId))
-      setSelectedSlotId('')
+      replaceSlots(slots.filter((slot) => slot.id !== selectedSlotId))
       reset(reservationInitialValues)
     } catch {
       setSubmitStatus('error')
@@ -183,7 +191,14 @@ export function ReservationForm() {
             </div>
           ) : slotsState === 'error' ? (
             <div className="rounded-3xl border border-[#d7b0ac] bg-[#fff7f6] px-5 py-5 text-sm text-[#7f2f29]">
-              {slotsMessage}
+              <p>{slotsMessage}</p>
+              <button
+                className="mt-4 rounded-full border border-[#c88854]/50 px-4 py-2 text-sm font-semibold text-[#7f2f29] transition hover:bg-white/70"
+                type="button"
+                onClick={() => void loadSlots()}
+              >
+                Try Again
+              </button>
             </div>
           ) : slotsState === 'empty' ? (
             <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-6 text-sm leading-7 text-slate">
@@ -192,6 +207,9 @@ export function ReservationForm() {
             </div>
           ) : (
             <div className="grid gap-6">
+              <p className="text-sm leading-7 text-slate">
+                Pick a day below, then tap the time that works best.
+              </p>
               {Object.entries(groupedSlots).map(([dayLabel, daySlots]) => (
                 <div key={dayLabel} className="grid gap-3">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">

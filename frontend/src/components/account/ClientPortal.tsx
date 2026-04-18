@@ -469,6 +469,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const requiresServiceSelection = Boolean(
     portal?.client.services.some((service) => service.remainingUnits > 0),
   )
+  const hasAnyContractedServices = Boolean(portal?.client.services.length)
   const bookingActionDisabled =
     bookingState === 'submitting' ||
     loading ||
@@ -594,14 +595,24 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
             <h3 className="text-2xl font-semibold text-ink">Contracted services</h3>
           </div>
           <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <p className="text-sm leading-7 text-slate">Choose the service you want to book.</p>
+            <p className="text-sm leading-7 text-slate">
+              {requiresServiceSelection
+                ? 'Choose the contracted service you want to use for this reservation.'
+                : 'Choose a date and time below. Your profile stays attached to the reservation automatically.'}
+            </p>
             <button
               className="button-dark w-full justify-center disabled:cursor-not-allowed disabled:opacity-60 md:w-fit"
               type="button"
               disabled={loading || refreshingPortal || !portal}
               onClick={() => beginReservation(selectedServiceEntitlementId)}
             >
-              {loading ? 'Loading...' : refreshingPortal ? 'Refreshing...' : 'Reserve a Time'}
+              {loading
+                ? 'Loading...'
+                : refreshingPortal
+                  ? 'Refreshing...'
+                  : requiresServiceSelection
+                    ? 'Reserve a Time'
+                    : 'Choose a Time'}
             </button>
           </div>
           <div className="mt-6 grid gap-4">
@@ -609,7 +620,9 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
               <p className="text-sm text-slate">Loading your service balances...</p>
             ) : !portal || portal.client.services.length === 0 ? (
               <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
-                No contracted services are currently attached to this account yet.
+                No contracted service balance is attached to this account yet. You can still
+                choose an available day and time below, and North Shore Nautical can match the
+                reservation to your account details.
               </p>
             ) : (
               portal.client.services.map((service) => (
@@ -961,7 +974,9 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           <p className="mt-4 text-base leading-8 text-slate">
             {editingBooking
               ? 'Adjust the date, time, add-ons, or notes for the reservation you already have on file.'
-              : 'Pick the contracted service you want to use, then choose an available day and time. Reserved slots are automatically blocked so no one else can take the same booking time.'}
+              : requiresServiceSelection
+                ? 'Pick the contracted service you want to use, then choose an available day and time. Reserved slots are automatically blocked so no one else can take the same booking time.'
+                : 'Choose an available day and time below. Reserved slots are blocked automatically so no one else can take the same booking time while your request is on file.'}
           </p>
 
           {editingBooking ? (
@@ -1110,7 +1125,9 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 : 'Confirming...'
               : editingBooking
                 ? 'Save Reservation Changes'
-                : 'Reserve My Service'}
+                : hasAnyContractedServices
+                  ? 'Reserve My Service'
+                  : 'Reserve My Time'}
           </button>
         </section>
 

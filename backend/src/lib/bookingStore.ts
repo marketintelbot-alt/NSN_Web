@@ -58,6 +58,12 @@ type StoredBookingRow = {
   booking_slots?: StoredSlotRow | StoredSlotRow[] | null
 }
 
+type DatabaseErrorLike = {
+  code?: string
+  details?: string | null
+  message?: string
+}
+
 export type PublicSlot = {
   id: string
   startsAt: string
@@ -174,6 +180,13 @@ function isUniqueConstraintError(error: { code?: string; message?: string } | nu
     error?.code === '23505' ||
     error?.message?.toLowerCase().includes('duplicate key value violates unique constraint') ||
     false
+  )
+}
+
+function isLegacyClientCreatedByConstraintError(error: DatabaseErrorLike | null) {
+  return (
+    error?.code === '23514' &&
+    Boolean(error.message?.includes('launch_bookings_created_by_check'))
   )
 }
 
@@ -544,25 +557,41 @@ export async function createClientBooking(clientAccount: ClientAccount, input: C
     input.serviceEntitlementId || null,
   )
 
-  const { data, error } = await supabaseAdmin
+  const baseInsert = {
+    slot_id: input.slotId,
+    client_account_id: clientAccount.id,
+    service_entitlement_id: serviceSelection.serviceEntitlementId,
+    service_name: serviceSelection.serviceName,
+    add_on_services: input.addOnServices,
+    full_name: clientAccount.fullName,
+    email: clientAccount.email,
+    phone: clientAccount.phone,
+    notes: input.notes || null,
+    status: 'confirmed',
+    email_customer_status: 'pending',
+    email_admin_status: 'pending',
+  }
+
+  let { data, error } = await supabaseAdmin
     .from('launch_bookings')
     .insert({
-      slot_id: input.slotId,
-      client_account_id: clientAccount.id,
-      service_entitlement_id: serviceSelection.serviceEntitlementId,
-      service_name: serviceSelection.serviceName,
-      add_on_services: input.addOnServices,
-      full_name: clientAccount.fullName,
-      email: clientAccount.email,
-      phone: clientAccount.phone,
-      notes: input.notes || null,
-      status: 'confirmed',
+      ...baseInsert,
       created_by: 'client',
-      email_customer_status: 'pending',
-      email_admin_status: 'pending',
     })
     .select('id')
     .single()
+
+  if (isLegacyClientCreatedByConstraintError(error)) {
+    ;({ data, error } = await supabaseAdmin
+      .from('launch_bookings')
+      .insert({
+        ...baseInsert,
+        // Older databases may not include the newer "client" source yet.
+        created_by: 'public',
+      })
+      .select('id')
+      .single())
+  }
 
   if (isUniqueConstraintError(error)) {
     throw new SlotConflictError()

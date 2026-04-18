@@ -16,6 +16,7 @@ import {
   formatSlotDate,
   formatSlotDateTime,
   formatSlotTime,
+  groupSlotsByDate,
   reservationInitialValues,
   reservationSchema,
   type ReservationFormValues,
@@ -161,13 +162,12 @@ export function ReservationForm() {
 
   const fieldHintClass = 'mt-2 text-sm text-[#b43e37]'
   const selectedSlot = slots.find((slot) => slot.id === selectedSlotId) || confirmedSlot
-  const groupedSlots = useMemo(() => {
-    return slots.reduce<Record<string, PublicSlot[]>>((groups, slot) => {
-      const key = formatSlotDate(slot.startsAt)
-      groups[key] = [...(groups[key] || []), slot]
-      return groups
-    }, {})
-  }, [slots])
+  const slotDayGroups = useMemo(() => groupSlotsByDate(slots), [slots])
+  const selectedSlotDayLabel = selectedSlot
+    ? formatSlotDate(selectedSlot.startsAt)
+    : slotDayGroups[0]?.label || ''
+  const selectedSlotDay =
+    slotDayGroups.find((dayGroup) => dayGroup.label === selectedSlotDayLabel) || slotDayGroups[0]
 
   return (
     <div className="grid gap-8 xl:grid-cols-[1.12fr_0.88fr]">
@@ -208,15 +208,40 @@ export function ReservationForm() {
           ) : (
             <div className="grid gap-6">
               <p className="text-sm leading-7 text-slate">
-                Pick a day below, then tap the time that works best.
+                Pick a day at the top, then tap the time that works best.
               </p>
-              {Object.entries(groupedSlots).map(([dayLabel, daySlots]) => (
-                <div key={dayLabel} className="grid gap-3">
+              <div className="overflow-x-auto pb-1">
+                <div className="flex min-w-max gap-3">
+                  {slotDayGroups.map((dayGroup) => {
+                    const isSelectedDay = dayGroup.label === selectedSlotDayLabel
+
+                    return (
+                      <button
+                        key={dayGroup.label}
+                        className={`rounded-2xl border px-4 py-3 text-left transition ${
+                          isSelectedDay
+                            ? 'border-lake bg-lake/10 text-ink'
+                            : 'border-ink/10 bg-white text-slate hover:border-lake/30'
+                        }`}
+                        type="button"
+                        onClick={() => setSelectedSlotId(dayGroup.slots[0]?.id || '')}
+                      >
+                        <span className="block text-sm font-semibold">{dayGroup.label}</span>
+                        <span className="mt-1 block text-xs uppercase tracking-[0.16em] text-slate/80">
+                          {dayGroup.slots.length} times
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              {selectedSlotDay ? (
+                <div className="grid gap-3">
                   <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
-                    {dayLabel}
+                    {selectedSlotDay.label}
                   </p>
                   <div className="grid gap-3 md:grid-cols-2">
-                    {daySlots.map((slot) => {
+                    {selectedSlotDay.slots.map((slot) => {
                       const isSelected = slot.id === selectedSlotId
 
                       return (
@@ -242,7 +267,7 @@ export function ReservationForm() {
                     })}
                   </div>
                 </div>
-              ))}
+              ) : null}
             </div>
           )}
         </div>

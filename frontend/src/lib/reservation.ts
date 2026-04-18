@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+import type { PublicSlot } from '../types/booking'
+
 export const serviceTimeZone = 'America/Chicago'
 
 const slotDateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -54,6 +56,25 @@ export function formatSlotTime(startsAt: string) {
 
 export function formatSlotDateTime(startsAt: string) {
   return `${formatSlotDate(startsAt)} at ${formatSlotTime(startsAt)}`
+}
+
+export type SlotDayGroup = {
+  label: string
+  slots: PublicSlot[]
+}
+
+export function groupSlotsByDate(slots: PublicSlot[]) {
+  const groupedSlots = new Map<string, PublicSlot[]>()
+
+  for (const slot of slots) {
+    const dayLabel = formatSlotDate(slot.startsAt)
+    groupedSlots.set(dayLabel, [...(groupedSlots.get(dayLabel) || []), slot])
+  }
+
+  return [...groupedSlots.entries()].map(([label, daySlots]) => ({
+    label,
+    slots: daySlots,
+  })) satisfies SlotDayGroup[]
 }
 
 export const reservationInitialValues: ReservationFormValues = {

@@ -22,6 +22,7 @@ import {
   formatSlotDate,
   formatSlotDateTime,
   formatSlotTime,
+  groupSlotsByDate,
 } from '../../lib/reservation'
 import type {
   ClientPortalResponse,
@@ -457,15 +458,13 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     [editingBookingId, portal],
   )
 
-  const groupedSlots = useMemo(() => {
-    return bookingSlotChoices.reduce<Record<string, PublicSlot[]>>((groups, slot) => {
-      const key = formatSlotDate(slot.startsAt)
-      groups[key] = [...(groups[key] || []), slot]
-      return groups
-    }, {})
-  }, [bookingSlotChoices])
-
   const selectedSlot = bookingSlotChoices.find((slot) => slot.id === selectedSlotId) || null
+  const slotDayGroups = useMemo(() => groupSlotsByDate(bookingSlotChoices), [bookingSlotChoices])
+  const selectedSlotDayLabel = selectedSlot
+    ? formatSlotDate(selectedSlot.startsAt)
+    : slotDayGroups[0]?.label || ''
+  const selectedSlotDay =
+    slotDayGroups.find((dayGroup) => dayGroup.label === selectedSlotDayLabel) || slotDayGroups[0]
   const requiresServiceSelection = Boolean(
     portal?.client.services.some((service) => service.remainingUnits > 0),
   )
@@ -1017,7 +1016,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           ) : null}
 
           <div className="mt-6 grid gap-5">
-            {Object.entries(groupedSlots).length === 0 ? (
+            {slotDayGroups.length === 0 ? (
               <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
                 <p>No booking times are open right now beyond the 24-hour notice window.</p>
                 <button
@@ -1030,38 +1029,62 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 </button>
               </div>
             ) : (
-              Object.entries(groupedSlots).map(([dateLabel, slots]) => (
-                <div
-                  key={dateLabel}
-                  className="rounded-3xl border border-ink/10 bg-[#f9fbfc] px-4 py-4"
-                >
-                  <p className="text-sm font-semibold uppercase tracking-[0.16em] text-lake">
-                    {dateLabel}
-                  </p>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {slots.map((slot) => (
-                      <button
-                        key={slot.id}
-                        className={`slot-button ${slot.id === selectedSlotId ? 'slot-button-active' : ''}`}
-                        type="button"
-                        onClick={() => setSelectedSlotId(slot.id)}
-                      >
-                        <span>
-                          <span className="block text-base font-semibold text-ink">
-                            {formatSlotTime(slot.startsAt)}
+              <div className="grid gap-4">
+                <div className="overflow-x-auto pb-1">
+                  <div className="flex min-w-max gap-3">
+                    {slotDayGroups.map((dayGroup) => {
+                      const isSelectedDay = dayGroup.label === selectedSlotDayLabel
+
+                      return (
+                        <button
+                          key={dayGroup.label}
+                          className={`rounded-2xl border px-4 py-3 text-left transition ${
+                            isSelectedDay
+                              ? 'border-lake bg-lake/10 text-ink'
+                              : 'border-ink/10 bg-white text-slate hover:border-lake/30'
+                          }`}
+                          type="button"
+                          onClick={() => setSelectedSlotId(dayGroup.slots[0]?.id || '')}
+                        >
+                          <span className="block text-sm font-semibold">{dayGroup.label}</span>
+                          <span className="mt-1 block text-xs uppercase tracking-[0.16em] text-slate/80">
+                            {dayGroup.slots.length} times
                           </span>
-                          <span className="mt-1 block text-sm text-slate">
-                            {slot.launchLocation}
-                          </span>
-                        </span>
-                        {slot.id === selectedSlotId ? (
-                          <CheckCircle2 className="h-5 w-5 shrink-0 text-lake" />
-                        ) : null}
-                      </button>
-                    ))}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
-              ))
+                {selectedSlotDay ? (
+                  <div className="rounded-3xl border border-ink/10 bg-[#f9fbfc] px-4 py-4">
+                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-lake">
+                      {selectedSlotDay.label}
+                    </p>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      {selectedSlotDay.slots.map((slot) => (
+                        <button
+                          key={slot.id}
+                          className={`slot-button ${slot.id === selectedSlotId ? 'slot-button-active' : ''}`}
+                          type="button"
+                          onClick={() => setSelectedSlotId(slot.id)}
+                        >
+                          <span>
+                            <span className="block text-base font-semibold text-ink">
+                              {formatSlotTime(slot.startsAt)}
+                            </span>
+                            <span className="mt-1 block text-sm text-slate">
+                              {slot.launchLocation}
+                            </span>
+                          </span>
+                          {slot.id === selectedSlotId ? (
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-lake" />
+                          ) : null}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
 

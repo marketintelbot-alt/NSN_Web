@@ -67,7 +67,13 @@ export function AdminPage() {
     setAuthState('submitting')
     setMessage('')
 
-    const response = await createAccountSession(email, password)
+    const normalizedEmail = email.trim()
+
+    if (normalizedEmail !== email) {
+      setEmail(normalizedEmail)
+    }
+
+    const response = await createAccountSession(normalizedEmail, password)
     setAuthState('idle')
 
     if (!response.ok || !response.session) {
@@ -116,7 +122,7 @@ export function AdminPage() {
               : 'Use your North Shore Nautical login to access your account securely.'
         }
       >
-        <div className="inline-flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
+        <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
           <span>
             Access is protected with secure, cookie-based sessions and environment-managed credentials.
@@ -133,14 +139,14 @@ export function AdminPage() {
               <ClientPortal session={session} onSignedOut={() => setSession(null)} />
             )
           ) : (
-            <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-              <FadeIn className="panel p-8">
+            <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
+              <FadeIn className="panel p-6 md:p-8">
                 <div className="flex items-center gap-3">
                   <LockKeyhole className="h-5 w-5 text-lake" />
                   <h2 className="section-title text-3xl">Client login</h2>
                 </div>
                 <p className="mt-4 text-base leading-8 text-slate">
-                  Sign in with your North Shore Nautical account credentials to continue.
+                  Sign in with the email and password tied to your North Shore Nautical account.
                 </p>
 
                 {loading ? (
@@ -149,12 +155,17 @@ export function AdminPage() {
                   </div>
                 ) : null}
 
-                <form className="mt-8 grid gap-5" onSubmit={handleSubmit}>
+                <form className="mt-6 grid gap-4 md:mt-8 md:gap-5" onSubmit={handleSubmit}>
                   <label className="field-label">
                     Email Address
                     <input
                       autoComplete="email"
+                      autoCapitalize="none"
+                      autoCorrect="off"
                       className="input-field"
+                      enterKeyHint="next"
+                      inputMode="email"
+                      spellCheck={false}
                       type="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
@@ -164,7 +175,11 @@ export function AdminPage() {
                     Password
                     <input
                       autoComplete="current-password"
+                      autoCapitalize="none"
+                      autoCorrect="off"
                       className="input-field"
+                      enterKeyHint="go"
+                      spellCheck={false}
                       type="password"
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
@@ -210,7 +225,7 @@ export function AdminPage() {
                       'The full control panel for managing clients, passwords, and bookings only appears after a successful admin login.',
                   },
                 ].map((item, index) => (
-                  <FadeIn key={item.title} className="soft-panel p-7" delay={index * 0.08}>
+                  <FadeIn key={item.title} className="soft-panel p-5 md:p-7" delay={index * 0.08}>
                     <h3 className="text-xl font-semibold text-ink">{item.title}</h3>
                     <p className="mt-3 text-base leading-8 text-slate">{item.copy}</p>
                   </FadeIn>

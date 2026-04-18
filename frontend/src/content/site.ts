@@ -5,7 +5,7 @@ export const siteMeta = {
     "Premium boat storage, detailing, waxing, launch delivery, and polished online booking for Chicago's North Shore.",
   siteUrl:
     import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') ||
-    'https://www.northshorenautical.com',
+    'https://nsnautical.com',
   heroImage: '/images/north-shore-hero.jpeg',
   socialImage: '/images/social-card.svg',
   timeZone: 'America/Chicago',

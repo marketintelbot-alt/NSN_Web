@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.northshorenautical.com/sitemap.xml
+Sitemap: https://nsnautical.com/sitemap.xml

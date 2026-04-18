@@ -13,6 +13,7 @@ import { Seo } from '../components/seo/Seo'
 import { FadeIn } from '../components/ui/FadeIn'
 import { FaqList } from '../components/ui/FaqList'
 import { CtaBanner } from '../components/ui/CtaBanner'
+import { InstallAppPrompt } from '../components/ui/InstallAppPrompt'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import {
   contactDetails,
@@ -90,11 +91,11 @@ export function HomePage() {
               with calm, professional coordination.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link className="button-primary" to="/account">
+              <Link className="button-primary w-full justify-center sm:w-auto" to="/account">
                 Client Login
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link className="button-secondary" to="/services">
+              <Link className="button-secondary w-full justify-center sm:w-auto" to="/services">
                 Explore Services
               </Link>
             </div>
@@ -111,6 +112,8 @@ export function HomePage() {
               ))}
             </div>
           </FadeIn>
+
+          <InstallAppPrompt />
         </div>
       </section>
 

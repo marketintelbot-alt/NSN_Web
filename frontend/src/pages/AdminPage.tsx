@@ -94,39 +94,39 @@ export function AdminPage() {
             ? session.role === 'admin'
               ? 'Admin Dashboard'
               : 'Client Portal'
-            : 'Client Login'
+            : 'Client Portal'
         }
         description={
           session
             ? session.role === 'admin'
               ? 'Secure booking administration for North Shore Nautical.'
               : 'Saved client booking access for North Shore Nautical.'
-            : 'Secure client login for North Shore Nautical.'
+            : 'Private client portal access for North Shore Nautical.'
         }
-        path={location.pathname === '/admin' ? '/admin' : '/account'}
+        path={location.pathname === '/admin' ? '/admin' : '/portal'}
         noIndex
       />
       <PageHero
-        eyebrow={session?.role === 'admin' ? 'Admin Access' : 'Client Login'}
+        eyebrow={session?.role === 'admin' ? 'Admin Access' : 'Client Portal'}
         title={
           session?.role === 'admin'
             ? 'Secure booking control for North Shore Nautical.'
             : session?.role === 'client'
               ? 'Your saved launch account is ready to book.'
-              : 'Secure access for North Shore Nautical clients.'
+              : 'Private client portal access, built to stay simple.'
         }
         description={
           session?.role === 'admin'
             ? 'Manage clients, saved launch profiles, bookings, and scheduling from one protected dashboard.'
             : session?.role === 'client'
               ? 'Your stored launch details stay on file so booking from your phone can stay quick and simple.'
-              : 'Use your North Shore Nautical login to access your account securely.'
+              : 'Sign in once to review upcoming reservations, stored boat details, and available services in one place.'
         }
       >
         <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
           <span>
-            Access is protected with secure, cookie-based sessions and environment-managed credentials.
+            Access is set up directly by North Shore Nautical and protected with secure, cookie-based sessions.
           </span>
         </div>
       </PageHero>
@@ -144,14 +144,17 @@ export function AdminPage() {
               <FadeIn className="panel p-6 md:p-8">
                 <div className="flex items-center gap-3">
                   <LockKeyhole className="h-5 w-5 text-lake" />
-                  <h2 className="section-title text-3xl">Client login</h2>
+                  <h2 className="section-title text-3xl">Client portal</h2>
                 </div>
                 <p className="mt-4 text-base leading-8 text-slate">
-                  Sign in with the email and password tied to your North Shore Nautical account.
+                  Sign in with the email and password tied to your North Shore Nautical portal.
                 </p>
 
                 <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
-                  <p className="font-semibold text-ink">Need help booking or signing in?</p>
+                  <p className="font-semibold text-ink">Need portal access or help signing in?</p>
+                  <p className="mt-2">
+                    Access is arranged directly through North Shore Nautical, so current clients can get back in quickly without a public signup flow.
+                  </p>
                   <div className="mt-3 flex flex-wrap gap-3">
                     {supportPhoneNumbers.map((supportLine) => (
                       <a
@@ -167,7 +170,7 @@ export function AdminPage() {
 
                 {loading ? (
                   <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-4 py-4 text-sm text-slate">
-                    Checking for a saved sign-in while the page loads...
+                    Checking for saved portal access while the page loads...
                   </div>
                 ) : null}
 
@@ -218,7 +221,7 @@ export function AdminPage() {
                   ) : null}
 
                   <button className="button-dark w-full justify-center md:w-fit" type="submit">
-                    {authState === 'submitting' ? 'Signing in...' : 'Sign In'}
+                    {authState === 'submitting' ? 'Opening portal...' : 'Open Portal'}
                   </button>
                 </form>
               </FadeIn>
@@ -226,19 +229,19 @@ export function AdminPage() {
               <div className="grid gap-5">
                 {[
                   {
-                    title: 'Saved launch profiles',
+                    title: 'Saved client profile',
                     copy:
-                      'Client accounts can keep the usual launch location, boat details, and contact information ready to go.',
+                      'Boat details, preferred launch location, and contact information stay on file so repeat reservations take less effort.',
                   },
                   {
-                    title: 'Mobile-first booking',
+                    title: 'Fast booking access',
                     copy:
-                      'Once a client is signed in, they can focus on choosing a date and time instead of re-entering the same details each trip.',
+                      'Once signed in, clients can focus on the date and timing instead of re-entering the same information each trip.',
                   },
                   {
-                    title: 'Administrative tools appear after sign-in',
+                    title: 'Private portal access',
                     copy:
-                      'The full control panel for managing clients, passwords, and bookings only appears after a successful admin login.',
+                      'Portal access is provisioned directly by North Shore Nautical, so the experience stays simple for clients without opening up a public signup process.',
                   },
                 ].map((item, index) => (
                   <FadeIn key={item.title} className="soft-panel p-5 md:p-7" delay={index * 0.08}>

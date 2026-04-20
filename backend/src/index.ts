@@ -14,11 +14,17 @@ import {
 } from './routes/adminSession.js'
 import {
   createClientBookingHandler,
+  createClientALaCarteCheckoutSessionHandler,
   readClientPortalHandler,
   requireClientSession,
   updateClientBookingHandler,
+  updateClientPasswordHandler,
   updateClientProfileHandler,
 } from './routes/accountPortal.js'
+import {
+  handleStripeWebhook,
+  listPublicALaCarteServicesHandler,
+} from './routes/aLaCarteServices.js'
 import { getPrimaryAdminEmail } from './lib/adminSession.js'
 import { getBusinessNotificationEmails } from './lib/notificationEmails.js'
 import {
@@ -128,6 +134,11 @@ app.use('/api', (_request, response, next) => {
   response.setHeader('Cache-Control', 'no-store')
   next()
 })
+app.post(
+  '/api/stripe/webhook',
+  express.raw({ type: 'application/json' }),
+  handleStripeWebhook,
+)
 app.use(express.json({ limit: '25kb', strict: true }))
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'tiny' : 'dev'))
 
@@ -162,9 +173,16 @@ app.get('/api/account/portal', requireClientSession, readClientPortalHandler)
 app.post('/api/account/bookings', requireClientSession, createClientBookingHandler)
 app.put('/api/account/bookings/:bookingId', requireClientSession, updateClientBookingHandler)
 app.put('/api/account/profile', requireClientSession, updateClientProfileHandler)
+app.put('/api/account/password', requireClientSession, updateClientPasswordHandler)
+app.post(
+  '/api/account/a-la-carte/checkout',
+  requireClientSession,
+  createClientALaCarteCheckoutSessionHandler,
+)
 
 app.get('/api/booking-slots', publicBookingRouter.listSlots)
 app.post('/api/bookings', reservationLimiter, publicBookingRouter.createBooking)
+app.get('/api/a-la-carte-services', listPublicALaCarteServicesHandler)
 
 app.use('/api', (_request, response) => {
   response.status(404).json({

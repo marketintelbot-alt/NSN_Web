@@ -14,8 +14,10 @@ Admin management lives behind a protected `/admin` dashboard.
 
 - client-facing booking flow with a minimal form
 - secure multi-admin sign-in with bcrypt-hashed password verification
+- client portal password changes after sign-in
 - HTTP-only cookie sessions for admin access
 - protected admin dashboard for slots, bookings, and email status
+- Stripe-backed prepaid a la carte services that must be paid before a reservation can be completed
 - Resend transactional emails:
   - customer confirmation
   - internal admin notification
@@ -45,6 +47,12 @@ Admin management lives behind a protected `/admin` dashboard.
   - blocks double-booking on the server
   - saves the booking before email delivery
   - keeps the booking even if email delivery fails
+- `GET /api/account/portal`
+  - returns the saved client profile, contracted service balances, prepaid a la carte balances, and available slots
+- `POST /api/account/a-la-carte/checkout`
+  - creates a Stripe Checkout session for prepaid a la carte services
+- `PUT /api/account/password`
+  - updates a signed-in client password
 
 ### Admin dashboard
 
@@ -102,11 +110,14 @@ PORT=4000
 RESEND_API_KEY=
 BUSINESS_NOTIFICATION_EMAIL=
 FROM_EMAIL=
+SITE_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173
 TRUST_PROXY_HOPS=1
 SUPABASE_URL=
 SUPABASE_SECRET_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
 ADMIN_EMAILS=
 ADMIN_PASSWORD_HASH=
 ADMIN_SESSION_SECRET=
@@ -128,6 +139,7 @@ Notes:
 - `ADMIN_SESSION_TTL_HOURS` is optional and defaults to `12`.
 - `SUPABASE_SECRET_KEY` is the preferred current Supabase server key.
 - `SUPABASE_SERVICE_ROLE_KEY` is supported as a legacy fallback.
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are required for prepaid a la carte checkout.
 - Keep whichever server key you use backend-only and never expose it to the frontend.
 
 ## One-time admin password setup
@@ -165,11 +177,16 @@ The active booking flow uses:
 
 - `booking_slots`
 - `launch_bookings`
+- `client_accounts`
+- `client_service_entitlements`
+- `client_paid_add_on_credits`
+- `stripe_checkout_purchases`
 
 Important behavior:
 
 - slot availability is always derived on the server
 - a database uniqueness constraint prevents double-booking
+- the same 24-hour rule still applies after a Stripe payment is completed
 - email delivery status is written back to each booking for admin follow-up
 
 ## Resend setup
@@ -188,6 +205,23 @@ The app sends two transactional emails per booking:
 - internal admin notification
 
 If delivery fails, the booking still stays saved and the admin dashboard shows the failure state.
+
+## Stripe setup
+
+1. Create a Stripe account and collect:
+   - `STRIPE_SECRET_KEY`
+   - `STRIPE_WEBHOOK_SECRET`
+2. Point the webhook at:
+   - `https://YOUR-BACKEND/api/stripe/webhook`
+3. Subscribe the webhook to:
+   - `checkout.session.completed`
+   - `checkout.session.async_payment_succeeded`
+
+Prepaid a la carte behavior:
+
+- only the published a la carte services on the portal can be sold through Stripe
+- clients must pay for those services before the portal will let them finish a reservation
+- the same slot validation and 24-hour scheduling rule still applies after payment
 
 ## Render deployment
 

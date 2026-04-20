@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   CalendarClock,
+  CreditCard,
   CheckCircle2,
+  KeyRound,
   LoaderCircle,
   LogOut,
   PencilLine,
@@ -17,7 +19,7 @@ import {
   destroyAccountSession,
   type AccountSession,
 } from '../../lib/adminSession'
-import { serviceMenuSections, supportPhoneNumbers } from '../../content/site'
+import { supportPhoneNumbers } from '../../content/site'
 import {
   formatSlotDate,
   formatSlotDateTime,
@@ -28,6 +30,8 @@ import {
   suggestReturnTime,
 } from '../../lib/reservation'
 import type {
+  ALaCarteService,
+  ClientALaCarteCredit,
   ClientPortalResponse,
   ClientServiceEntitlement,
   PublicSlot,
@@ -48,8 +52,18 @@ type ProfileFormState = {
   notes: string
 }
 
+type PasswordFormState = {
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+}
+
 const transportLaunchLocations = ['Lloyd Boat Launch', 'Evanston Boat Launch'] as const
 const noTransportLaunchLocation = 'Not needed'
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  currency: 'USD',
+  style: 'currency',
+})
 
 function emptyProfileForm(): ProfileFormState {
   return {
@@ -91,13 +105,6 @@ function serviceCardClasses(service: ClientServiceEntitlement, selectedId: strin
   return 'border-ink/10 bg-white hover:border-lake/40'
 }
 
-const addOnServiceOptions = serviceMenuSections
-  .filter(
-    (section) =>
-      section.title.includes('A La Carte') || section.title.includes('Specialty & Add-On'),
-  )
-  .flatMap((section) => section.items)
-
 const supportNumbersLine = supportPhoneNumbers.map((contact) => contact.phoneDisplay).join(' or ')
 const returnTimingReminder = `If your return timing changes, call or text support at ${supportNumbersLine}.`
 
@@ -120,6 +127,60 @@ function getDefaultServiceEntitlementId(
     portal.client.services.find((service) => service.remainingUnits > 0)?.id ||
     ''
   )
+}
+
+function emptyPasswordForm(): PasswordFormState {
+  return {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  }
+}
+
+function formatCurrency(amountCents: number) {
+  return currencyFormatter.format(amountCents / 100)
+}
+
+function buildCheckoutAmountDefaults(portal: ClientPortalResponse | null) {
+  return Object.fromEntries(
+    (portal?.aLaCarteServices || [])
+      .filter((service) => typeof service.defaultCheckoutAmountCents === 'number')
+      .map((service) => [
+        service.serviceKey,
+        String(
+          typeof service.defaultCheckoutAmountCents === 'number'
+            ? Math.round(service.defaultCheckoutAmountCents / 100)
+            : '',
+        ),
+      ]),
+  )
+}
+
+function findALaCarteCredit(
+  credits: ClientALaCarteCredit[],
+  serviceKey: string,
+) {
+  return credits.find((credit) => credit.serviceKey === serviceKey) || null
+}
+
+function readCheckoutStatusFromLocation() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  return new URLSearchParams(window.location.search).get('checkout') || ''
+}
+
+function getCheckoutStatusMessage(checkoutStatus: string) {
+  if (checkoutStatus === 'success') {
+    return 'Stripe payment received. Your prepaid service will appear in the portal as soon as the confirmation finishes processing.'
+  }
+
+  if (checkoutStatus === 'cancelled') {
+    return 'Stripe checkout was cancelled, so no service credit was added.'
+  }
+
+  return ''
 }
 
 function buildBookingSlotChoices(
@@ -147,6 +208,7 @@ function buildBookingSlotChoices(
 }
 
 export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
+  const checkoutStatusFromLocation = readCheckoutStatusFromLocation()
   const [portal, setPortal] = useState<ClientPortalResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshingPortal, setRefreshingPortal] = useState(false)
@@ -164,6 +226,14 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
   const [profileExpanded, setProfileExpanded] = useState(false)
   const [profileState, setProfileState] = useState<'idle' | 'saving'>('idle')
   const [profileMessage, setProfileMessage] = useState('')
+  const [checkoutAmounts, setCheckoutAmounts] = useState<Record<string, string>>({})
+  const [checkoutServiceKey, setCheckoutServiceKey] = useState('')
+  const [checkoutMessage, setCheckoutMessage] = useState(
+    getCheckoutStatusMessage(checkoutStatusFromLocation),
+  )
+  const [passwordForm, setPasswordForm] = useState<PasswordFormState>(emptyPasswordForm())
+  const [passwordState, setPasswordState] = useState<'idle' | 'saving'>('idle')
+  const [passwordMessage, setPasswordMessage] = useState('')
 
   function scrollToBookingComposer() {
     document.getElementById('client-booking-composer')?.scrollIntoView({
@@ -191,7 +261,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     setBookingNotes('')
   }
 
-  const loadPortal = useCallback(async () => {
+  async function loadPortal(nextEditingBookingId = editingBookingId) {
     setRefreshingPortal(true)
 
     const response = await adminApiRequest<ClientPortalResponse>('/api/account/portal')
@@ -212,7 +282,11 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     setPortalMessage('')
     setPortal(response.payload)
     setProfileForm(buildProfileForm(response.payload))
-    const nextBookingSlots = buildBookingSlotChoices(response.payload, editingBookingId)
+    setCheckoutAmounts((current) => ({
+      ...buildCheckoutAmountDefaults(response.payload),
+      ...current,
+    }))
+    const nextBookingSlots = buildBookingSlotChoices(response.payload, nextEditingBookingId)
 
     setSelectedSlotId((current) =>
       nextBookingSlots.find((slot) => slot.id === current)?.id || nextBookingSlots[0]?.id || '',
@@ -222,12 +296,22 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     )
 
     return response.payload
-  }, [editingBookingId, onSignedOut])
+  }
 
   useEffect(() => {
     let isMounted = true
 
     async function loadInitialPortal() {
+      if (checkoutStatusFromLocation && typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search)
+        searchParams.delete('checkout')
+        searchParams.delete('service')
+        searchParams.delete('session_id')
+        const nextSearch = searchParams.toString()
+        const nextUrl = `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ''}`
+        window.history.replaceState({}, '', nextUrl)
+      }
+
       const response = await adminApiRequest<ClientPortalResponse>('/api/account/portal')
 
       if (!isMounted) {
@@ -249,6 +333,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       setPortalMessage('')
       setPortal(response.payload)
       setProfileForm(buildProfileForm(response.payload))
+      setCheckoutAmounts(buildCheckoutAmountDefaults(response.payload))
       setSelectedSlotId(response.payload.availableSlots[0]?.id || '')
       setSelectedReturnTime('')
       setSelectedServiceEntitlementId(getDefaultServiceEntitlementId(response.payload))
@@ -259,7 +344,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     return () => {
       isMounted = false
     }
-  }, [onSignedOut])
+  }, [checkoutStatusFromLocation, onSignedOut])
 
   async function handleSignOut() {
     await destroyAccountSession()
@@ -304,11 +389,10 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
       return
     }
 
-    if (
-      portal?.client.services.some((service) => service.remainingUnits > 0) &&
-      !selectedServiceEntitlementId
-    ) {
-      setMessage('Choose one of your available contracted services first.')
+    if (!selectedServiceEntitlementId && selectedAddOnServices.length === 0) {
+      setMessage(
+        'Choose one of your contracted services or prepay for an a la carte service first.',
+      )
       return
     }
 
@@ -463,6 +547,69 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     await refreshPortal()
   }
 
+  async function handleCreateCheckout(service: ALaCarteService) {
+    const amountValue = checkoutAmounts[service.serviceKey] || ''
+    const amountInDollars = Number(amountValue)
+
+    if (!Number.isFinite(amountInDollars) || amountInDollars <= 0) {
+      setCheckoutMessage('Choose a valid Stripe amount first.')
+      return
+    }
+
+    setCheckoutServiceKey(service.serviceKey)
+    setCheckoutMessage('')
+
+    const response = await adminApiRequest<{ checkoutUrl?: string; message?: string }>(
+      '/api/account/a-la-carte/checkout',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          serviceKey: service.serviceKey,
+          amountCents: Math.round(amountInDollars * 100),
+        }),
+      },
+    )
+
+    setCheckoutServiceKey('')
+
+    if (response.status === 401) {
+      onSignedOut()
+      return
+    }
+
+    if (!response.ok || !response.payload.checkoutUrl) {
+      setCheckoutMessage(response.payload.message || 'Unable to start Stripe checkout right now.')
+      return
+    }
+
+    window.location.assign(response.payload.checkoutUrl)
+  }
+
+  async function handleSavePassword() {
+    setPasswordState('saving')
+    setPasswordMessage('')
+
+    const response = await adminApiRequest<{ message?: string }>('/api/account/password', {
+      method: 'PUT',
+      body: JSON.stringify(passwordForm),
+    })
+
+    setPasswordState('idle')
+
+    if (response.status === 401) {
+      onSignedOut()
+      return
+    }
+
+    if (!response.ok) {
+      setPasswordMessage(response.payload.message || 'Unable to update your password right now.')
+      return
+    }
+
+    setPasswordForm(emptyPasswordForm())
+    setPasswordMessage('Your portal password was updated.')
+  }
+
   const editingBooking =
     portal?.upcomingBookings.find((booking) => booking.id === editingBookingId) || null
 
@@ -480,17 +627,23 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
     : slotDayGroups[0]?.label || ''
   const selectedSlotDay =
     slotDayGroups.find((dayGroup) => dayGroup.label === selectedSlotDayLabel) || slotDayGroups[0]
-  const requiresServiceSelection = Boolean(
+  const requiresContractedServiceSelection = Boolean(
     portal?.client.services.some((service) => service.remainingUnits > 0),
   )
   const hasAnyContractedServices = Boolean(portal?.client.services.length)
+  const selectedAddOnCount = selectedAddOnServices.length
+  const availableALaCarteCredits = portal?.aLaCarteCredits || []
+  const hasAnyPaidALaCarteCredit = availableALaCarteCredits.some(
+    (credit) => credit.remainingUnits > 0,
+  )
   const bookingActionDisabled =
     bookingState === 'submitting' ||
     loading ||
     refreshingPortal ||
     !selectedSlotId ||
     !effectiveSelectedReturnTime ||
-    (requiresServiceSelection && !selectedServiceEntitlementId)
+    (!selectedServiceEntitlementId && selectedAddOnCount === 0) ||
+    (requiresContractedServiceSelection && !selectedServiceEntitlementId && selectedAddOnCount === 0)
 
   return (
     <div className="grid gap-8 xl:grid-cols-[0.92fr_1.08fr]">
@@ -606,14 +759,205 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
 
         <FadeIn className="panel p-6 md:p-8" delay={0.05}>
           <div className="flex items-center gap-3">
+            <KeyRound className="h-5 w-5 text-lake" />
+            <h3 className="text-2xl font-semibold text-ink">Security</h3>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-slate">
+            Change your password here any time after you sign in.
+          </p>
+          <div className="mt-6 grid gap-4">
+            <label className="field-label">
+              Current password
+              <input
+                autoComplete="current-password"
+                className="input-field"
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={(event) =>
+                  setPasswordForm((current) => ({
+                    ...current,
+                    currentPassword: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field-label">
+              New password
+              <input
+                autoComplete="new-password"
+                className="input-field"
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(event) =>
+                  setPasswordForm((current) => ({
+                    ...current,
+                    newPassword: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label className="field-label">
+              Confirm new password
+              <input
+                autoComplete="new-password"
+                className="input-field"
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(event) =>
+                  setPasswordForm((current) => ({
+                    ...current,
+                    confirmPassword: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            {passwordMessage ? (
+              <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-4 text-sm text-slate">
+                {passwordMessage}
+              </p>
+            ) : null}
+            <button
+              className="button-dark w-full justify-center disabled:cursor-not-allowed disabled:opacity-60 md:w-fit"
+              type="button"
+              disabled={passwordState === 'saving'}
+              onClick={() => void handleSavePassword()}
+            >
+              {passwordState === 'saving' ? 'Saving Password...' : 'Update Password'}
+            </button>
+          </div>
+        </FadeIn>
+
+        <FadeIn className="panel p-6 md:p-8" delay={0.07}>
+          <div className="flex items-center gap-3">
+            <CreditCard className="h-5 w-5 text-lake" />
+            <h3 className="text-2xl font-semibold text-ink">Prepaid a la carte services</h3>
+          </div>
+          <div className="mt-4 grid gap-3">
+            <p className="text-sm leading-7 text-slate">
+              A la carte services must be paid through Stripe before they can be attached to a reservation. The same 24-hour reservation window still applies after payment.
+            </p>
+            {checkoutMessage ? (
+              <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-4 text-sm text-slate">
+                {checkoutMessage}
+              </p>
+            ) : null}
+          </div>
+          <div className="mt-6 grid gap-4">
+            {loading ? (
+              <p className="text-sm text-slate">Loading prepaid service options...</p>
+            ) : !portal || portal.aLaCarteServices.length === 0 ? (
+              <p className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
+                No Stripe-enabled a la carte services are attached to the portal right now.
+              </p>
+            ) : (
+              portal.aLaCarteServices.map((service) => {
+                const credit = findALaCarteCredit(availableALaCarteCredits, service.serviceKey)
+                const canPayNow = service.checkoutEnabled && !service.customQuoteOnly
+                const minimumDollars = service.minimumCheckoutAmountCents
+                  ? Math.round(service.minimumCheckoutAmountCents / 100)
+                  : null
+                const maximumDollars = service.maximumCheckoutAmountCents
+                  ? Math.round(service.maximumCheckoutAmountCents / 100)
+                  : null
+
+                return (
+                  <div
+                    key={service.serviceKey}
+                    className="rounded-3xl border border-ink/10 bg-[#f8fbfc] px-5 py-5"
+                  >
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <p className="text-lg font-semibold text-ink">{service.serviceName}</p>
+                        <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-lake">
+                          {service.category}
+                        </p>
+                        <p className="mt-3 text-sm leading-7 text-slate">{service.description}</p>
+                        <p className="mt-2 text-sm font-semibold text-ink">
+                          {service.pricingDisplay}
+                        </p>
+                        <p className="mt-2 text-sm leading-7 text-slate">{service.checkoutBlurb}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="status-pill status-pill-active">
+                          {credit?.remainingUnits || 0} prepaid
+                        </span>
+                        {credit ? (
+                          <span className="status-pill">{credit.totalUnits} total</span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {service.customQuoteOnly ? (
+                      <p className="mt-4 rounded-3xl border border-ink/10 bg-white px-4 py-4 text-sm leading-7 text-slate">
+                        This service stays custom-quoted, so it is intentionally not sold through Stripe.
+                      </p>
+                    ) : !canPayNow ? (
+                      <p className="mt-4 rounded-3xl border border-ink/10 bg-white px-4 py-4 text-sm leading-7 text-slate">
+                        Add your boat length in the profile editor first so the portal can calculate the correct Stripe range.
+                      </p>
+                    ) : (
+                      <div className="mt-4 grid gap-4 rounded-3xl border border-ink/10 bg-white px-4 py-4 md:grid-cols-[0.75fr_0.75fr_auto]">
+                        <label className="field-label">
+                          Stripe amount
+                          <input
+                            className="input-field"
+                            inputMode="numeric"
+                            value={checkoutAmounts[service.serviceKey] || ''}
+                            onChange={(event) =>
+                              setCheckoutAmounts((current) => ({
+                                ...current,
+                                [service.serviceKey]: event.target.value.replace(/[^0-9]/g, ''),
+                              }))
+                            }
+                          />
+                        </label>
+                        <div className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-4 py-4 text-sm leading-7 text-slate">
+                          <p className="font-semibold text-ink">Allowed range</p>
+                          <p className="mt-2">
+                            {typeof service.minimumCheckoutAmountCents === 'number' &&
+                            typeof service.maximumCheckoutAmountCents === 'number'
+                              ? `${formatCurrency(service.minimumCheckoutAmountCents)} to ${formatCurrency(service.maximumCheckoutAmountCents)}`
+                              : 'Pricing unavailable'}
+                          </p>
+                        </div>
+                        <button
+                          className="button-dark w-full justify-center self-end disabled:cursor-not-allowed disabled:opacity-60 md:w-fit"
+                          type="button"
+                          disabled={
+                            checkoutServiceKey === service.serviceKey ||
+                            minimumDollars === null ||
+                            maximumDollars === null ||
+                            Number(checkoutAmounts[service.serviceKey] || 0) < minimumDollars ||
+                            Number(checkoutAmounts[service.serviceKey] || 0) > maximumDollars
+                          }
+                          onClick={() => void handleCreateCheckout(service)}
+                        >
+                          {checkoutServiceKey === service.serviceKey ? 'Opening Stripe...' : 'Pay with Stripe'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+          {!hasAnyPaidALaCarteCredit ? (
+            <p className="mt-5 text-sm leading-7 text-slate">
+              Until a service is prepaid here or a contract credit is on file, the portal will not let the reservation be completed.
+            </p>
+          ) : null}
+        </FadeIn>
+
+        <FadeIn className="panel p-6 md:p-8" delay={0.09}>
+          <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-lake" />
             <h3 className="text-2xl font-semibold text-ink">Contracted services</h3>
           </div>
           <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <p className="text-sm leading-7 text-slate">
-              {requiresServiceSelection
+              {requiresContractedServiceSelection
                 ? 'Choose the contracted service you want to use for this reservation.'
-                : 'Choose a date and time below. Your profile stays attached to the reservation automatically.'}
+                : 'Contracted services are still handled separately from Stripe and can continue to be loaded onto your account by North Shore Nautical.'}
             </p>
             <button
               className="button-dark w-full justify-center disabled:cursor-not-allowed disabled:opacity-60 md:w-fit"
@@ -625,7 +969,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 ? 'Loading...'
                 : refreshingPortal
                   ? 'Refreshing...'
-                  : requiresServiceSelection
+                  : requiresContractedServiceSelection
                     ? 'Reserve a Time'
                     : 'Choose a Time'}
             </button>
@@ -994,9 +1338,9 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
           <p className="mt-4 text-base leading-8 text-slate">
             {editingBooking
               ? 'Adjust the date, time, add-ons, or notes for the reservation you already have on file.'
-              : requiresServiceSelection
-                ? 'Pick the contracted service you want to use, then choose an available day and time. Reserved slots are automatically blocked so no one else can take the same booking time.'
-                : 'Choose an available day and time below. Reserved slots are blocked automatically so no one else can take the same booking time while your request is on file.'}
+              : requiresContractedServiceSelection
+                ? 'Pick the contracted service you want to use, or add a prepaid a la carte service, then choose an available day and time. Reserved slots are automatically blocked so no one else can take the same booking time.'
+                : 'Choose at least one prepaid a la carte service or use a contracted service, then choose an available day and time. The same 24-hour reservation rule still applies.'}
           </p>
 
           {editingBooking ? (
@@ -1151,32 +1495,62 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
               <div>
                 <p className="text-lg font-semibold text-ink">A la carte add-ons</p>
                 <p className="text-sm leading-7 text-slate">
-                  Add any extra services you want included with this reservation.
+                  Only prepaid a la carte services can be added to a reservation.
                 </p>
               </div>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {addOnServiceOptions.map((addOnService) => {
-                const selected = selectedAddOnServices.includes(addOnService)
+              {(portal?.aLaCarteServices || []).map((addOnService) => {
+                const selected = selectedAddOnServices.includes(addOnService.serviceName)
+                const credit = findALaCarteCredit(
+                  availableALaCarteCredits,
+                  addOnService.serviceKey,
+                )
+                const selectedOnExistingBooking = Boolean(
+                  editingBooking?.addOnServices.includes(addOnService.serviceName),
+                )
+                const remainingUnits =
+                  (credit?.remainingUnits || 0) + (selectedOnExistingBooking ? 1 : 0)
+                const selectionDisabled =
+                  addOnService.customQuoteOnly || (!selected && remainingUnits <= 0)
 
                 return (
                   <button
-                    key={addOnService}
+                    key={addOnService.serviceKey}
                     className={`rounded-3xl border px-4 py-4 text-left transition ${
-                      selected ? 'border-lake bg-lake/10' : 'border-ink/10 bg-white hover:border-lake/30'
+                      selected
+                        ? 'border-lake bg-lake/10'
+                        : selectionDisabled
+                          ? 'border-ink/10 bg-white opacity-60'
+                          : 'border-ink/10 bg-white hover:border-lake/30'
                     }`}
                     type="button"
+                    disabled={selectionDisabled}
                     onClick={() =>
                       setSelectedAddOnServices((current) =>
-                        toggleAddOnSelection(current, addOnService),
+                        toggleAddOnSelection(current, addOnService.serviceName),
                       )
                     }
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <span className="text-sm font-semibold leading-7 text-ink">{addOnService}</span>
+                      <div>
+                        <span className="text-sm font-semibold leading-7 text-ink">
+                          {addOnService.serviceName}
+                        </span>
+                        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate/80">
+                          {credit?.remainingUnits || 0} prepaid remaining
+                        </p>
+                      </div>
                       {selected ? <CheckCircle2 className="h-5 w-5 shrink-0 text-lake" /> : null}
                     </div>
+                    {!selected && selectionDisabled ? (
+                      <p className="mt-3 text-xs leading-6 text-slate">
+                        {addOnService.customQuoteOnly
+                          ? 'This service stays quote-only.'
+                          : 'Pay for this service above before adding it to the reservation.'}
+                      </p>
+                    ) : null}
                   </button>
                 )
               })}
@@ -1205,7 +1579,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
                 : 'Confirming...'
               : editingBooking
                 ? 'Save Reservation Changes'
-                : hasAnyContractedServices
+                : hasAnyContractedServices || hasAnyPaidALaCarteCredit
                   ? 'Reserve My Service'
                   : 'Reserve My Time'}
           </button>

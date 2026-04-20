@@ -4,6 +4,7 @@ const apiBaseUrl =
   import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:4000'
 const apiUnavailableMessage =
   'We could not reach the secure booking service. Please try again in a moment.'
+const accountSessionTokenStorageKey = 'nsn_account_session_token'
 
 type AccountSessionResponse = {
   session?: AccountSession
@@ -13,14 +14,45 @@ type AccountSessionResponse = {
   clientAccountId?: string | null
   fullName?: string | null
   expiresAt?: string
+  sessionToken?: string
   message?: string
+}
+
+function readStoredAccountSessionToken() {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  return window.localStorage.getItem(accountSessionTokenStorageKey) || ''
+}
+
+function writeStoredAccountSessionToken(token: string) {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (token) {
+    window.localStorage.setItem(accountSessionTokenStorageKey, token)
+    return
+  }
+
+  window.localStorage.removeItem(accountSessionTokenStorageKey)
+}
+
+function clearStoredAccountSessionToken() {
+  writeStoredAccountSessionToken('')
 }
 
 export async function adminApiRequest<T>(path: string, options: RequestInit = {}) {
   const headers = new Headers(options.headers)
+  const sessionToken = readStoredAccountSessionToken()
 
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
+  }
+
+  if (sessionToken && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${sessionToken}`)
   }
 
   try {
@@ -31,6 +63,10 @@ export async function adminApiRequest<T>(path: string, options: RequestInit = {}
     })
 
     const payload = (await response.json().catch(() => ({}))) as T & { message?: string }
+
+    if (response.status === 401) {
+      clearStoredAccountSessionToken()
+    }
 
     return {
       ok: response.ok,
@@ -73,6 +109,10 @@ export async function createAccountSession(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   })
 
+  if (response.ok && response.payload.sessionToken) {
+    writeStoredAccountSessionToken(response.payload.sessionToken)
+  }
+
   return {
     ok: response.ok,
     status: response.status,
@@ -83,19 +123,34 @@ export async function createAccountSession(email: string, password: string) {
 
 export async function readAccountSession() {
   const response = await adminApiRequest<AccountSessionResponse>('/api/account/session')
+  const session = normalizeSession(response.payload)
+
+  if (!session) {
+    clearStoredAccountSessionToken()
+  }
 
   return {
     ok: response.ok,
     status: response.status,
-    session: normalizeSession(response.payload),
+    session,
     message: response.payload.message || '',
   }
 }
 
 export async function destroyAccountSession() {
+  const sessionToken = readStoredAccountSessionToken()
+  clearStoredAccountSessionToken()
+
+  const headers = new Headers()
+
+  if (sessionToken) {
+    headers.set('Authorization', `Bearer ${sessionToken}`)
+  }
+
   await fetch(`${apiBaseUrl}/api/account/session`, {
     method: 'DELETE',
     credentials: 'include',
+    headers,
   }).catch(() => undefined)
 }
 

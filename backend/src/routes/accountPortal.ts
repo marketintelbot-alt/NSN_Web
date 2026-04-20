@@ -2,12 +2,15 @@ import type { NextFunction, Request, Response } from 'express'
 
 import { ZodError } from 'zod'
 
-import { readAdminSessionCookie } from '../lib/adminCookie.js'
-import { getPrimaryAdminEmail, verifyAccountSessionToken } from '../lib/adminSession.js'
+import {
+  getPrimaryAdminEmail,
+  readVerifiedAccountSession,
+} from '../lib/adminSession.js'
 import {
   readClientAccountById,
   type ClientAccount,
   updateClientProfile,
+  updateClientPassword,
 } from '../lib/clientAccounts.js'
 import {
   SlotConflictError,
@@ -19,11 +22,15 @@ import {
 import { sendBookingEmails } from '../lib/bookingEmailDelivery.js'
 import {
   clientBookingSchema,
+  clientALaCarteCheckoutSchema,
   clientBookingUpdateSchema,
+  clientPasswordChangeSchema,
   clientProfileSchema,
 } from '../lib/bookingSchemas.js'
 import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
 import { hasSupabaseAdminConfig } from '../lib/supabaseAdmin.js'
+import { validateALaCarteCheckoutAmount } from '../lib/aLaCarteServices.js'
+import { createALaCarteCheckoutSession } from '../lib/stripeCheckout.js'
 
 function getEmailOptions() {
   return {
@@ -68,8 +75,7 @@ export async function requireClientSession(
   response: Response,
   next: NextFunction,
 ) {
-  const token = readAdminSessionCookie(request)
-  const session = token ? verifyAccountSessionToken(token) : null
+  const session = readVerifiedAccountSession(request)
 
   if (!session || session.role !== 'client' || !session.clientAccountId) {
     return response.status(401).json({
@@ -163,6 +169,46 @@ export async function updateClientProfileHandler(request: Request, response: Res
     return response.status(200).json({
       client,
       message: 'Profile updated.',
+    })
+  } catch (error) {
+    return respondWithPortalError(error, response)
+  }
+}
+
+export async function updateClientPasswordHandler(request: Request, response: Response) {
+  try {
+    const payload = clientPasswordChangeSchema.parse(request.body)
+    await updateClientPassword(getClientAccount(response).id, {
+      currentPassword: payload.currentPassword,
+      newPassword: payload.newPassword,
+    })
+
+    return response.status(200).json({
+      message: 'Password updated.',
+    })
+  } catch (error) {
+    return respondWithPortalError(error, response)
+  }
+}
+
+export async function createClientALaCarteCheckoutSessionHandler(
+  request: Request,
+  response: Response,
+) {
+  try {
+    const clientAccount = getClientAccount(response)
+    const payload = clientALaCarteCheckoutSchema.parse(request.body)
+    const validatedCheckout = await validateALaCarteCheckoutAmount(
+      payload.serviceKey,
+      payload.amountCents,
+      clientAccount.boatLengthFeet,
+    )
+
+    const checkoutSession = await createALaCarteCheckoutSession(clientAccount, validatedCheckout)
+
+    return response.status(200).json({
+      checkoutUrl: checkoutSession.url,
+      sessionId: checkoutSession.id,
     })
   } catch (error) {
     return respondWithPortalError(error, response)

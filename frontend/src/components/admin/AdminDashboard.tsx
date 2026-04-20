@@ -558,6 +558,13 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
     })
   }
 
+  function jumpToReservationsOnFile() {
+    document.getElementById('admin-reservations-on-file')?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+
   function startNewClientProfile() {
     setSelectedClientId('')
     setClientForm(emptyClientForm())
@@ -744,8 +751,8 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
 
     setDashboardMessage(
       clientForm.clientId
-        ? `Client profile updated and saved to the admin portal. ${savedClient?.fullName || 'This client'} can use their email and password to sign in.`
-        : `Client profile created and saved. ${savedClient?.fullName || 'This client'} now has their own client login account.`,
+        ? `Client profile updated and saved to the admin portal. ${savedClient?.fullName || 'This client'} can use their email and password to sign in through the client portal.`
+        : `Client profile created and saved. ${savedClient?.fullName || 'This client'} now has private client portal access.`,
     )
     setDashboardLoading(true)
     await loadDashboard()
@@ -912,6 +919,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                     (booking) => booking.status !== 'cancelled' && booking.status !== 'returned',
                   )
                   .length.toString(),
+                onClick: jumpToReservationsOnFile,
               },
               { label: 'Open Slots', value: availableSlots.length.toString() },
               {
@@ -924,14 +932,34 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                   )
                   .length.toString(),
               },
-            ].map((item) => (
-              <div key={item.label} className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
-                  {item.label}
-                </p>
-                <p className="mt-3 font-display text-4xl font-semibold text-ink">{item.value}</p>
-              </div>
-            ))}
+            ].map((item) =>
+              item.onClick ? (
+                <button
+                  key={item.label}
+                  className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-left transition hover:border-lake/35 hover:bg-lake/5"
+                  type="button"
+                  onClick={item.onClick}
+                >
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
+                    {item.label}
+                  </p>
+                  <p className="mt-3 font-display text-4xl font-semibold text-ink">
+                    {item.value}
+                  </p>
+                  <p className="mt-3 text-sm font-semibold text-ink">View bookings</p>
+                </button>
+              ) : (
+                <div
+                  key={item.label}
+                  className="rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5"
+                >
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
+                    {item.label}
+                  </p>
+                  <p className="mt-3 font-display text-4xl font-semibold text-ink">{item.value}</p>
+                </div>
+              ),
+            )}
           </div>
 
           {dashboardMessage ? (
@@ -947,7 +975,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
             <h3 className="text-2xl font-semibold text-ink">Client profile composer</h3>
           </div>
           <p className="mt-4 text-base leading-8 text-slate">
-            Create the client login here, store the boat details and desired launch spot, and load any contracted services directly onto the dashboard.
+            Set up client portal access here, store the boat details and desired launch spot, and load any contracted services directly onto the dashboard.
           </p>
 
           <form className="mt-6 grid gap-4" onSubmit={handleSaveClient}>
@@ -963,7 +991,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 />
               </label>
               <label className="field-label">
-                Email login
+                Portal email
                 <input
                   className="input-field"
                   type="email"
@@ -974,7 +1002,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                 />
               </label>
               <label className="field-label">
-                Password
+                Portal password
                 <input
                   autoCapitalize="none"
                   autoComplete="new-password"
@@ -982,7 +1010,9 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                   className="input-field"
                   type="password"
                   placeholder={
-                    clientForm.clientId ? 'Leave blank to keep current password' : 'Assign a password'
+                    clientForm.clientId
+                      ? 'Leave blank to keep the current password'
+                      : 'Set a portal password'
                   }
                   spellCheck={false}
                   value={clientForm.password}
@@ -1821,7 +1851,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
         </FadeIn>
 
         <FadeIn className="panel p-8" delay={0.08}>
-          <div className="flex items-center gap-3">
+          <div id="admin-reservations-on-file" className="flex scroll-mt-28 items-center gap-3">
             <CalendarClock className="h-5 w-5 text-lake" />
             <h3 className="text-2xl font-semibold text-ink">Reservations on file</h3>
           </div>

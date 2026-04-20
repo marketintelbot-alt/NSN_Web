@@ -88,8 +88,8 @@ export function Footer() {
                 Terms of Service
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
-              <Link className="inline-flex items-center gap-2 hover:text-ink" to="/account">
-                Client Login
+              <Link className="inline-flex items-center gap-2 hover:text-ink" to="/portal">
+                Client Portal
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </div>

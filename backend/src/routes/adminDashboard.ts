@@ -2,8 +2,11 @@ import type { NextFunction, Request, Response } from 'express'
 
 import { ZodError } from 'zod'
 
-import { clearAdminSessionCookie, readAdminSessionCookie } from '../lib/adminCookie.js'
-import { getPrimaryAdminEmail, verifyAccountSessionToken } from '../lib/adminSession.js'
+import { clearAdminSessionCookie } from '../lib/adminCookie.js'
+import {
+  getPrimaryAdminEmail,
+  readVerifiedAccountSession,
+} from '../lib/adminSession.js'
 import { sendBookingEmails } from '../lib/bookingEmailDelivery.js'
 import { listClientAccounts, upsertClientAccount } from '../lib/clientAccounts.js'
 import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
@@ -44,8 +47,7 @@ function getEmailOptions(): EmailOptions {
 }
 
 export function requireAdminSession(request: Request, response: Response, next: NextFunction) {
-  const token = readAdminSessionCookie(request)
-  const session = token ? verifyAccountSessionToken(token) : null
+  const session = readVerifiedAccountSession(request)
 
   if (!session || session.role !== 'admin') {
     clearAdminSessionCookie(response)

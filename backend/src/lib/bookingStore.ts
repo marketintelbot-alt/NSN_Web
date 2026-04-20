@@ -1,3 +1,4 @@
+import { addDays, addMonths } from 'date-fns'
 import { formatInTimeZone } from 'date-fns-tz'
 
 import type {
@@ -13,6 +14,12 @@ import {
   readClientAccountById,
   type ClientServiceEntitlement,
 } from './clientAccounts.js'
+import {
+  ensureClientHasPaidALaCarteCredits,
+  listClientALaCarteCredits,
+  listClientALaCarteServices,
+  normalizeSelectedALaCarteServiceNames,
+} from './aLaCarteServices.js'
 import {
   createLaunchDateTime,
   formatStoredDateTime,
@@ -115,13 +122,18 @@ export type AdminBooking = {
   slot: PublicSlot
 }
 
-const rollingAvailabilityDays = 30
+const launchBookingAvailabilityMonths = 1
+const serviceOnlyBookingAvailabilityMonths = 3
 const slotGenerationStartHour = 8
 const slotGenerationEndHour = 19
 const slotGenerationIntervalMinutes = 30
 const slotGenerationChunkSize = 200
+const queryPageSize = 1000
 const leadTimeMs = 24 * 60 * 60 * 1000
 const slotTravelBufferMs = 30 * 60 * 1000
+const launchBookingWindowMessage = 'Launch reservations can be booked up to 1 month in advance.'
+const serviceOnlyBookingWindowMessage =
+  'Service-only reservations can be booked up to 3 months in advance.'
 
 export class SlotConflictError extends Error {
   constructor(message = 'That time slot is no longer available.') {
@@ -143,6 +155,14 @@ function getAvailabilityCutoffDate(currentDate = new Date()) {
 
 function getAvailabilityCutoffIso(currentDate = new Date()) {
   return getAvailabilityCutoffDate(currentDate).toISOString()
+}
+
+function getAvailabilityHorizonDate(monthsAhead: number, currentDate = new Date()) {
+  return addMonths(getAvailabilityCutoffDate(currentDate), monthsAhead)
+}
+
+function getAvailabilityHorizonIso(monthsAhead: number, currentDate = new Date()) {
+  return getAvailabilityHorizonDate(monthsAhead, currentDate).toISOString()
 }
 
 function normalizeSlotRow(slot: StoredSlotRow): PublicSlot {
@@ -263,9 +283,26 @@ function buildSlotTimeStrings() {
 
 const slotTimeStrings = buildSlotTimeStrings()
 
-async function ensureRollingSlotInventory(daysAhead = rollingAvailabilityDays) {
+function isServiceOnlyClient(clientAccount: Pick<ClientAccount, 'preferredLaunchLocation'>) {
+  return clientAccount.preferredLaunchLocation === noTransportLaunchLocation
+}
+
+function getClientBookingAvailabilityMonths(clientAccount: Pick<ClientAccount, 'preferredLaunchLocation'>) {
+  return isServiceOnlyClient(clientAccount)
+    ? serviceOnlyBookingAvailabilityMonths
+    : launchBookingAvailabilityMonths
+}
+
+function getClientBookingWindowMessage(clientAccount: Pick<ClientAccount, 'preferredLaunchLocation'>) {
+  return isServiceOnlyClient(clientAccount)
+    ? serviceOnlyBookingWindowMessage
+    : launchBookingWindowMessage
+}
+
+async function ensureRollingSlotInventory(monthsAhead = launchBookingAvailabilityMonths) {
   const supabaseAdmin = getSupabaseAdminClient()
   const cutoffDate = getAvailabilityCutoffDate()
+  const horizonDate = addMonths(cutoffDate, monthsAhead)
   const records: Array<{
     starts_at: string
     launch_location: string
@@ -273,8 +310,7 @@ async function ensureRollingSlotInventory(daysAhead = rollingAvailabilityDays) {
     is_active: true
   }> = []
 
-  for (let offset = 0; offset < daysAhead; offset += 1) {
-    const day = new Date(cutoffDate.getTime() + offset * 24 * 60 * 60 * 1000)
+  for (let day = new Date(cutoffDate); day <= horizonDate; day = addDays(day, 1)) {
     const serviceDate = getServiceDateString(day)
 
     for (const launchLocation of launchLocations) {
@@ -336,28 +372,50 @@ async function readBookingById(bookingId: string) {
   return (data as StoredBookingRow | null) ?? null
 }
 
+async function readAllRows<T>(
+  loadPage: (from: number, to: number) => Promise<{
+    data: T[] | null
+    error: { message?: string } | null
+  }>,
+) {
+  const rows: T[] = []
+
+  for (let from = 0; ; from += queryPageSize) {
+    const { data, error } = await loadPage(from, from + queryPageSize - 1)
+
+    if (error) {
+      throw error
+    }
+
+    const pageRows = data ?? []
+    rows.push(...pageRows)
+
+    if (pageRows.length < queryPageSize) {
+      return rows
+    }
+  }
+}
+
 function getBookingStartsAt(booking: StoredBookingRow) {
   return new Date(extractJoinedSlot(booking.booking_slots).starts_at).getTime()
 }
 
 async function listBlockingBookings(excludeBookingId?: string) {
   const supabaseAdmin = getSupabaseAdminClient()
-  let query = supabaseAdmin
-    .from('launch_bookings')
-    .select('id, status, booking_slots(*)')
-    .eq('status', 'confirmed')
+  return readAllRows<StoredBookingRow>((from, to) => {
+    let query = supabaseAdmin
+      .from('launch_bookings')
+      .select('id, status, booking_slots(*)')
+      .eq('status', 'confirmed')
+      .order('id', { ascending: true })
+      .range(from, to)
 
-  if (excludeBookingId) {
-    query = query.neq('id', excludeBookingId)
-  }
+    if (excludeBookingId) {
+      query = query.neq('id', excludeBookingId)
+    }
 
-  const { data, error } = await query
-
-  if (error) {
-    throw error
-  }
-
-  return (data ?? []) as StoredBookingRow[]
+    return query
+  })
 }
 
 async function ensureTravelBufferAvailability(slot: StoredSlotRow, excludeBookingId?: string) {
@@ -377,7 +435,14 @@ async function ensureTravelBufferAvailability(slot: StoredSlotRow, excludeBookin
   }
 }
 
-async function ensureSlotIsBookable(slotId: string, excludeBookingId?: string) {
+async function ensureSlotIsBookable(
+  slotId: string,
+  options: {
+    excludeBookingId?: string
+    maxMonthsAhead?: number
+    maxMonthsMessage?: string
+  } = {},
+) {
   const slot = await readSlotById(slotId)
 
   if (!slot || !slot.is_active) {
@@ -394,7 +459,14 @@ async function ensureSlotIsBookable(slotId: string, excludeBookingId?: string) {
     throw new SlotConflictError(reservationWindowMessage)
   }
 
-  await ensureTravelBufferAvailability(slot, excludeBookingId)
+  if (
+    typeof options.maxMonthsAhead === 'number' &&
+    startsAtMs > getAvailabilityHorizonDate(options.maxMonthsAhead).getTime()
+  ) {
+    throw new SlotConflictError(options.maxMonthsMessage || 'That time slot is too far in advance.')
+  }
+
+  await ensureTravelBufferAvailability(slot, options.excludeBookingId)
 
   return slot
 }
@@ -460,84 +532,87 @@ function sortBookingsAscending(bookings: AdminBooking[]) {
   )
 }
 
-export async function listAvailableSlots(launchLocation?: string) {
-  await ensureRollingSlotInventory()
+export async function listAvailableSlots(
+  launchLocation?: string,
+  monthsAhead = launchBookingAvailabilityMonths,
+) {
+  await ensureRollingSlotInventory(monthsAhead)
 
   const supabaseAdmin = getSupabaseAdminClient()
   const cutoffIso = getAvailabilityCutoffIso()
-  let slotsQuery = supabaseAdmin
-    .from('booking_slots')
-    .select('*')
-    .eq('is_active', true)
-    .gte('starts_at', cutoffIso)
-    .order('starts_at', { ascending: true })
+  const horizonIso = getAvailabilityHorizonIso(monthsAhead)
+  const [slots, bookings] = await Promise.all([
+    readAllRows<StoredSlotRow>((from, to) => {
+      let query = supabaseAdmin
+        .from('booking_slots')
+        .select('*')
+        .eq('is_active', true)
+        .gte('starts_at', cutoffIso)
+        .lte('starts_at', horizonIso)
+        .order('starts_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to)
 
-  if (launchLocation) {
-    slotsQuery = slotsQuery.eq('launch_location', launchLocation)
-  }
+      if (launchLocation) {
+        query = query.eq('launch_location', launchLocation)
+      }
 
-  const [{ data: slots, error: slotError }, { data: bookings, error: bookingError }] =
-    await Promise.all([
-      slotsQuery,
+      return query
+    }),
+    readAllRows<StoredBookingRow>((from, to) =>
       supabaseAdmin
         .from('launch_bookings')
         .select('id, status, booking_slots(*)')
-        .eq('status', 'confirmed'),
-    ])
-
-  if (slotError) {
-    throw slotError
-  }
-
-  if (bookingError) {
-    throw bookingError
-  }
+        .eq('status', 'confirmed')
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+  ])
 
   const blockedSlotStartsAtMs = new Set(
-    ((bookings ?? []) as StoredBookingRow[]).flatMap((booking) => {
+    bookings.flatMap((booking) => {
       const bookingStartsAtMs = getBookingStartsAt(booking)
       return [bookingStartsAtMs, bookingStartsAtMs + slotTravelBufferMs]
     }),
   )
 
-  return ((slots ?? []) as StoredSlotRow[])
+  return slots
     .filter((slot) => !blockedSlotStartsAtMs.has(new Date(slot.starts_at).getTime()))
     .map(normalizeSlotRow)
 }
 
 export async function listAdminDashboard() {
-  await ensureRollingSlotInventory()
+  await ensureRollingSlotInventory(serviceOnlyBookingAvailabilityMonths)
 
   const supabaseAdmin = getSupabaseAdminClient()
   const recentWindowIso = new Date(Date.now() - 1000 * 60 * 60 * 24 * 14).toISOString()
 
-  const [{ data: slots, error: slotError }, { data: bookings, error: bookingError }] =
-    await Promise.all([
+  const [slots, bookings] = await Promise.all([
+    readAllRows<StoredSlotRow>((from, to) =>
       supabaseAdmin
         .from('booking_slots')
         .select('*')
         .gte('starts_at', recentWindowIso)
-        .order('starts_at', { ascending: true }),
+        .order('starts_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    ),
+    readAllRows<StoredBookingRow>((from, to) =>
       supabaseAdmin
         .from('launch_bookings')
         .select('*, booking_slots(*)')
-        .order('created_at', { ascending: false }),
-    ])
-
-  if (slotError) {
-    throw slotError
-  }
-
-  if (bookingError) {
-    throw bookingError
-  }
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(from, to),
+    ),
+  ])
 
   const allBookings = sortBookingsAscending(
-    ((bookings ?? []) as StoredBookingRow[]).map(normalizeBookingRow),
+    bookings.map(normalizeBookingRow),
   )
 
   return {
-    slots: ((slots ?? []) as StoredSlotRow[]).map((slot) => ({
+    slots: slots.map((slot) => ({
       ...normalizeSlotRow(slot),
       isActive: slot.is_active,
     })),
@@ -561,14 +636,16 @@ export async function listClientBookings(clientAccountId: string) {
 }
 
 export async function listClientPortal(clientAccount: ClientAccount) {
-  const [availableSlots, bookings, refreshedClientAccount] = await Promise.all([
+  const availabilityMonths = getClientBookingAvailabilityMonths(clientAccount)
+
+  const [availableSlots, bookings, refreshedClientAccount, aLaCarteCredits] = await Promise.all([
     listAvailableSlots(
-      clientAccount.preferredLaunchLocation === noTransportLaunchLocation
-        ? undefined
-        : clientAccount.preferredLaunchLocation,
+      isServiceOnlyClient(clientAccount) ? undefined : clientAccount.preferredLaunchLocation,
+      availabilityMonths,
     ),
     listClientBookings(clientAccount.id),
     readClientAccountById(clientAccount.id),
+    listClientALaCarteCredits(clientAccount.id),
   ])
 
   const now = Date.now()
@@ -588,12 +665,19 @@ export async function listClientPortal(clientAccount: ClientAccount) {
     availableSlots,
     upcomingBookings,
     bookingHistory,
+    aLaCarteServices: listClientALaCarteServices(
+      (refreshedClientAccount || clientAccount).boatLengthFeet,
+    ),
+    aLaCarteCredits,
   }
 }
 
 export async function createPublicBooking(input: PublicBookingInput) {
   const supabaseAdmin = getSupabaseAdminClient()
-  await ensureSlotIsBookable(input.slotId)
+  await ensureSlotIsBookable(input.slotId, {
+    maxMonthsAhead: launchBookingAvailabilityMonths,
+    maxMonthsMessage: launchBookingWindowMessage,
+  })
   const clientAccountId = await findMatchingClientAccountId(input.email)
 
   const { data, error } = await supabaseAdmin
@@ -636,7 +720,10 @@ export async function createPublicBooking(input: PublicBookingInput) {
 
 export async function createClientBooking(clientAccount: ClientAccount, input: ClientBookingInput) {
   const supabaseAdmin = getSupabaseAdminClient()
-  const slot = await ensureSlotIsBookable(input.slotId)
+  const slot = await ensureSlotIsBookable(input.slotId, {
+    maxMonthsAhead: getClientBookingAvailabilityMonths(clientAccount),
+    maxMonthsMessage: getClientBookingWindowMessage(clientAccount),
+  })
 
   if (
     clientAccount.preferredLaunchLocation !== noTransportLaunchLocation &&
@@ -647,24 +734,28 @@ export async function createClientBooking(clientAccount: ClientAccount, input: C
     )
   }
 
-  if (
-    clientAccount.services.some((service) => service.remainingUnits > 0) &&
-    !input.serviceEntitlementId
-  ) {
-    throw new Error('Choose one of your available contracted services first.')
-  }
-
   const serviceSelection = await resolveServiceSelection(
     clientAccount.id,
     input.serviceEntitlementId || null,
   )
+  const normalizedAddOnServices = await ensureClientHasPaidALaCarteCredits(
+    clientAccount.id,
+    input.addOnServices,
+  )
+  const hasContractedSelection = Boolean(serviceSelection.serviceEntitlementId)
+
+  if (!hasContractedSelection && normalizedAddOnServices.length === 0) {
+    throw new Error(
+      'Choose one of your contracted services or pay for an a la carte service before reserving a time.',
+    )
+  }
 
   const baseInsert = {
     slot_id: input.slotId,
     client_account_id: clientAccount.id,
     service_entitlement_id: serviceSelection.serviceEntitlementId,
     service_name: serviceSelection.serviceName,
-    add_on_services: input.addOnServices,
+    add_on_services: normalizedAddOnServices,
     full_name: clientAccount.fullName,
     email: clientAccount.email,
     phone: clientAccount.phone,
@@ -750,7 +841,11 @@ export async function updateClientBooking(
       nextReturnTime !== existingBookingDetails.returnTime)
 
   if (nextStatus === 'confirmed') {
-    const slot = await ensureSlotIsBookable(nextSlotId, bookingId)
+    const slot = await ensureSlotIsBookable(nextSlotId, {
+      excludeBookingId: bookingId,
+      maxMonthsAhead: getClientBookingAvailabilityMonths(clientAccount),
+      maxMonthsMessage: getClientBookingWindowMessage(clientAccount),
+    })
 
     if (
       clientAccount.preferredLaunchLocation !== noTransportLaunchLocation &&
@@ -770,6 +865,18 @@ export async function updateClientBooking(
     requestedServiceEntitlementId,
     existingBooking,
   )
+  const normalizedAddOnServices = await ensureClientHasPaidALaCarteCredits(
+    clientAccount.id,
+    input.addOnServices,
+    existingBooking,
+  )
+  const hasContractedSelection = Boolean(serviceSelection.serviceEntitlementId)
+
+  if (nextStatus !== 'cancelled' && !hasContractedSelection && normalizedAddOnServices.length === 0) {
+    throw new Error(
+      'Choose one of your contracted services or pay for an a la carte service before reserving a time.',
+    )
+  }
 
   const { error } = await supabaseAdmin
     .from('launch_bookings')
@@ -777,7 +884,7 @@ export async function updateClientBooking(
       slot_id: nextSlotId,
       service_entitlement_id: serviceSelection.serviceEntitlementId,
       service_name: serviceSelection.serviceName,
-      add_on_services: input.addOnServices,
+      add_on_services: normalizedAddOnServices,
       notes: serializeBookingNotes({
         notes: input.notes,
         operationalStatus: 'confirmed',
@@ -899,7 +1006,7 @@ export async function createAdminBooking(input: AdminBookingInput) {
       client_account_id: clientAccountId,
       service_entitlement_id: serviceSelection.serviceEntitlementId,
       service_name: serviceSelection.serviceName,
-      add_on_services: input.addOnServices,
+      add_on_services: normalizeSelectedALaCarteServiceNames(input.addOnServices),
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,
@@ -951,7 +1058,7 @@ export async function updateAdminBooking(bookingId: string, input: AdminBookingI
     (isSlotChanging || input.returnTime !== existingBookingDetails.returnTime)
 
   if (shouldValidateSlot) {
-    await ensureSlotIsBookable(input.slotId, bookingId)
+    await ensureSlotIsBookable(input.slotId, { excludeBookingId: bookingId })
   }
 
   const clientAccountId = await findMatchingClientAccountId(
@@ -971,7 +1078,7 @@ export async function updateAdminBooking(bookingId: string, input: AdminBookingI
       client_account_id: clientAccountId,
       service_entitlement_id: serviceSelection.serviceEntitlementId,
       service_name: serviceSelection.serviceName,
-      add_on_services: input.addOnServices,
+      add_on_services: normalizeSelectedALaCarteServiceNames(input.addOnServices),
       full_name: input.fullName,
       email: input.email,
       phone: input.phone,

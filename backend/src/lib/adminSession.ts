@@ -1,7 +1,9 @@
+import type { Request } from 'express'
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
 import bcrypt from 'bcryptjs'
 
+import { readAdminSessionCookie } from './adminCookie.js'
 import { authenticateClientCredentials } from './clientAccounts.js'
 
 export type AccountRole = 'admin' | 'client'
@@ -289,4 +291,23 @@ export function verifyAccountSessionToken(token: string): VerifiedAccountSession
   } catch {
     return null
   }
+}
+
+export function readAccountSessionToken(request: Pick<Request, 'headers'>) {
+  const authorizationHeader = request.headers.authorization
+
+  if (typeof authorizationHeader === 'string') {
+    const [scheme, token] = authorizationHeader.split(/\s+/, 2)
+
+    if (scheme?.toLowerCase() === 'bearer' && token) {
+      return token
+    }
+  }
+
+  return readAdminSessionCookie(request as Request)
+}
+
+export function readVerifiedAccountSession(request: Pick<Request, 'headers'>) {
+  const token = readAccountSessionToken(request)
+  return token ? verifyAccountSessionToken(token) : null
 }

@@ -97,8 +97,8 @@ export function ContactPage() {
       <CtaBanner
         title="Need launch coordination rather than a general inquiry?"
         copy="Move directly to the booking page if you are ready to choose an available time and confirm it online."
-        primaryLabel="Client Login"
-        primaryTo="/account"
+        primaryLabel="Client Portal"
+        primaryTo="/portal"
       />
     </>
   )

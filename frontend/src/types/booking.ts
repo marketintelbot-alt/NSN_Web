@@ -58,6 +58,34 @@ export type ClientServiceEntitlement = {
   updatedAt: string
 }
 
+export type ALaCarteService = {
+  serviceKey: string
+  serviceName: string
+  category: string
+  description: string
+  pricingDisplay: string
+  checkoutBlurb: string
+  requiresBoatLength: boolean
+  customQuoteOnly: boolean
+  checkoutEnabled: boolean
+  minimumCheckoutAmountCents: number | null
+  maximumCheckoutAmountCents: number | null
+  defaultCheckoutAmountCents: number | null
+}
+
+export type ClientALaCarteCredit = {
+  id: string
+  clientAccountId: string
+  serviceKey: string
+  serviceName: string
+  category: string
+  totalUnits: number
+  reservedUnits: number
+  remainingUnits: number
+  createdAt: string
+  updatedAt: string
+}
+
 export type AdminBooking = {
   id: string
   slotId: string
@@ -96,4 +124,6 @@ export type ClientPortalResponse = {
   availableSlots: PublicSlot[]
   upcomingBookings: AdminBooking[]
   bookingHistory: AdminBooking[]
+  aLaCarteServices: ALaCarteService[]
+  aLaCarteCredits: ClientALaCarteCredit[]
 }

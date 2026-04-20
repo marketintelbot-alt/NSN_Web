@@ -175,6 +175,41 @@ export const clientProfileSchema = z.object({
   notes: optionalNotes,
 })
 
+export const clientPasswordChangeSchema = z
+  .object({
+    currentPassword: z.string().trim().min(1, 'Enter your current password.'),
+    newPassword: z
+      .string()
+      .trim()
+      .min(8, 'Your new password must be at least 8 characters long.'),
+    confirmPassword: z.string().trim().min(1, 'Confirm your new password.'),
+  })
+  .superRefine((value, context) => {
+    if (value.newPassword !== value.confirmPassword) {
+      context.addIssue({
+        code: 'custom',
+        path: ['confirmPassword'],
+        message: 'Your new password confirmation must match.',
+      })
+    }
+  })
+
+export const clientALaCarteCheckoutSchema = z.object({
+  serviceKey: z
+    .string()
+    .trim()
+    .min(1, 'Choose a service first.')
+    .max(120, 'Choose a valid service.'),
+  amountCents: z.preprocess((value) => {
+    if (typeof value === 'number') {
+      return value
+    }
+
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : value
+  }, z.number().int('Choose a whole-dollar checkout amount.').min(100, 'Choose a valid checkout amount.')),
+})
+
 export const adminSlotSchema = z
   .object({
     slotId: z.string().uuid().optional(),
@@ -279,6 +314,8 @@ export type PublicBookingInput = z.infer<typeof publicBookingSchema>
 export type ClientBookingInput = z.infer<typeof clientBookingSchema>
 export type ClientBookingUpdateInput = z.infer<typeof clientBookingUpdateSchema>
 export type ClientProfileInput = z.infer<typeof clientProfileSchema>
+export type ClientPasswordChangeInput = z.infer<typeof clientPasswordChangeSchema>
+export type ClientALaCarteCheckoutInput = z.infer<typeof clientALaCarteCheckoutSchema>
 export type AdminSlotInput = z.infer<typeof adminSlotSchema>
 export type AdminBookingInput = z.infer<typeof adminBookingSchema>
 export type AdminClientAccountInput = z.infer<typeof adminClientAccountSchema>

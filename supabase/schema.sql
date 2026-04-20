@@ -83,6 +83,50 @@ create unique index if not exists client_service_entitlements_unique_idx
 create index if not exists client_service_entitlements_client_idx
   on public.client_service_entitlements (client_account_id);
 
+create table if not exists public.client_paid_add_on_credits (
+  id uuid primary key default gen_random_uuid(),
+  client_account_id uuid not null references public.client_accounts (id) on delete cascade,
+  service_key varchar(120) not null,
+  service_name varchar(120) not null,
+  total_units integer not null default 0,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint client_paid_add_on_credits_total_units_check
+    check (total_units >= 0)
+);
+
+create unique index if not exists client_paid_add_on_credits_unique_idx
+  on public.client_paid_add_on_credits (client_account_id, service_key);
+
+create index if not exists client_paid_add_on_credits_client_idx
+  on public.client_paid_add_on_credits (client_account_id);
+
+create table if not exists public.stripe_checkout_purchases (
+  id uuid primary key default gen_random_uuid(),
+  client_account_id uuid not null references public.client_accounts (id) on delete cascade,
+  service_key varchar(120) not null,
+  service_name varchar(120) not null,
+  quantity integer not null default 1,
+  unit_amount_cents integer not null,
+  currency varchar(12) not null default 'usd',
+  stripe_checkout_session_id varchar(255) not null,
+  stripe_payment_intent_id varchar(255),
+  customer_email varchar(255),
+  fulfilled_at timestamptz not null default timezone('utc', now()),
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  constraint stripe_checkout_purchases_quantity_check
+    check (quantity > 0 and quantity <= 1000),
+  constraint stripe_checkout_purchases_amount_check
+    check (unit_amount_cents > 0)
+);
+
+create unique index if not exists stripe_checkout_purchases_session_idx
+  on public.stripe_checkout_purchases (stripe_checkout_session_id);
+
+create index if not exists stripe_checkout_purchases_client_idx
+  on public.stripe_checkout_purchases (client_account_id);
+
 create table if not exists public.launch_bookings (
   id uuid primary key default gen_random_uuid(),
   slot_id uuid not null references public.booking_slots (id) on delete restrict,
@@ -147,7 +191,78 @@ create index if not exists launch_bookings_service_entitlement_idx
 alter table public.booking_slots enable row level security;
 alter table public.client_accounts enable row level security;
 alter table public.client_service_entitlements enable row level security;
+alter table public.client_paid_add_on_credits enable row level security;
+alter table public.stripe_checkout_purchases enable row level security;
 alter table public.launch_bookings enable row level security;
+
+create or replace function public.fulfill_stripe_add_on_purchase(
+  p_client_account_id uuid,
+  p_service_key varchar,
+  p_service_name varchar,
+  p_quantity integer,
+  p_unit_amount_cents integer,
+  p_currency varchar,
+  p_stripe_checkout_session_id varchar,
+  p_stripe_payment_intent_id varchar,
+  p_customer_email varchar
+)
+returns boolean
+language plpgsql
+as $$
+declare
+  inserted_rows integer := 0;
+begin
+  insert into public.stripe_checkout_purchases (
+    client_account_id,
+    service_key,
+    service_name,
+    quantity,
+    unit_amount_cents,
+    currency,
+    stripe_checkout_session_id,
+    stripe_payment_intent_id,
+    customer_email
+  )
+  values (
+    p_client_account_id,
+    p_service_key,
+    p_service_name,
+    p_quantity,
+    p_unit_amount_cents,
+    coalesce(nullif(p_currency, ''), 'usd'),
+    p_stripe_checkout_session_id,
+    nullif(p_stripe_payment_intent_id, ''),
+    nullif(p_customer_email, '')
+  )
+  on conflict (stripe_checkout_session_id) do nothing;
+
+  get diagnostics inserted_rows = row_count;
+
+  if inserted_rows = 0 then
+    return false;
+  end if;
+
+  insert into public.client_paid_add_on_credits (
+    client_account_id,
+    service_key,
+    service_name,
+    total_units
+  )
+  values (
+    p_client_account_id,
+    p_service_key,
+    p_service_name,
+    p_quantity
+  )
+  on conflict (client_account_id, service_key)
+  do update set
+    service_name = excluded.service_name,
+    total_units = public.client_paid_add_on_credits.total_units + excluded.total_units,
+    updated_at = timezone('utc', now());
+
+  return true;
+end;
+$$;
 
 drop trigger if exists set_booking_slots_updated_at on public.booking_slots;
 create trigger set_booking_slots_updated_at
@@ -164,6 +279,18 @@ execute function public.set_updated_at_timestamp();
 drop trigger if exists set_client_service_entitlements_updated_at on public.client_service_entitlements;
 create trigger set_client_service_entitlements_updated_at
 before update on public.client_service_entitlements
+for each row
+execute function public.set_updated_at_timestamp();
+
+drop trigger if exists set_client_paid_add_on_credits_updated_at on public.client_paid_add_on_credits;
+create trigger set_client_paid_add_on_credits_updated_at
+before update on public.client_paid_add_on_credits
+for each row
+execute function public.set_updated_at_timestamp();
+
+drop trigger if exists set_stripe_checkout_purchases_updated_at on public.stripe_checkout_purchases;
+create trigger set_stripe_checkout_purchases_updated_at
+before update on public.stripe_checkout_purchases
 for each row
 execute function public.set_updated_at_timestamp();
 

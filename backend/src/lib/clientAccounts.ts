@@ -103,6 +103,11 @@ export type ClientProfileInput = {
   notes?: string
 }
 
+export type ClientPasswordChangeInput = {
+  currentPassword: string
+  newPassword: string
+}
+
 const missingSchemaMessage =
   'Client account storage is not configured yet. Run the latest Supabase schema before using client account management.'
 
@@ -580,4 +585,45 @@ export async function updateClientProfile(clientId: string, input: ClientProfile
       notes: service.notes || '',
     })),
   })
+}
+
+export async function updateClientPassword(
+  clientId: string,
+  input: ClientPasswordChangeInput,
+) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { data, error } = await supabaseAdmin
+    .from('client_accounts')
+    .select('password_hash')
+    .eq('id', clientId)
+    .single()
+
+  if (error) {
+    if (isMissingClientAccountsSchemaError(error)) {
+      throw new Error(missingSchemaMessage)
+    }
+
+    throw error
+  }
+
+  const storedPasswordHash = (data.password_hash as string) || ''
+  const passwordMatches = await bcrypt.compare(input.currentPassword, storedPasswordHash)
+
+  if (!passwordMatches) {
+    throw new Error('Your current password did not match our records.')
+  }
+
+  const nextPasswordHash = await bcrypt.hash(input.newPassword, 12)
+  const { error: updateError } = await supabaseAdmin
+    .from('client_accounts')
+    .update({ password_hash: nextPasswordHash })
+    .eq('id', clientId)
+
+  if (updateError) {
+    if (isMissingClientAccountsSchemaError(updateError)) {
+      throw new Error(missingSchemaMessage)
+    }
+
+    throw updateError
+  }
 }

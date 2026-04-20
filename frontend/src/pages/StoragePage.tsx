@@ -91,8 +91,8 @@ export function StoragePage() {
               and handling context. That creates a smoother path from advance request
               to launch-day delivery.
             </p>
-            <Link className="button-dark mt-8" to="/account">
-              Client Login
+            <Link className="button-dark mt-8" to="/portal">
+              Client Portal
               <ArrowRight className="h-4 w-4" />
             </Link>
           </FadeIn>
@@ -104,8 +104,8 @@ export function StoragePage() {
         copy="If you want launch timing, readiness, and communication to feel more orderly, start with a service conversation about storage and coordination."
         primaryLabel="Contact North Shore Nautical"
         primaryTo="/contact"
-        secondaryLabel="Client Login"
-        secondaryTo="/account"
+        secondaryLabel="Client Portal"
+        secondaryTo="/portal"
       />
     </>
   )

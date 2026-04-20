@@ -4,11 +4,11 @@ import rateLimit from 'express-rate-limit'
 import {
   authenticateAccountCredentials,
   createAccountSessionToken,
+  readVerifiedAccountSession,
   verifyAccountSessionToken,
 } from '../lib/adminSession.js'
 import {
   clearAdminSessionCookie,
-  readAdminSessionCookie,
   writeAdminSessionCookie,
 } from '../lib/adminCookie.js'
 
@@ -19,16 +19,11 @@ type AccountSessionResponse = {
   clientAccountId?: string | null
   fullName?: string | null
   expiresAt?: string
+  sessionToken?: string
 }
 
 function getVerifiedSession(request: Request) {
-  const token = readAdminSessionCookie(request)
-
-  if (!token) {
-    return null
-  }
-
-  return verifyAccountSessionToken(token)
+  return readVerifiedAccountSession(request)
 }
 
 export const adminLoginLimiter = rateLimit({
@@ -71,6 +66,7 @@ export async function createAdminSession(request: Request, response: Response) {
       clientAccountId: authenticatedAccount.clientAccountId,
       fullName: authenticatedAccount.fullName,
       expiresAt: session?.expiresAt,
+      sessionToken: token,
     } satisfies AccountSessionResponse,
   })
 }
@@ -79,9 +75,9 @@ export function readAdminSession(request: Request, response: Response) {
   const session = getVerifiedSession(request)
 
   if (!session) {
-    return response.status(401).json({
-      message: 'Account session is not valid.',
-    })
+    return response.status(200).json({
+      authenticated: false,
+    } satisfies AccountSessionResponse)
   }
 
   return response.status(200).json({

@@ -91,8 +91,8 @@ export function HomePage() {
               with calm, professional coordination.
             </p>
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link className="button-primary w-full justify-center sm:w-auto" to="/account">
-                Client Login
+              <Link className="button-primary w-full justify-center sm:w-auto" to="/portal">
+                Client Portal
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link className="button-secondary w-full justify-center sm:w-auto" to="/services">
@@ -251,8 +251,8 @@ export function HomePage() {
       <CtaBanner
         title="Reserve early and keep launch day calm."
         copy="Launch delivery requests are reviewed manually so every timing request, destination, and cleaning preference can be coordinated with care. Submit at least 24 hours ahead to stay within the scheduling window."
-        primaryLabel="Client Login"
-        primaryTo="/account"
+        primaryLabel="Client Portal"
+        primaryTo="/portal"
         secondaryLabel="Contact North Shore Nautical"
         secondaryTo="/contact"
       />

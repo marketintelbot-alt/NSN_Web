@@ -64,13 +64,14 @@ function App() {
           <Route element={<HomePage />} path="/" />
           <Route element={<ServicesPage />} path="/services" />
           <Route element={<StoragePage />} path="/storage" />
-          <Route element={<Navigate replace to="/account" />} path="/reserve-launch" />
-          <Route element={<Navigate replace to="/account" />} path="/reserve-driver" />
+          <Route element={<Navigate replace to="/portal" />} path="/reserve-launch" />
+          <Route element={<Navigate replace to="/portal" />} path="/reserve-driver" />
           <Route element={<AboutPage />} path="/about" />
           <Route element={<FaqPage />} path="/faq" />
           <Route element={<ContactPage />} path="/contact" />
           <Route element={<AdminPage />} path="/admin" />
-          <Route element={<AdminPage />} path="/account" />
+          <Route element={<AdminPage />} path="/portal" />
+          <Route element={<Navigate replace to="/portal" />} path="/account" />
           <Route element={<PrivacyPolicyPage />} path="/privacy-policy" />
           <Route element={<TermsOfServicePage />} path="/terms-of-service" />
           <Route element={<NotFoundPage />} path="*" />

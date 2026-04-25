@@ -1,36 +1,42 @@
+export type PublicNavigationItem = {
+  label: string
+  to: string
+  children?: Array<{
+    label: string
+    to: string
+  }>
+}
+
 export const siteMeta = {
   name: 'North Shore Nautical',
   titleSuffix: 'North Shore Nautical',
+  tagline: 'Premium Marine Care & Advisory',
   description:
-    "Premium boat storage, detailing, waxing, launch delivery, and polished online booking for Chicago's North Shore.",
-  siteUrl:
-    import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') ||
-    'https://nsnautical.com',
+    "Premium boat detailing, marine care, and practical owner advisory for Chicago's North Shore and Lake Michigan marinas.",
+  siteUrl: import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') || 'https://nsnautical.com',
   heroImage: '/images/north-shore-hero.jpeg',
   socialImage: '/images/social-card.svg',
   timeZone: 'America/Chicago',
 }
 
-export const navigation = [
+export const navigation: PublicNavigationItem[] = [
   { label: 'Home', to: '/' },
-  { label: 'Services', to: '/services' },
-  { label: 'Storage', to: '/storage' },
-  { label: 'About', to: '/about' },
-  { label: 'FAQ', to: '/faq' },
+  {
+    label: 'Services',
+    to: '/services',
+    children: [
+      { label: 'Marine Care', to: '/services' },
+      { label: 'Advisory', to: '/advisory' },
+    ],
+  },
+  { label: 'Pricing', to: '/pricing' },
+  { label: 'Gallery', to: '/gallery' },
+  { label: 'Advisory', to: '/advisory' },
   { label: 'Contact', to: '/contact' },
 ]
 
-export const trustIndicators = [
-  'Live available booking times',
-  'Lloyd or Evanston launch delivery',
-  'Clear confirmation emails',
-  'North Shore handling',
-]
-
-export const launchLocations = ['Lloyd Boat Launch', 'Evanston Boat Launch'] as const
-
 export const serviceAreas = [
-  'Evanston',
+  'Chicago',
   'Wilmette',
   'Kenilworth',
   'Winnetka',
@@ -40,236 +46,126 @@ export const serviceAreas = [
   'Lake Bluff',
 ]
 
-export const contacts = [
+export const brandPromise =
+  'We help North Shore boat owners keep their boats clean, protected, and ready to enjoy all summer.'
+
+export const trustHighlights = [
+  'Premium detailing and upkeep-first service plans',
+  'Manual request review before any payment is captured',
+  'Chicago North Shore and Lake Michigan scheduling fluency',
+  'Practical advisory support for confident ownership decisions',
+]
+
+export const homeMetrics = [
   {
-    name: 'Carter Ellis',
-    role: 'President',
-    email: 'carter@ellismarinegroup.com',
-    phoneDisplay: '(314) 606-2112',
-    phoneHref: 'tel:+13146062112',
+    label: 'Primary Focus',
+    value: 'Marine Care',
+    description: 'Detailing, upkeep, protection, and finish care lead the service experience.',
   },
   {
-    name: 'Johnny Maris',
-    role: 'Vice President',
-    email: 'johnny@ellismarinegroup.com',
-    phoneDisplay: '(847) 331-0927',
-    phoneHref: 'tel:+18473310927',
+    label: 'Checkout Model',
+    value: 'Pending Review',
+    description: 'Requests are reviewed before approval, and card authorizations are captured only after approval.',
+  },
+  {
+    label: 'Service Footprint',
+    value: 'North Shore + Lake Michigan',
+    description: 'Built for marina-based owners across Chicago’s North Shore communities.',
   },
 ]
 
-export const supportPhoneNumbers = contacts.map((contact) => ({
-  phoneDisplay: contact.phoneDisplay,
-  phoneHref: contact.phoneHref,
-}))
-
-export const contactDetails = {
-  email: contacts[0].email,
-  phoneDisplay: contacts[0].phoneDisplay,
-  phoneHref: contacts[0].phoneHref,
-  responseExpectation:
-    'Launch delivery reservations and service inquiries are reviewed promptly during business hours, with scheduling coordinated around stored-client readiness, requested timing, and launch destination.',
-  urgentNote:
-    'For weather-sensitive or time-sensitive changes after you submit a request, call directly so launch timing, Lloyd or Evanston delivery, and any cleaning needs can be reviewed quickly.',
-}
-
-export const services = [
+export const marineCareHighlights = [
   {
-    slug: 'storage',
-    name: 'Boat Storage',
-    summary:
-      'Orderly, professionally managed storage designed for owners whose boats stay with North Shore Nautical and are prepared for scheduled launch delivery.',
-    bullets: [
-      'Structured storage handling and vessel readiness',
-      'Careful oversight for stored-client boats',
-      'Launch preparation built into the storage relationship',
-    ],
+    title: 'Maintenance Detail',
+    description: 'For recurring seasonal upkeep, light interior care, and a fresh-ready exterior.',
   },
   {
-    slug: 'detailing',
-    name: 'Detailing',
-    summary:
-      'Interior and exterior detailing services designed to keep stored boats clean, presentable, and ready before launch day.',
-    bullets: [
-      'Trash removal, basic tidy, spot wipe-downs, and interior vacuuming',
-      'Deep vinyl cleaning, UV protection, compartment wipe-downs, and light mildew treatment',
-      'Full exterior washing, non-skid deck scrubs, and hardware cleaning',
-    ],
+    title: 'Signature Detail',
+    description: 'A fuller marine care package when presentation, comfort, and finish all matter.',
   },
   {
-    slug: 'waxing',
-    name: 'Waxing & Finish Correction',
-    summary:
-      'Protective waxing and finish-correction work for owners who want stronger gloss, cleaner brightwork, and a more polished presentation.',
-    bullets: [
-      'Single-stage polish with wax or sealant application',
-      'Oxidation removal and multi-stage compounding when needed',
-      'Stainless and aluminum hand polishing for finished details',
-    ],
-  },
-  {
-    slug: 'driver-reservation',
-    name: 'Launch Delivery Reservation',
-    summary:
-      'A reservation-based delivery service for stored-client boats being brought to Lloyd Boat Launch or Evanston Boat Launch.',
-    bullets: [
-      'Launch choice between Lloyd Boat Launch and Evanston Boat Launch',
-      'Open online times managed directly by North Shore Nautical',
-      'Minimal booking form built for phones',
-      'Instant booking confirmation with transactional email follow-up',
-    ],
+    title: 'Specialty Surface Care',
+    description:
+      'Buff and wax, non-skid deck scrubs, vinyl deep cleaning, and targeted care for high-touch surfaces.',
   },
 ]
 
-export const serviceMenuSections = [
+export const advisoryHighlights = [
   {
-    title: 'Detailing Packages Include',
-    description:
-      'Core detailing work is built around practical cleaning, cleaner presentation, and launch-day readiness.',
-    items: [
-      'Trash removal and basic tidy',
-      'Spot wipe-down of seats, helm, and cupholders',
-      'Interior vacuuming and light sweep',
-      'Deep vinyl cleaning and UV protection',
-      'Interior compartments and storage wiped',
-      'Light mildew and odor treatment',
-      'Full exterior wash of hull and topsides',
-      'Non-skid deck scrub',
-      'Windows, rails, and hardware cleaned',
-    ],
+    title: 'Buying Guidance',
+    description: 'Practical support for sorting through listings, marina realities, and ownership-fit questions.',
   },
   {
-    title: 'Waxing & Restoration Services',
-    description:
-      'Finish work ranges from gloss-boosting protection to deeper correction for weathered or oxidized surfaces.',
-    items: [
-      'Single-stage machine polish',
-      'Wax or sealant application',
-      'Light-to-moderate oxidation removal',
-      'Multi-stage compounding and correction',
-      'Stainless and aluminum hand polish',
-    ],
+    title: 'Care Planning',
+    description: 'Seasonal upkeep planning, referral guidance, and owner-side maintenance coordination.',
   },
   {
-    title: 'A La Carte Interior Services',
+    title: 'Ownership Support',
     description:
-      'Interior work can also be scheduled as individual services when a full detail is not needed.',
-    items: [
-      'Carpet and mat shampoo',
-      'Vinyl seat deep clean and condition',
-      'Cabin interior detail',
-      'Mold and mildew treatment',
-    ],
-  },
-  {
-    title: 'A La Carte Exterior Services',
-    description:
-      'Exterior services can be scheduled individually for upkeep, presentation, or finish recovery.',
-    items: [
-      'Exterior wash only',
-      'Non-skid deck scrub',
-      'Buff and wax (single-stage)',
-      'Oxidation removal',
-    ],
-  },
-  {
-    title: 'Specialty & Add-On Services',
-    description:
-      'Additional finish and seasonal services are available when a boat needs something more specific than a standard detail.',
-    items: [
-      'Stainless and aluminum polishing',
-      'Teak cleaning and oiling',
-      'Decal removal',
-      'Seasonal launch and haul-out detail',
-    ],
+      'North Shore-specific guidance for pre-season prep, post-season planning, and trusted next steps.',
   },
 ]
 
-export const serviceNotes = [
-  'Service scope depends on vessel condition and accessibility.',
-  'Minimum service charges apply.',
-  'Fully insured, with most marinas available upon request.',
-]
-
-export const howItWorks = [
+export const galleryStories = [
   {
-    title: 'Choose an open time slot',
-    description:
-      'Pick from the available launch times already opened by North Shore Nautical.',
+    title: 'Clean exterior finish',
+    caption: 'A bright, polished look that feels ready for a full Lake Michigan weekend.',
+    image: '/images/north-shore-hero.jpeg',
   },
   {
-    title: 'Confirm your contact details',
-    description:
-      'Enter your name, email, phone number, and any note that helps with coordination.',
+    title: 'Summer-ready presentation',
+    caption: 'Fresh surfaces, clean interiors, and a service rhythm built around marina life.',
+    image: '/images/north-shore-hero.jpeg',
   },
   {
-    title: 'Receive your confirmation',
-    description:
-      'Your booking is saved first, then North Shore Nautical and the client both receive transactional confirmation.',
-  },
-]
-
-export const principles = [
-  {
-    title: 'Professional handling',
-    description:
-      'Every interaction is shaped around careful coordination, clear expectations, and respect for the ownership experience.',
+    title: 'North Shore detail standards',
+    caption: 'Marine care that looks calm, premium, and intentional from the first walkthrough.',
+    image: '/images/hero-lake-fallback.svg',
   },
   {
-    title: 'North Shore fluency',
-    description:
-      "The service model is grounded in the rhythms of Chicago's North Shore shoreline, harbors, and launch schedules.",
-  },
-  {
-    title: 'Calm communication',
-    description:
-      'Clients receive concise, timely updates without unnecessary noise, so the process feels steady from request through launch day.',
+    title: 'Owner-focused upkeep',
+    caption: 'Support designed around clean boats, clear communication, and practical next steps.',
+    image: '/images/hero-lake-fallback.svg',
   },
 ]
 
-export const faqs = [
+export const advisoryPillars = [
   {
-    question: 'How far in advance do I need to reserve launch delivery?',
-    answer:
-      'Launch delivery reservations must be submitted at least 24 hours before the requested launch time. This lead time allows North Shore Nautical to review delivery availability and confirm scheduling properly.',
+    title: 'Pre-purchase support',
+    description:
+      'Owner-side guidance to help you think through fit, upkeep expectations, and practical follow-up questions.',
   },
   {
-    question: 'Do you accept same-day requests?',
-    answer:
-      'Same-day launch delivery is not guaranteed. If a request falls inside the 24-hour scheduling window, the reservation form will not accept it. For urgent situations, contact North Shore Nautical directly.',
+    title: 'Seasonal planning',
+    description:
+      'A simple roadmap for pre-season prep, peak-summer upkeep, and post-season care planning.',
   },
   {
-    question: 'What information do I need to submit a reservation?',
+    title: 'Referral guidance',
+    description:
+      'Trusted direction toward technicians, vendors, and next-step specialists when a request falls outside our scope.',
+  },
+]
+
+export const faqItems = [
+  {
+    question: 'Which services can I check out online?',
     answer:
-      'Just provide your name, email address, phone number, and any optional note helpful for launch-day coordination. The time slot itself is selected before you submit.',
+      'Routine per-foot marine care services can move to secure checkout online. Heavier condition work and advisory requests are reviewed through an inquiry-first process.',
   },
   {
-    question: 'Is reservation submission an automatic confirmation?',
+    question: 'When is my card actually charged?',
     answer:
-      'Yes. The website only shows slots that North Shore Nautical has already opened, so choosing a time and submitting the form confirms the booking.',
+      'For instant-checkout services, your payment method is authorized first. North Shore Nautical captures payment only after reviewing and approving the request.',
   },
   {
-    question: 'Are these reservations usually for boats already stored with North Shore Nautical?',
+    question: 'What if I am not sure which service fits my boat?',
     answer:
-      'Yes. In most cases, launch reservations are for boats already stored with North Shore Nautical. If your storage situation is different, note it in the reservation instructions or contact us directly before scheduling.',
+      'Choose the “not sure what I need” option in the booking flow or contact form. Those requests are routed directly to a quote-and-review path.',
   },
   {
-    question: 'Which launch destinations can I choose?',
+    question: 'Do you offer advisory without detailing?',
     answer:
-      'Launch delivery reservations currently offer two destination choices: Lloyd Boat Launch and Evanston Boat Launch.',
-  },
-  {
-    question: 'Can I request cleaning before launch delivery?',
-    answer:
-      'Yes. The reservation form includes a cleaning option so you can request pre-launch cleaning as part of the scheduled delivery.',
-  },
-  {
-    question: 'What if I need a time that is not listed online?',
-    answer:
-      'Contact North Shore Nautical directly. Additional slots can be opened manually when availability allows.',
-  },
-  {
-    question: 'What happens if weather affects launch timing?',
-    answer:
-      'Lake conditions can affect launch timing. When timing needs to shift because of weather or safety concerns, North Shore Nautical communicates promptly and works to coordinate the best next step.',
+      'Yes. Advisory requests can be submitted on their own for buying guidance, upkeep planning, seasonal support, and referral direction.',
   },
 ]

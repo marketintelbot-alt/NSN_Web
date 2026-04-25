@@ -11,29 +11,40 @@ const HomePage = lazy(() =>
 const ServicesPage = lazy(() =>
   import('./pages/ServicesPage').then((module) => ({ default: module.ServicesPage })),
 )
-const StoragePage = lazy(() =>
-  import('./pages/StoragePage').then((module) => ({ default: module.StoragePage })),
+const PricingPage = lazy(() =>
+  import('./pages/PricingPage').then((module) => ({ default: module.PricingPage })),
 )
-const AboutPage = lazy(() =>
-  import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })),
+const GalleryPage = lazy(() =>
+  import('./pages/GalleryPage').then((module) => ({ default: module.GalleryPage })),
 )
-const FaqPage = lazy(() =>
-  import('./pages/FaqPage').then((module) => ({ default: module.FaqPage })),
+const AdvisoryPage = lazy(() =>
+  import('./pages/AdvisoryPage').then((module) => ({ default: module.AdvisoryPage })),
 )
 const ContactPage = lazy(() =>
   import('./pages/ContactPage').then((module) => ({ default: module.ContactPage })),
 )
+const BookingPage = lazy(() =>
+  import('./pages/BookingPage').then((module) => ({ default: module.BookingPage })),
+)
+const ConfirmationPage = lazy(() =>
+  import('./pages/ConfirmationPage').then((module) => ({
+    default: module.ConfirmationPage,
+  })),
+)
 const AdminPage = lazy(() =>
   import('./pages/AdminPage').then((module) => ({ default: module.AdminPage })),
+)
+const PortalPage = lazy(() =>
+  import('./pages/PortalPage').then((module) => ({ default: module.PortalPage })),
 )
 const PrivacyPolicyPage = lazy(() =>
   import('./pages/PrivacyPolicyPage').then((module) => ({
     default: module.PrivacyPolicyPage,
   })),
 )
-const TermsOfServicePage = lazy(() =>
-  import('./pages/TermsOfServicePage').then((module) => ({
-    default: module.TermsOfServicePage,
+const ServiceAgreementPage = lazy(() =>
+  import('./pages/ServiceAgreementPage').then((module) => ({
+    default: module.ServiceAgreementPage,
   })),
 )
 const NotFoundPage = lazy(() =>
@@ -63,17 +74,23 @@ function App() {
         <Routes>
           <Route element={<HomePage />} path="/" />
           <Route element={<ServicesPage />} path="/services" />
-          <Route element={<StoragePage />} path="/storage" />
+          <Route element={<PricingPage />} path="/pricing" />
+          <Route element={<GalleryPage />} path="/gallery" />
+          <Route element={<AdvisoryPage />} path="/advisory" />
+          <Route element={<ContactPage />} path="/contact" />
+          <Route element={<BookingPage />} path="/booking" />
+          <Route element={<ConfirmationPage />} path="/booking/confirmation" />
+          <Route element={<AdminPage />} path="/admin" />
+          <Route element={<PortalPage />} path="/portal" />
+          <Route element={<Navigate replace to="/services" />} path="/storage" />
+          <Route element={<Navigate replace to="/advisory" />} path="/about" />
+          <Route element={<Navigate replace to="/contact" />} path="/faq" />
           <Route element={<Navigate replace to="/portal" />} path="/reserve-launch" />
           <Route element={<Navigate replace to="/portal" />} path="/reserve-driver" />
-          <Route element={<AboutPage />} path="/about" />
-          <Route element={<FaqPage />} path="/faq" />
-          <Route element={<ContactPage />} path="/contact" />
-          <Route element={<AdminPage />} path="/admin" />
-          <Route element={<AdminPage />} path="/portal" />
           <Route element={<Navigate replace to="/portal" />} path="/account" />
           <Route element={<PrivacyPolicyPage />} path="/privacy-policy" />
-          <Route element={<TermsOfServicePage />} path="/terms-of-service" />
+          <Route element={<ServiceAgreementPage />} path="/service-agreement" />
+          <Route element={<Navigate replace to="/service-agreement" />} path="/terms-of-service" />
           <Route element={<NotFoundPage />} path="*" />
         </Routes>
       </Suspense>

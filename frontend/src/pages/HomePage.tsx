@@ -1,176 +1,94 @@
-import {
-  Anchor,
-  ArrowRight,
-  CalendarClock,
-  MapPinned,
-  ShipWheel,
-  ShieldCheck,
-  Sparkles,
-} from 'lucide-react'
+import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Seo } from '../components/seo/Seo'
+import { CtaBanner } from '../components/ui/CtaBanner'
 import { FadeIn } from '../components/ui/FadeIn'
 import { FaqList } from '../components/ui/FaqList'
-import { CtaBanner } from '../components/ui/CtaBanner'
-import { InstallAppPrompt } from '../components/ui/InstallAppPrompt'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import {
-  contactDetails,
-  faqs,
-  howItWorks,
-  principles,
+  advisoryHighlights,
+  brandPromise,
+  faqItems,
+  galleryStories,
+  homeMetrics,
+  marineCareHighlights,
   serviceAreas,
-  services,
   siteMeta,
-  trustIndicators,
+  trustHighlights,
 } from '../content/site'
-
-const serviceIcons = {
-  storage: Anchor,
-  detailing: Sparkles,
-  waxing: ShieldCheck,
-  'driver-reservation': CalendarClock,
-}
 
 export function HomePage() {
   return (
     <>
       <Seo
-        title="Premium Boat Care on Chicago's North Shore"
-        description="North Shore Nautical provides premium boat storage, detailing, waxing, launch delivery, and a polished online booking flow for Chicago's North Shore."
+        title="Premium Boat Detailing & Marine Care on Chicago’s North Shore"
+        description="Professional detailing, seasonal upkeep, and owner advisory designed to keep your boat clean, protected, and ready to enjoy all summer."
         path="/"
         image={siteMeta.heroImage}
-        structuredData={[
-          {
-            '@context': 'https://schema.org',
-            '@type': 'LocalBusiness',
-            name: siteMeta.name,
-            url: siteMeta.siteUrl,
-            description: siteMeta.description,
-            telephone: contactDetails.phoneDisplay,
-            email: contactDetails.email,
-            areaServed: serviceAreas,
-            serviceType: services.map((service) => service.name),
-          },
-          {
-            '@context': 'https://schema.org',
-            '@type': 'FAQPage',
-            mainEntity: faqs.slice(0, 4).map((item) => ({
-              '@type': 'Question',
-              name: item.question,
-              acceptedAnswer: {
-                '@type': 'Answer',
-                text: item.answer,
-              },
-            })),
-          },
-        ]}
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'LocalBusiness',
+          name: siteMeta.name,
+          slogan: siteMeta.tagline,
+          url: siteMeta.siteUrl,
+          description: siteMeta.description,
+          areaServed: serviceAreas,
+          serviceType: ['Marine detailing', 'Boat cleaning', 'Marine care', 'Boat owner advisory'],
+        }}
       />
 
-      <section className="relative min-h-screen overflow-hidden bg-ink pt-32 text-white md:pt-40">
+      <section className="relative min-h-[92svh] overflow-hidden bg-ink pt-28 text-white md:pt-36">
         <div
-          className="absolute inset-0 bg-cover"
+          className="absolute inset-0 bg-cover bg-center"
           style={{
             backgroundImage: `url(${siteMeta.heroImage})`,
-            backgroundPosition: 'center 58%',
           }}
         />
         <div className="absolute inset-0 bg-hero-overlay" />
-        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-[#f5f8fa]" />
-        <div className="container relative pb-20 pt-16 md:pb-28 md:pt-24">
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-[#f7fbff]" />
+
+        <div className="container relative flex min-h-[calc(92svh-7rem)] items-end pb-16 md:pb-20">
           <FadeIn className="max-w-4xl">
-            <span className="eyebrow">Premium Stored-Boat Concierge</span>
-            <h1 className="display-title-inverse max-w-4xl">
-              Your boat, prepared and brought to launch with North Shore precision.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/75 md:text-xl">
-              Most North Shore Nautical clients already keep their boats in storage
-              with us. Reserve delivery to Lloyd Boat Launch or Evanston Boat Launch,
-              add detailing or finish work when needed, and let the details be handled
-              with calm, professional coordination.
+            <span className="eyebrow">{siteMeta.tagline}</span>
+            <p className="mt-6 text-sm font-semibold uppercase tracking-[0.24em] text-white/80">
+              Chicago&apos;s North Shore
             </p>
+            <h1 className="display-title-inverse mt-4 max-w-5xl">
+              Premium Boat Detailing &amp; Marine Care on Chicago&apos;s North Shore
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/76 md:text-xl">
+              Professional detailing, seasonal upkeep, and owner advisory designed to keep your boat
+              clean, protected, and ready to enjoy all summer.
+            </p>
+            <p className="mt-6 max-w-2xl text-base leading-8 text-white/76">{brandPromise}</p>
+
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
-              <Link className="button-primary w-full justify-center sm:w-auto" to="/portal">
-                Client Portal
+              <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
+                Book Marine Care
                 <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link className="button-secondary w-full justify-center sm:w-auto" to="/pricing">
+                Request an Estimate
               </Link>
               <Link className="button-secondary w-full justify-center sm:w-auto" to="/services">
                 Explore Services
               </Link>
             </div>
           </FadeIn>
-
-          <FadeIn className="mt-20 panel p-6 md:mt-28 md:p-8" delay={0.15}>
-            <div className="grid gap-6 md:grid-cols-4">
-              {trustIndicators.map((indicator) => (
-                <div key={indicator} className="border-l border-ink/10 pl-4 first:border-l-0 first:pl-0">
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate/80">
-                    {indicator}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </FadeIn>
-
-          <InstallAppPrompt />
         </div>
       </section>
 
       <section className="section-pad">
         <div className="container">
-          <SectionIntro
-            label="Services"
-            title="A refined service model for owners who prefer readiness over friction."
-            copy="From stored-boat oversight to launch-day delivery, North Shore Nautical keeps each service intentionally aligned so your boat feels prepared before the lake is."
-          />
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            {services.map((service, index) => {
-              const Icon = serviceIcons[service.slug as keyof typeof serviceIcons]
-
-              return (
-                <FadeIn key={service.slug} className="soft-panel p-7" delay={index * 0.08}>
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lake/10 text-lake">
-                      <Icon className="h-5 w-5" />
-                    </span>
-                    <h2 className="font-display text-3xl font-semibold text-ink">
-                      {service.name}
-                    </h2>
-                  </div>
-                  <p className="mt-4 text-base leading-8 text-slate">{service.summary}</p>
-                  <ul className="mt-6 grid gap-3 text-sm leading-7 text-slate">
-                    {service.bullets.map((bullet) => (
-                      <li key={bullet} className="flex gap-3">
-                        <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-lake" />
-                        <span>{bullet}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </FadeIn>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
-      <section className="section-pad bg-[#edf3f6]">
-        <div className="container">
-          <SectionIntro
-            label="How It Works"
-            title="A launch request process designed to feel composed and dependable."
-            copy="The reservation process is straightforward by design: clear details, clear lead time, and a professional review before launch-day delivery begins."
-          />
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
-            {howItWorks.map((step, index) => (
-              <FadeIn key={step.title} className="soft-panel p-7" delay={index * 0.1}>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-lake">
-                  Step {index + 1}
+          <div className="grid gap-6 lg:grid-cols-3">
+            {homeMetrics.map((metric, index) => (
+              <FadeIn key={metric.label} className="soft-panel p-6" delay={index * 0.06}>
+                <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
+                  {metric.label}
                 </p>
-                <h2 className="mt-4 font-display text-3xl font-semibold text-ink">
-                  {step.title}
-                </h2>
-                <p className="mt-4 text-base leading-8 text-slate">{step.description}</p>
+                <h2 className="mt-4 font-display text-4xl font-semibold text-ink">{metric.value}</h2>
+                <p className="mt-3 text-sm leading-7 text-slate">{metric.description}</p>
               </FadeIn>
             ))}
           </div>
@@ -178,83 +96,121 @@ export function HomePage() {
       </section>
 
       <section className="section-pad">
-        <div className="container grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
-          <FadeIn>
-            <SectionIntro
-              label="Why North Shore Nautical"
-              title="Convenience, professionalism, and peace of mind without the usual clutter."
-              copy="The standard is simple: careful handling, polished communication, and a schedule that respects the realities of launch-day operations."
-            />
-          </FadeIn>
-          <div className="grid gap-6">
-            {principles.map((principle, index) => (
-              <FadeIn key={principle.title} className="soft-panel p-7" delay={index * 0.08}>
-                <div className="flex items-center gap-3">
-                  {index === 0 ? (
-                    <ShieldCheck className="h-5 w-5 text-lake" />
-                  ) : index === 1 ? (
-                    <MapPinned className="h-5 w-5 text-lake" />
-                  ) : (
-                    <ShipWheel className="h-5 w-5 text-lake" />
-                  )}
-                  <h2 className="text-xl font-semibold text-ink">{principle.title}</h2>
+        <div className="container grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+          <SectionIntro
+            label="Marine Care"
+            title="Marine care is the first conversation, not an add-on."
+            copy="North Shore Nautical is positioned around detailing, upkeep, finish care, and condition-aware service planning. Advisory is available, but the public experience should lead with premium marine care."
+          />
+          <div className="grid gap-5">
+            {marineCareHighlights.map((item, index) => (
+              <FadeIn key={item.title} className="panel p-6 md:p-7" delay={index * 0.08}>
+                <div className="flex items-start gap-4">
+                  <span className="mt-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-lake/14 text-lake">
+                    <Sparkles className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-2xl font-semibold text-ink">{item.title}</h3>
+                    <p className="mt-3 text-base leading-8 text-slate">{item.description}</p>
+                  </div>
                 </div>
-                <p className="mt-3 text-base leading-8 text-slate">{principle.description}</p>
               </FadeIn>
             ))}
           </div>
         </div>
       </section>
 
-      <section className="section-pad bg-[#f0f5f7]">
-        <div className="container grid gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
-          <FadeIn>
-            <SectionIntro
-              label="Service Area"
-              title="Serving Chicago's North Shore with a local, launch-minded approach."
-              copy="North Shore Nautical supports clients across Chicago's North Shore communities and nearby launch points with a service model built around planning, readiness, and responsible coordination."
-            />
-          </FadeIn>
-          <FadeIn className="panel p-8">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {serviceAreas.map((community) => (
-                <div
-                  key={community}
-                  className="rounded-2xl border border-ink/10 bg-white px-4 py-4 text-sm font-semibold uppercase tracking-[0.14em] text-ink"
-                >
-                  {community}
-                </div>
-              ))}
-            </div>
-          </FadeIn>
+      <section className="section-pad bg-white/60">
+        <div className="container grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+          <div className="grid gap-5">
+            {advisoryHighlights.map((item, index) => (
+              <FadeIn key={item.title} className="soft-panel p-6 md:p-7" delay={index * 0.08}>
+                <h3 className="text-2xl font-semibold text-ink">{item.title}</h3>
+                <p className="mt-3 text-base leading-8 text-slate">{item.description}</p>
+              </FadeIn>
+            ))}
+          </div>
+          <SectionIntro
+            label="Advisory"
+            title="Owner advisory that stays practical."
+            copy="Advisory is framed as buying guidance, upkeep planning, seasonal support, and referral direction with clear owner-side boundaries."
+          />
         </div>
       </section>
 
       <section className="section-pad">
         <div className="container">
           <SectionIntro
-            label="FAQ"
-            title="Clear answers before you schedule."
-            copy="A few of the questions owners ask most often before reserving launch delivery or reviewing stored-boat service details."
+            align="center"
+            label="Why Owners Choose North Shore Nautical"
+            title="Clear communication, polished work, and a summer-ready feel without the clutter."
+            copy="Every section of the public site is built to feel bright, calm, and intentional because that is the same standard the service experience should carry."
           />
-          <div className="mt-12">
-            <FaqList items={faqs.slice(0, 4)} />
+          <div className="mt-12 grid gap-4 lg:grid-cols-2">
+            {trustHighlights.map((highlight, index) => (
+              <FadeIn key={highlight} className="rounded-3xl border border-ink/10 bg-white/80 px-5 py-5" delay={index * 0.05}>
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-lake" />
+                  <p className="text-base leading-8 text-slate">{highlight}</p>
+                </div>
+              </FadeIn>
+            ))}
           </div>
-          <div className="mt-8">
-            <Link className="button-dark" to="/faq">
-              View All FAQs
+        </div>
+      </section>
+
+      <section className="section-pad bg-white/60">
+        <div className="container">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <SectionIntro
+              label="Gallery"
+              title="The gallery is ready for richer media, and the structure already feels polished."
+              copy="The current image set is enough to support a polished public debut while keeping the gallery ready for seasonal updates, fresh project photos, and before-and-after stories."
+            />
+            <Link className="button-quiet justify-start md:justify-center" to="/gallery">
+              View full gallery
             </Link>
+          </div>
+          <div className="mt-10 grid gap-5 lg:grid-cols-2">
+            {galleryStories.slice(0, 2).map((story, index) => (
+              <FadeIn key={story.title} className="overflow-hidden rounded-[2rem] border border-ink/10 bg-white/84 shadow-soft" delay={index * 0.08}>
+                <div className="aspect-[4/3] overflow-hidden">
+                  <img
+                    alt={story.title}
+                    className="h-full w-full object-cover"
+                    src={story.image}
+                  />
+                </div>
+                <div className="p-6">
+                  <h3 className="text-2xl font-semibold text-ink">{story.title}</h3>
+                  <p className="mt-3 text-base leading-8 text-slate">{story.caption}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section-pad">
+        <div className="container">
+          <SectionIntro
+            label="Common Questions"
+            title="A few clear answers before you submit."
+            copy="The public site should make the flow obvious: care first, advisory second, and request review before any appointment is confirmed."
+          />
+          <div className="mt-10">
+            <FaqList items={faqItems} />
           </div>
         </div>
       </section>
 
       <CtaBanner
-        title="Reserve early and keep launch day calm."
-        copy="Launch delivery requests are reviewed manually so every timing request, destination, and cleaning preference can be coordinated with care. Submit at least 24 hours ahead to stay within the scheduling window."
-        primaryLabel="Client Portal"
-        primaryTo="/portal"
-        secondaryLabel="Contact North Shore Nautical"
-        secondaryTo="/contact"
+        title="Ready to price the work or submit your request?"
+        copy="Choose an instant-checkout marine care service or route the request to review when the boat needs heavier-condition work, advisory support, or a custom scope."
+        primaryLabel="Book Marine Care"
+        primaryTo="/booking"
+        secondaryLabel="View Pricing"
+        secondaryTo="/pricing"
       />
     </>
   )

@@ -1,20 +1,20 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
 import { CircleAlert, LockKeyhole, ShieldCheck } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 
-import { MarineServiceAdminDashboard } from '../components/admin/MarineServiceAdminDashboard'
+import { ClientPortal } from '../components/account/ClientPortal'
+import { AdminDashboard } from '../components/admin/AdminDashboard'
 import { Seo } from '../components/seo/Seo'
 import { FadeIn } from '../components/ui/FadeIn'
 import { PageHero } from '../components/ui/PageHero'
 import {
   createAccountSession,
-  destroyAccountSession,
   readAccountSession,
   type AccountSession,
 } from '../lib/adminSession'
 
-export function AdminPage() {
+export function PortalPage() {
   const location = useLocation()
   const [session, setSession] = useState<AccountSession | null>(null)
   const [loading, setLoading] = useState(true)
@@ -91,41 +91,35 @@ export function AdminPage() {
         title={
           session
             ? session.role === 'admin'
-              ? 'Admin Dashboard'
-              : 'Admin Access'
-            : 'Admin Access'
+              ? 'Private Operations Portal'
+              : 'Private Client Portal'
+            : 'Private Portal'
         }
-        description={
-          session
-            ? session.role === 'admin'
-              ? 'Secure marine care request administration for North Shore Nautical.'
-              : 'Secure admin-only access for North Shore Nautical.'
-            : 'Secure admin-only access for North Shore Nautical.'
-        }
+        description="Private access for North Shore Nautical portal users."
         path={location.pathname}
         noIndex
       />
       <PageHero
-        eyebrow="Admin Access"
+        eyebrow="Private Portal"
         title={
           session?.role === 'admin'
-            ? 'Secure control for marine care requests, approvals, and payment capture.'
+            ? 'Private operations access for existing internal workflows.'
             : session?.role === 'client'
-              ? 'This area is reserved for North Shore Nautical administrators.'
-              : 'Protected access for reviewing requests, approvals, and payment status.'
+              ? 'Your private North Shore Nautical portal is ready.'
+              : 'Private portal access for invited clients and legacy internal workflows.'
         }
         description={
           session?.role === 'admin'
-            ? 'Review incoming bookings and inquiries, capture approved authorizations, request changes, and manage customer communication from one protected dashboard.'
+            ? 'This private route preserves legacy operations that are intentionally kept separate from the public marine care website.'
             : session?.role === 'client'
-              ? 'If you are looking for the private client portal, use the dedicated portal route instead of the admin dashboard.'
-              : 'Admin access is protected with secure session handling and is intended only for North Shore Nautical team members.'
+              ? 'Access your saved portal information, upcoming reservations, and account details from one private place.'
+              : 'This route is not linked from the public site and is only for invited portal users.'
         }
       >
         <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
           <span>
-            Admin access is set up directly by North Shore Nautical and protected with secure, cookie-based sessions.
+            Portal access is provisioned directly by North Shore Nautical and protected with secure, cookie-based sessions.
           </span>
         </div>
       </PageHero>
@@ -134,48 +128,25 @@ export function AdminPage() {
         <div className="container">
           {session ? (
             session.role === 'admin' ? (
-              <MarineServiceAdminDashboard
-                accountSession={session}
-                onSignedOut={() => setSession(null)}
-              />
+              <AdminDashboard accountSession={session} onSignedOut={() => setSession(null)} />
             ) : (
-              <FadeIn className="panel p-6 md:p-8">
-                <h2 className="section-title text-3xl">Admin access only</h2>
-                <p className="mt-4 max-w-2xl text-base leading-8 text-slate">
-                  This dashboard is reserved for North Shore Nautical administrators. Your current session is a private portal session instead.
-                </p>
-                <div className="mt-6 flex flex-col gap-4 sm:flex-row">
-                  <Link className="button-primary justify-center" to="/portal">
-                    Go To Private Portal
-                  </Link>
-                  <button
-                    className="button-secondary justify-center"
-                    type="button"
-                    onClick={async () => {
-                      await destroyAccountSession()
-                      setSession(null)
-                    }}
-                  >
-                    Sign Out
-                  </button>
-                </div>
-              </FadeIn>
+              <ClientPortal session={session} onSignedOut={() => setSession(null)} />
             )
           ) : (
             <div className="grid gap-6 lg:grid-cols-[0.92fr_1.08fr]">
               <FadeIn className="panel p-6 md:p-8">
                 <div className="flex items-center gap-3">
                   <LockKeyhole className="h-5 w-5 text-lake" />
-                  <h2 className="section-title text-3xl">Administrator sign-in</h2>
+                  <h2 className="section-title text-3xl">Portal sign-in</h2>
                 </div>
                 <p className="mt-4 text-base leading-8 text-slate">
-                  Sign in with the email and password connected to North Shore Nautical administrative access.
+                  Sign in with the email and password tied to your private North Shore Nautical portal.
                 </p>
 
                 <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f7fbfc] px-5 py-5 text-sm leading-7 text-slate">
-                  <p className="font-semibold text-ink">Need access help?</p>
+                  <p className="font-semibold text-ink">Need portal access or help signing in?</p>
                   <p className="mt-2">
-                    Administrator accounts are provisioned directly by North Shore Nautical. There is no public signup flow for this dashboard.
+                    Access is arranged directly through North Shore Nautical so current portal users can get back in quickly without a public signup flow.
                   </p>
                 </div>
 
@@ -240,19 +211,19 @@ export function AdminPage() {
               <div className="grid gap-5">
                 {[
                   {
-                    title: 'Pending review workflow',
+                    title: 'Private access only',
                     copy:
-                      'Requests stay in pending review until North Shore Nautical approves them and captures payment.',
+                      'This route remains intentionally separate from the public marine care site and is only for existing portal users.',
                   },
                   {
-                    title: 'Payment authorization visibility',
+                    title: 'Saved account details',
                     copy:
-                      'The dashboard surfaces authorization, capture, cancelation, and refund status in one place.',
+                      'Returning users can access their account details and existing workflow information without starting over each time.',
                   },
                   {
-                    title: 'Protected operations',
+                    title: 'Protected sessions',
                     copy:
-                      'Access is limited to authenticated team members so booking approvals and customer details stay protected.',
+                      'Portal access is provisioned directly by North Shore Nautical so the experience stays simple for invited users without opening a public signup flow.',
                   },
                 ].map((item, index) => (
                   <FadeIn key={item.title} className="soft-panel p-5 md:p-7" delay={index * 0.08}>

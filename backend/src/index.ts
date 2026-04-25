@@ -21,12 +21,7 @@ import {
   updateClientPasswordHandler,
   updateClientProfileHandler,
 } from './routes/accountPortal.js'
-import {
-  handleStripeWebhook,
-  listPublicALaCarteServicesHandler,
-} from './routes/aLaCarteServices.js'
-import { getPrimaryAdminEmail } from './lib/adminSession.js'
-import { getBusinessNotificationEmails } from './lib/notificationEmails.js'
+import { handleStripeWebhook } from './routes/aLaCarteServices.js'
 import {
   createAdminBookingHandler,
   createAdminClientAccount,
@@ -39,7 +34,19 @@ import {
   updateAdminClientAccount,
   updateAdminSlot,
 } from './routes/adminDashboard.js'
-import { createPublicBookingRouter } from './routes/publicBooking.js'
+import {
+  approveServiceRequestHandler,
+  cancelServiceRequestHandler,
+  completeServiceRequestHandler,
+  declineServiceRequestHandler,
+  readAdminServiceRequestsHandler,
+  requestServiceChangesHandler,
+} from './routes/adminServiceRequests.js'
+import {
+  createServiceRequestHandler,
+  listServiceCatalogHandler,
+  readServiceRequestConfirmationHandler,
+} from './routes/serviceRequests.js'
 
 const app = express()
 const port = Number(process.env.PORT || 4000)
@@ -92,22 +99,15 @@ function isAllowedOrigin(origin?: string) {
 
   return isLocalPreviewOrigin || allowedOrigins.includes(normalizedOrigin)
 }
-
-const reservationLimiter = rateLimit({
+const serviceRequestLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 8,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: {
     message:
-      'Too many reservation attempts were submitted from this network. Please wait a few minutes and try again.',
+      'Too many requests were submitted from this network. Please wait a few minutes and try again.',
   },
-})
-
-const publicBookingRouter = createPublicBookingRouter({
-  resendApiKey: process.env.RESEND_API_KEY,
-  fromEmail: process.env.FROM_EMAIL,
-  businessNotificationEmails: getBusinessNotificationEmails(getPrimaryAdminEmail()),
 })
 
 app.disable('x-powered-by')
@@ -156,6 +156,32 @@ app.post('/api/account/session', adminLoginLimiter, createAdminSession)
 app.get('/api/account/session', readAdminSession)
 app.delete('/api/account/session', destroyAdminSession)
 app.get('/api/admin/dashboard', requireAdminSession, readAdminDashboard)
+app.get('/api/admin/service-requests', requireAdminSession, readAdminServiceRequestsHandler)
+app.post(
+  '/api/admin/service-requests/:requestId/approve-capture',
+  requireAdminSession,
+  approveServiceRequestHandler,
+)
+app.post(
+  '/api/admin/service-requests/:requestId/request-changes',
+  requireAdminSession,
+  requestServiceChangesHandler,
+)
+app.post(
+  '/api/admin/service-requests/:requestId/decline',
+  requireAdminSession,
+  declineServiceRequestHandler,
+)
+app.post(
+  '/api/admin/service-requests/:requestId/complete',
+  requireAdminSession,
+  completeServiceRequestHandler,
+)
+app.post(
+  '/api/admin/service-requests/:requestId/cancel',
+  requireAdminSession,
+  cancelServiceRequestHandler,
+)
 app.post('/api/admin/slots', requireAdminSession, createAdminSlot)
 app.put('/api/admin/slots/:slotId', requireAdminSession, updateAdminSlot)
 app.delete('/api/admin/slots/:slotId', requireAdminSession, removeAdminSlot)
@@ -180,9 +206,9 @@ app.post(
   createClientALaCarteCheckoutSessionHandler,
 )
 
-app.get('/api/booking-slots', publicBookingRouter.listSlots)
-app.post('/api/bookings', reservationLimiter, publicBookingRouter.createBooking)
-app.get('/api/a-la-carte-services', listPublicALaCarteServicesHandler)
+app.get('/api/services/catalog', listServiceCatalogHandler)
+app.post('/api/service-requests', serviceRequestLimiter, createServiceRequestHandler)
+app.get('/api/service-requests/:requestId/confirmation', readServiceRequestConfirmationHandler)
 
 app.use('/api', (_request, response) => {
   response.status(404).json({

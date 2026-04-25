@@ -31,7 +31,31 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_PRICE_MAINTENANCE_DETAIL
+        sync: false
+      - key: STRIPE_PRICE_SIGNATURE_DETAIL
+        sync: false
+      - key: STRIPE_PRICE_EXTERIOR_WASH
+        sync: false
+      - key: STRIPE_PRICE_BUFF_WAX
+        sync: false
+      - key: STRIPE_PRICE_VINYL_DEEP_CLEAN
+        sync: false
+      - key: STRIPE_PRICE_CARPET_MAT_SHAMPOO
+        sync: false
+      - key: STRIPE_PRICE_NON_SKID_DECK_SCRUB
+        sync: false
+      - key: SUCCESS_URL
+        sync: false
+      - key: CANCEL_URL
+        sync: false
+      - key: BUSINESS_NOTIFICATION_EMAILS
+        sync: false
       - key: ADMIN_EMAILS
+        sync: false
+      - key: ADMIN_EMAIL
         sync: false
       - key: ADMIN_PASSWORD_HASH
         sync: false

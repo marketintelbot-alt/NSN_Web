@@ -19,7 +19,7 @@ import {
   destroyAccountSession,
   type AccountSession,
 } from '../../lib/adminSession'
-import { supportPhoneNumbers } from '../../content/site'
+import { supportPhoneNumbers } from '../../content/legacyPortal'
 import {
   formatSlotDate,
   formatSlotDateTime,

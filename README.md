@@ -1,71 +1,76 @@
 # North Shore Nautical
 
-North Shore Nautical is a mobile-first booking site and lightweight API for a small seasonal client list. The app is tuned for the simplest reliable flow:
-
-- clients open the site
-- see available time slots
-- choose one
-- enter a few details
-- get a confirmation email
-
-Admin management lives behind a protected `/admin` dashboard.
+North Shore Nautical is now positioned as a premium marine detailing, marine care, and owner-advisory business. The public site sells marine care first, advisory second, and keeps every booking in a pending-review state until admin approval and payment capture.
 
 ## What this build includes
 
-- client-facing booking flow with a minimal form
-- secure multi-admin sign-in with bcrypt-hashed password verification
-- client portal password changes after sign-in
-- HTTP-only cookie sessions for admin access
-- protected admin dashboard for slots, bookings, and email status
-- Stripe-backed prepaid a la carte services that must be paid before a reservation can be completed
-- Resend transactional emails:
-  - customer confirmation
-  - internal admin notification
-- server-side validation, rate limiting, and double-booking protection
-- Render-compatible deployment without changing platforms
-- PWA-ready manifest, install metadata, and placeholder icons
+- public website with the final navigation:
+  - Home
+  - Services
+  - Pricing
+  - Gallery
+  - Advisory
+  - Contact
+- centralized public service catalog and pricing config in `backend/src/lib/serviceCatalog.ts`
+- public booking flow for:
+  - instant-checkout marine care services
+  - quote-only services
+  - condition-heavy inquiry routing
+- server-side validation of service, boat length, pricing, agreement acceptance, and checkout eligibility
+- dynamic Stripe Checkout Sessions with manual capture
+- protected `/admin` dashboard for request review and payment capture
+- preserved private `/portal` route for legacy internal or invited-user workflows that are intentionally not linked from the public site
+- Supabase-backed request records plus preserved legacy tables
+- updated email templates and Stripe webhook synchronization for the new approval model
 
 ## Architecture
 
 - `frontend/`
-  - Vite + React + TypeScript site and booking UI
+  - Vite + React + TypeScript public site, booking flow, confirmation states, and admin UI
 - `backend/`
-  - Express API for auth, booking, slot management, and email delivery
+  - Express API for auth, public service requests, Stripe webhooks, admin actions, and private legacy portal endpoints
+- `backend/src/lib/serviceCatalog.ts`
+  - source of truth for public services, pricing, display order, and checkout eligibility
+- `backend/src/lib/serviceRequests.ts`
+  - request creation, Stripe authorization, admin actions, and webhook synchronization
 - `supabase/schema.sql`
-  - tables and constraints for booking slots and launch bookings
+  - Supabase schema including `service_requests` and preserved legacy tables
 - `render.yaml`
-  - Render Blueprint for the frontend static site and backend web service
+  - Render Blueprint for the frontend static site, backend web service, and reminder job
 
-## Booking behavior
+## Public request flow
 
-### Booking flow
+### Public APIs
 
-- `GET /api/booking-slots`
-  - returns future active slots that are not already booked
-- `POST /api/bookings`
-  - validates and sanitizes user input
-  - blocks double-booking on the server
-  - saves the booking before email delivery
-  - keeps the booking even if email delivery fails
-- `GET /api/account/portal`
-  - returns the saved client profile, contracted service balances, prepaid a la carte balances, and available slots
-- `POST /api/account/a-la-carte/checkout`
-  - creates a Stripe Checkout session for prepaid a la carte services
-- `PUT /api/account/password`
-  - updates a signed-in client password
+- `GET /api/services/catalog`
+  - returns the centralized public service catalog
+- `POST /api/service-requests`
+  - validates the request
+  - routes quote-only or condition-heavy work to inquiry review
+  - recalculates pricing server-side before Stripe is used
+  - creates a Stripe Checkout Session only for eligible instant-checkout services
+- `GET /api/service-requests/:requestId/confirmation`
+  - returns the latest request, booking, and payment state
 
-### Admin dashboard
+### Stripe behavior
 
-- `POST /api/admin/session`
-  - validates configured admin logins
-  - sets a secure HTTP-only cookie
-- `GET /api/admin/dashboard`
-  - returns all relevant slots and bookings
-- admin can:
-  - add, edit, and delete available slots
-  - create or edit bookings manually
-  - review customer and admin email delivery state
-  - retry booking confirmation emails
+- instant-checkout services use Stripe Checkout Sessions created on the backend
+- line item quantity equals rounded-up boat length in feet
+- `payment_intent_data.capture_method` is set to `manual`
+- checkout authorizes the card but does not confirm the appointment
+- admin approval captures the PaymentIntent and changes the request to `confirmed`
+- admin decline cancels the uncaptured authorization and changes the request to `declined`
+
+### Admin APIs
+
+- `GET /api/admin/service-requests`
+- `POST /api/admin/service-requests/:requestId/approve-capture`
+- `POST /api/admin/service-requests/:requestId/request-changes`
+- `POST /api/admin/service-requests/:requestId/decline`
+- `POST /api/admin/service-requests/:requestId/complete`
+- `POST /api/admin/service-requests/:requestId/cancel`
+
+All admin routes require authenticated admin sessions.
 
 ## Local development
 
@@ -92,7 +97,6 @@ Repo-level helpers:
 ```bash
 npm run build
 npm run lint
-npm run sync:copy
 ```
 
 Local URLs:
@@ -100,6 +104,7 @@ Local URLs:
 - frontend: `http://localhost:5173`
 - backend: `http://localhost:4000`
 - admin: `http://localhost:5173/admin`
+- private portal: `http://localhost:5173/portal`
 
 ## Environment variables
 
@@ -109,6 +114,7 @@ Backend `.env`:
 PORT=4000
 RESEND_API_KEY=
 BUSINESS_NOTIFICATION_EMAIL=
+BUSINESS_NOTIFICATION_EMAILS=
 FROM_EMAIL=
 SITE_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173
@@ -118,7 +124,18 @@ SUPABASE_SECRET_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_PRICE_MAINTENANCE_DETAIL=price_1TPubeCobOhggrgBFtN5kPlc
+STRIPE_PRICE_SIGNATURE_DETAIL=price_1TPujvCobOhggrgBNXw0hiqs
+STRIPE_PRICE_EXTERIOR_WASH=price_1TPukPCobOhggrgBeEaSfxpP
+STRIPE_PRICE_BUFF_WAX=price_1TPukvCobOhggrgBI1gCnPHz
+STRIPE_PRICE_VINYL_DEEP_CLEAN=price_1TPulKCobOhggrgBi3IHdn4Y
+STRIPE_PRICE_CARPET_MAT_SHAMPOO=price_1TPuloCobOhggrgBUAtakSk0
+STRIPE_PRICE_NON_SKID_DECK_SCRUB=price_1TPumECobOhggrgBcSx9r6Gf
+SUCCESS_URL=https://nsnautical.com/booking/confirmation?request={REQUEST_ID}&session_id={CHECKOUT_SESSION_ID}
+CANCEL_URL=https://nsnautical.com/booking?cancelled=1&service={SERVICE_ID}
 ADMIN_EMAILS=
+ADMIN_EMAIL=
 ADMIN_PASSWORD_HASH=
 ADMIN_SESSION_SECRET=
 ADMIN_SESSION_TTL_HOURS=12
@@ -133,14 +150,15 @@ VITE_SITE_URL=https://nsnautical.com
 
 Notes:
 
-- `BUSINESS_NOTIFICATION_EMAIL` can match one of the configured `ADMIN_EMAILS` if one inbox should receive internal notifications.
-- `FROM_EMAIL` must be a verified Resend sender, for example `North Shore Nautical <bookings@yourdomain.com>`.
-- `ADMIN_PASSWORD_HASH` must be a bcrypt hash, not a plaintext password.
-- `ADMIN_SESSION_TTL_HOURS` is optional and defaults to `12`.
-- `SUPABASE_SECRET_KEY` is the preferred current Supabase server key.
-- `SUPABASE_SERVICE_ROLE_KEY` is supported as a legacy fallback.
-- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are required for prepaid a la carte checkout.
-- Keep whichever server key you use backend-only and never expose it to the frontend.
+- `STRIPE_PUBLISHABLE_KEY` is optional for the current hosted Checkout flow and is included as a placeholder only.
+- `SUCCESS_URL` and `CANCEL_URL` support token replacement:
+  - `{REQUEST_ID}`
+  - `{CHECKOUT_SESSION_ID}`
+  - `{SERVICE_ID}`
+- `BUSINESS_NOTIFICATION_EMAIL` or `BUSINESS_NOTIFICATION_EMAILS` can be used for internal notifications.
+- `FROM_EMAIL` must be a verified Resend sender.
+- `ADMIN_PASSWORD_HASH` must be a bcrypt hash.
+- keep Supabase server keys and Stripe secret keys backend-only
 
 ## One-time admin password setup
 
@@ -157,140 +175,70 @@ Copy the printed hash into `ADMIN_PASSWORD_HASH`, then set:
 - `ADMIN_PASSWORD_HASH`
 - `ADMIN_SESSION_SECRET`
 
-Admin sign-in lives at `/admin`.
-
 ## Supabase setup
 
-This app uses Supabase as the database layer for availability and bookings.
-
-1. Create a Supabase project.
-2. Open the SQL editor.
-3. Run `supabase/schema.sql`.
-4. Add these backend environment variables:
+1. Create the Supabase project.
+2. Run [supabase/schema.sql](/Users/johnnymaris/Desktop/New%20project/NSN_Web/supabase/schema.sql).
+3. Add backend env vars:
    - `SUPABASE_URL`
    - `SUPABASE_SECRET_KEY`
-   - or `SUPABASE_SERVICE_ROLE_KEY` if you are using the legacy keys tab
+   - or `SUPABASE_SERVICE_ROLE_KEY` as the fallback legacy key
 
-There is also a short setup handoff at [supabase/SETUP.md](/Users/johnnymaris/Desktop/New%20project/NSN_Web/supabase/SETUP.md).
+There is a shorter operational handoff at [supabase/SETUP.md](/Users/johnnymaris/Desktop/New%20project/NSN_Web/supabase/SETUP.md).
 
-The active booking flow uses:
+Important public data flow:
 
-- `booking_slots`
-- `launch_bookings`
-- `client_accounts`
-- `client_service_entitlements`
-- `client_paid_add_on_credits`
-- `stripe_checkout_purchases`
+- `service_requests` stores public inquiries and booking/payment review states
+- agreement acceptance metadata is stored with the request
+- Stripe IDs and payment status are stored server-side only
+- legacy tables remain in place for private or historical workflows
 
-Important behavior:
+## Stripe webhook setup
 
-- slot availability is always derived on the server
-- a database uniqueness constraint prevents double-booking
-- the same 24-hour rule still applies after a Stripe payment is completed
-- email delivery status is written back to each booking for admin follow-up
+Point Stripe to:
 
-## Resend setup
+- `https://YOUR-BACKEND/api/stripe/webhook`
 
-1. Create a Resend account.
-2. Verify your sender domain or sender identity.
-3. Create a transactional API key.
-4. Set:
-   - `RESEND_API_KEY`
-   - `FROM_EMAIL`
-   - `BUSINESS_NOTIFICATION_EMAIL`
+Subscribe to:
 
-The app sends two transactional emails per booking:
+- `checkout.session.completed`
+- `payment_intent.amount_capturable_updated`
+- `payment_intent.succeeded`
+- `payment_intent.canceled`
+- `charge.refunded`
 
-- customer confirmation
-- internal admin notification
-
-If delivery fails, the booking still stays saved and the admin dashboard shows the failure state.
-
-## Stripe setup
-
-1. Create a Stripe account and collect:
-   - `STRIPE_SECRET_KEY`
-   - `STRIPE_WEBHOOK_SECRET`
-2. Point the webhook at:
-   - `https://YOUR-BACKEND/api/stripe/webhook`
-3. Subscribe the webhook to:
-   - `checkout.session.completed`
-   - `checkout.session.async_payment_succeeded`
-
-Prepaid a la carte behavior:
-
-- only the published a la carte services on the portal can be sold through Stripe
-- clients must pay for those services before the portal will let them finish a reservation
-- the same slot validation and 24-hour scheduling rule still applies after payment
+The webhook handlers are idempotent and update booking/payment status without creating duplicates.
 
 ## Render deployment
 
-This repo is configured for two Render services:
+This repo is configured for:
 
 - `north-shore-nautical-site`
-  - Static Site
+  - static site
   - root directory: `frontend`
 - `north-shore-nautical-api`
-  - Web Service
+  - web service
+  - root directory: `backend`
+- `north-shore-nautical-reminders`
+  - cron worker
   - root directory: `backend`
 
-You can use `render.yaml` as a Blueprint or match the same settings manually in the Render dashboard.
-
-### Frontend service
-
-- build command: `npm install && npm run build`
-- publish directory: `dist`
-- env vars:
-  - `VITE_API_BASE_URL=https://YOUR-BACKEND.onrender.com`
-  - `VITE_SITE_URL=https://YOUR-LIVE-DOMAIN.com`
-
-### Backend service
-
-- build command: `npm install && npm run build`
-- start command: `npm run start`
-- health check path: `/api/health`
-- env vars:
-  - `RESEND_API_KEY`
-  - `BUSINESS_NOTIFICATION_EMAIL`
-  - `FROM_EMAIL`
-  - `CORS_ORIGIN=https://YOUR-FRONTEND.onrender.com`
-  - `TRUST_PROXY_HOPS=1`
-  - `SUPABASE_URL`
-  - `SUPABASE_SECRET_KEY`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-  - `ADMIN_EMAILS`
-  - `ADMIN_PASSWORD_HASH`
-  - `ADMIN_SESSION_SECRET`
-  - `ADMIN_SESSION_TTL_HOURS=12`
-
-Deployment notes:
+Key deployment notes:
 
 - keep `CORS_ORIGIN` set to the exact frontend origin
-- after adding a custom domain, update both `CORS_ORIGIN` and `VITE_SITE_URL`
-- the admin cookie is configured for secure cross-origin use in production so the split Render frontend/API setup works cleanly
-
-## PWA and home screen readiness
-
-The frontend now includes:
-
-- `manifest.webmanifest`
-- standalone display metadata
-- Apple mobile web app tags
-- placeholder install icons in `frontend/public/icons/`
-- a minimal service worker for installability
-
-Replace the placeholder icons later if brand-ready artwork becomes available:
-
-- `frontend/public/icons/icon-192.png`
-- `frontend/public/icons/icon-512.png`
-- `frontend/public/icons/icon-512-maskable.png`
-- `frontend/public/icons/apple-touch-icon.png`
+- keep `SITE_URL` and `VITE_SITE_URL` aligned with the live public domain
+- set the live Stripe secret and webhook secret before using instant-checkout services in production
+- the public site is go-live ready once Stripe, Supabase, admin auth, and Resend are connected
 
 ## Quick production checklist
 
-1. Run `supabase/schema.sql` in the production Supabase project.
-2. Generate a bcrypt hash and set `ADMIN_PASSWORD_HASH`.
-3. Verify the Resend sender and API key.
-4. Set the backend and frontend environment variables in Render.
-5. Deploy both services.
-6. Visit `/admin`, sign in, create a slot, and complete one real booking test.
+1. Run `supabase/schema.sql` or the new migration set in production.
+2. Configure admin auth, Supabase, and Resend env vars.
+3. Create Stripe prices for the instant-checkout services and paste those IDs into env vars.
+4. Configure the Stripe webhook endpoint and secret.
+5. Deploy frontend and backend.
+6. Test:
+   - one inquiry-only request
+   - one instant-checkout authorization
+   - one admin approve and capture
+   - one admin decline and cancel authorization

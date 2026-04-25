@@ -13,28 +13,29 @@ export default {
     },
     extend: {
       colors: {
-        ink: '#06131f',
-        navy: '#0b2235',
-        slate: '#5f7080',
-        mist: '#dce6ec',
-        lake: '#7fa4b8',
-        foam: '#f7fafc',
-        line: 'rgba(9, 27, 42, 0.11)',
-        gold: '#b79b73',
+        ink: '#0d2740',
+        navy: '#143a59',
+        slate: '#587089',
+        mist: '#e4eef5',
+        lake: '#8bb7d4',
+        foam: '#f7fbff',
+        sand: '#f2e7d3',
+        line: 'rgba(20, 58, 89, 0.11)',
+        gold: '#c6a46b',
       },
       fontFamily: {
-        sans: ['Source Sans 3', 'sans-serif'],
-        display: ['Libre Baskerville', 'serif'],
+        sans: ['Manrope', 'sans-serif'],
+        display: ['Cormorant Garamond', 'serif'],
       },
       boxShadow: {
-        soft: '0 22px 48px rgba(7, 22, 34, 0.08)',
-        panel: '0 28px 70px rgba(4, 18, 30, 0.12)',
+        soft: '0 20px 50px rgba(20, 58, 89, 0.08)',
+        panel: '0 32px 90px rgba(20, 58, 89, 0.12)',
       },
       backgroundImage: {
         'hero-overlay':
-          'linear-gradient(180deg, rgba(6, 19, 31, 0.22) 0%, rgba(6, 19, 31, 0.62) 48%, rgba(6, 19, 31, 0.88) 100%)',
+          'linear-gradient(180deg, rgba(13, 39, 64, 0.14) 0%, rgba(13, 39, 64, 0.46) 46%, rgba(13, 39, 64, 0.82) 100%)',
         'section-glow':
-          'radial-gradient(circle at top, rgba(127, 164, 184, 0.22), transparent 58%)',
+          'radial-gradient(circle at top, rgba(139, 183, 212, 0.28), transparent 58%)',
       },
       borderRadius: {
         '4xl': '2rem',

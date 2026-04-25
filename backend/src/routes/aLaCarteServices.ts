@@ -7,6 +7,14 @@ import {
   fulfillALaCarteCheckoutPurchase,
   listPublicALaCarteServices,
 } from '../lib/aLaCarteServices.js'
+import { getPrimaryAdminEmail } from '../lib/adminSession.js'
+import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
+import { sendRefundedBookingEmail } from '../lib/serviceRequestEmailDelivery.js'
+import {
+  syncServiceRequestAuthorizationFromCheckoutSession,
+  syncServiceRequestAuthorizationFromPaymentIntent,
+  syncServiceRequestRefundFromCharge,
+} from '../lib/serviceRequests.js'
 import { getStripeClient, getStripeWebhookSecret } from '../lib/stripeCheckout.js'
 
 function readStripeSignature(request: Request) {
@@ -51,6 +59,14 @@ export function listPublicALaCarteServicesHandler(_request: Request, response: R
   })
 }
 
+function getEmailOptions() {
+  return {
+    resendApiKey: process.env.RESEND_API_KEY,
+    fromEmail: process.env.FROM_EMAIL,
+    businessNotificationEmails: getBusinessNotificationEmails(getPrimaryAdminEmail()),
+  }
+}
+
 export async function handleStripeWebhook(request: Request, response: Response) {
   const webhookSecret = getStripeWebhookSecret()
 
@@ -81,14 +97,36 @@ export async function handleStripeWebhook(request: Request, response: Response) 
           break
         }
 
-        if (
-          event.type === 'checkout.session.completed' &&
-          session.payment_status !== 'paid'
-        ) {
+        if (session.metadata?.checkoutKind === 'a_la_carte') {
+          if (
+            event.type === 'checkout.session.completed' &&
+            session.payment_status !== 'paid'
+          ) {
+            break
+          }
+
+          await fulfillCompletedCheckoutSession(session)
           break
         }
 
-        await fulfillCompletedCheckoutSession(session)
+        await syncServiceRequestAuthorizationFromCheckoutSession(session)
+        break
+      }
+      case 'payment_intent.amount_capturable_updated':
+      case 'payment_intent.succeeded':
+      case 'payment_intent.canceled': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        await syncServiceRequestAuthorizationFromPaymentIntent(paymentIntent)
+        break
+      }
+      case 'charge.refunded': {
+        const charge = event.data.object as Stripe.Charge
+        const refundedRequest = await syncServiceRequestRefundFromCharge(charge)
+
+        if (refundedRequest) {
+          void sendRefundedBookingEmail(refundedRequest, getEmailOptions())
+        }
+
         break
       }
       default:

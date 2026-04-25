@@ -1,13 +1,13 @@
 {
   "name": "North Shore Nautical",
   "short_name": "North Shore",
-  "description": "Book available North Shore Nautical launch times and manage reservations.",
+  "description": "Premium marine care, detailing, and advisory for Chicago's North Shore boat owners.",
   "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#06131f",
-  "theme_color": "#06131f",
+  "background_color": "#f7fbff",
+  "theme_color": "#143a59",
   "orientation": "portrait",
   "icons": [
     {

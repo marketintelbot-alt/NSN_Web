@@ -12,7 +12,7 @@ import {
 import { motion } from 'framer-motion'
 import { useForm, useWatch } from 'react-hook-form'
 
-import { supportPhoneNumbers } from '../../content/site'
+import { supportPhoneNumbers } from '../../content/legacyPortal'
 import {
   formatSlotDate,
   formatSlotDateTime,

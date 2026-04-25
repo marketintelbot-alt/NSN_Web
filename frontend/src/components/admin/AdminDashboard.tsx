@@ -22,7 +22,7 @@ import {
   destroyAccountSession,
   type AccountSession,
 } from '../../lib/adminSession'
-import { serviceMenuSections, supportPhoneNumbers } from '../../content/site'
+import { serviceMenuSections, supportPhoneNumbers } from '../../content/legacyPortal'
 import {
   formatReturnTime,
   formatSlotDateTime,

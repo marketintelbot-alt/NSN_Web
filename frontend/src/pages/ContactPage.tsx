@@ -1,104 +1,82 @@
-import { CalendarClock, Mail, Phone, ShipWheel } from 'lucide-react'
+import { CalendarClock, Mail, ShieldCheck, Sparkles } from 'lucide-react'
 
+import { MarineServiceRequestForm } from '../components/service-request/MarineServiceRequestForm'
 import { Seo } from '../components/seo/Seo'
-import { PageHero } from '../components/ui/PageHero'
-import { FadeIn } from '../components/ui/FadeIn'
 import { CtaBanner } from '../components/ui/CtaBanner'
-import { contactDetails, contacts } from '../content/site'
+import { FadeIn } from '../components/ui/FadeIn'
+import { PageHero } from '../components/ui/PageHero'
+
+const contactCards = [
+  {
+    title: 'Inquiry review',
+    copy:
+      'Use the form to share service interest, boat details, timing, and notes. North Shore Nautical reviews every inquiry directly before following up.',
+    icon: Mail,
+  },
+  {
+    title: 'Scheduling expectations',
+    copy:
+      'Requested date and time helps North Shore Nautical review fit, marina context, and approval timing in the business time zone.',
+    icon: CalendarClock,
+  },
+  {
+    title: 'Clear follow-up',
+    copy:
+      'A North Shore Nautical team member will follow up directly if additional access details, condition notes, or scope clarification is needed.',
+    icon: ShieldCheck,
+  },
+]
 
 export function ContactPage() {
   return (
     <>
       <Seo
         title="Contact"
-        description="Contact North Shore Nautical for storage inquiries, launch delivery questions, and booking support."
+        description="Submit a professional North Shore Nautical inquiry for marine care estimates, advisory support, and scheduling review."
         path="/contact"
       />
+
       <PageHero
         eyebrow="Contact"
-        title="Direct, professional communication for scheduling and service inquiries."
-        description="North Shore Nautical keeps inquiries simple: clear contact channels, measured response expectations, and practical guidance for the next step."
+        title="A professional inquiry form built for marine care requests, estimates, and owner advisory."
+        description="North Shore Nautical keeps contact simple: submit the key details once, route the request to review, and let the team follow up directly."
       />
 
       <section className="section-pad">
-        <div className="container grid gap-6 lg:grid-cols-2">
-          <FadeIn className="panel p-8">
-            <h2 className="font-display text-4xl font-semibold text-ink">Direct inquiry</h2>
-            <p className="mt-4 text-base leading-8 text-slate">
-              For general service conversations, storage questions, or launch planning
-              details, reach out directly using the contact information below.
-            </p>
-            <div className="mt-8 grid gap-5">
-              {contacts.map((contact) => (
-                <div key={contact.email} className="soft-panel p-5">
-                  <div className="flex items-center gap-3">
-                    <Mail className="h-5 w-5 text-lake" />
-                    <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate">
-                        {contact.role}
-                      </p>
-                      <p className="mt-1 text-lg font-semibold text-ink">{contact.name}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid gap-4">
-                    <a
-                      className="inline-flex items-center gap-3 font-semibold text-ink hover:text-navy"
-                      href={`mailto:${contact.email}`}
-                    >
-                      <Mail className="h-5 w-5 text-lake" />
-                      {contact.email}
-                    </a>
-                    {contact.phoneDisplay && contact.phoneHref ? (
-                      <a
-                        className="inline-flex items-center gap-3 font-semibold text-ink hover:text-navy"
-                        href={contact.phoneHref}
-                      >
-                        <Phone className="h-5 w-5 text-lake" />
-                        {contact.phoneDisplay}
-                      </a>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
+        <div className="container grid gap-10">
+          <div className="grid gap-5 lg:grid-cols-3">
+            {contactCards.map((item, index) => {
+              const Icon = item.icon
+              return (
+                <FadeIn key={item.title} className="soft-panel p-6" delay={index * 0.06}>
+                  <Icon className="h-5 w-5 text-lake" />
+                  <h2 className="mt-4 text-2xl font-semibold text-ink">{item.title}</h2>
+                  <p className="mt-3 text-base leading-8 text-slate">{item.copy}</p>
+                </FadeIn>
+              )
+            })}
+          </div>
+
+          <FadeIn className="rounded-3xl border border-ink/10 bg-white/76 px-5 py-4 text-sm leading-7 text-slate">
+            <div className="flex items-start gap-3">
+              <Sparkles className="mt-1 h-5 w-5 shrink-0 text-lake" />
+              <span>
+                Photo upload is not part of the public form yet. If photos would help clarify the scope, North Shore Nautical can request them during follow-up.
+              </span>
             </div>
           </FadeIn>
 
-          <div className="grid gap-5">
-            <FadeIn className="soft-panel p-7">
-              <div className="flex items-center gap-3">
-                <ShipWheel className="h-5 w-5 text-lake" />
-                <h2 className="text-xl font-semibold text-ink">Response expectations</h2>
-              </div>
-              <p className="mt-4 text-base leading-8 text-slate">
-                {contactDetails.responseExpectation}
-              </p>
-            </FadeIn>
-            <FadeIn className="soft-panel p-7" delay={0.08}>
-              <div className="flex items-center gap-3">
-                <CalendarClock className="h-5 w-5 text-lake" />
-                <h2 className="text-xl font-semibold text-ink">Scheduling note</h2>
-              </div>
-              <p className="mt-4 text-base leading-8 text-slate">
-                Launch delivery reservations require a minimum of 24 hours&apos; notice.
-                If you already know your preferred launch timing, the reservation form
-                is the best place to start.
-              </p>
-            </FadeIn>
-            <FadeIn className="soft-panel p-7" delay={0.16}>
-              <h2 className="text-xl font-semibold text-ink">Urgent changes or special requests</h2>
-              <p className="mt-4 text-base leading-8 text-slate">
-                {contactDetails.urgentNote}
-              </p>
-            </FadeIn>
-          </div>
+          <MarineServiceRequestForm mode="contact" />
         </div>
       </section>
 
       <CtaBanner
-        title="Need launch coordination rather than a general inquiry?"
-        copy="Move directly to the booking page if you are ready to choose an available time and confirm it online."
-        primaryLabel="Client Portal"
-        primaryTo="/portal"
+        title="Prefer to compare services before submitting?"
+        copy="Explore marine care pricing, review quote-only services, and then return here if the request needs a more tailored scope."
+        primaryLabel="View Pricing"
+        primaryTo="/pricing"
+        secondaryLabel="Explore Services"
+        secondaryTo="/services"
       />
     </>
   )

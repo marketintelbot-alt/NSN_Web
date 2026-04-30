@@ -1,4 +1,4 @@
-import { ArrowRight, Phone } from 'lucide-react'
+import { ArrowRight, Mail, Phone } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Seo } from '../components/seo/Seo'
@@ -20,7 +20,7 @@ export function AboutPage() {
       <PageHero
         eyebrow="About Us"
         title="A local marine care team built around clean boats, clear communication, and practical follow-through."
-        description="North Shore Nautical is run by Johnny Maris and Carter Ellis with a simple standard: keep the request process organized, review boat condition honestly, and make every service visit feel cared for."
+        description="North Shore Nautical is run by Carter Ellis and Johnny Maris. We are lifelong boaters with 10+ years of experience."
       >
         <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
           Book Marine Care
@@ -33,21 +33,23 @@ export function AboutPage() {
           <SectionIntro
             label="The Team"
             title="Two direct contacts, one shared service standard."
-            copy="Customers can quickly see who is behind the work, what each person handles, and how to get in touch."
+            copy="We are lifelong boaters with 10+ years of experience."
           />
 
           <div className="grid gap-5 md:grid-cols-2">
             {teamMembers.map((member, index) => (
               <FadeIn key={member.name} className="panel p-6 md:p-7" delay={index * 0.08}>
                 <h2 className="text-3xl font-semibold text-ink">{member.name}</h2>
-                <p className="mt-2 text-sm font-semibold uppercase tracking-[0.16em] text-navy/70">
-                  {member.role}
-                </p>
-                <p className="mt-4 text-base leading-8 text-slate">{member.description}</p>
-                <a className="button-secondary mt-6 w-full justify-center" href={member.phoneHref}>
-                  <Phone className="h-4 w-4" />
-                  {member.phoneDisplay}
-                </a>
+                <div className="mt-6 grid gap-3">
+                  <a className="button-secondary w-full justify-center" href={member.phoneHref}>
+                    <Phone className="h-4 w-4" />
+                    {member.phoneDisplay}
+                  </a>
+                  <a className="button-secondary w-full justify-center" href={member.emailHref}>
+                    <Mail className="h-4 w-4" />
+                    {member.emailDisplay}
+                  </a>
+                </div>
               </FadeIn>
             ))}
           </div>

@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Phone, Sparkles } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Mail, Phone, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Seo } from '../components/seo/Seo'
@@ -233,8 +233,8 @@ export function HomePage() {
           <SectionIntro
             align="center"
             label="Direct Contacts"
-            title="Johnny Maris and Carter Ellis are your direct North Shore Nautical contacts."
-            copy="Reach the right person quickly for marine care questions, scheduling details, condition review, and customer follow-up."
+            title="Carter Ellis and Johnny Maris are your direct North Shore Nautical contacts."
+            copy="We are lifelong boaters with 10+ years of experience."
           />
           <div className="mt-12 grid gap-5 md:grid-cols-2">
             {teamMembers.map((member, index) => (
@@ -245,16 +245,18 @@ export function HomePage() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-semibold text-ink">{member.name}</h2>
-                    <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-navy/70">
-                      {member.role}
-                    </p>
-                    <p className="mt-3 text-sm leading-7 text-slate">{member.description}</p>
                   </div>
                 </div>
-                <a className="button-secondary mt-6 w-full justify-center" href={member.phoneHref}>
-                  <Phone className="h-4 w-4" />
-                  {member.phoneDisplay}
-                </a>
+                <div className="mt-6 grid gap-3">
+                  <a className="button-secondary w-full justify-center" href={member.phoneHref}>
+                    <Phone className="h-4 w-4" />
+                    {member.phoneDisplay}
+                  </a>
+                  <a className="button-secondary w-full justify-center" href={member.emailHref}>
+                    <Mail className="h-4 w-4" />
+                    {member.emailDisplay}
+                  </a>
+                </div>
               </FadeIn>
             ))}
           </div>

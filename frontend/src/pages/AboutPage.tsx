@@ -20,7 +20,7 @@ export function AboutPage() {
       <PageHero
         eyebrow="About Us"
         title="A local marine care team built around clean boats, clear communication, and practical follow-through."
-        description="North Shore Nautical is run by Johnny and Carter with a simple standard: keep the request process organized, review boat condition honestly, and make every service visit feel cared for."
+        description="North Shore Nautical is run by Johnny Maris and Carter Ellis with a simple standard: keep the request process organized, review boat condition honestly, and make every service visit feel cared for."
       >
         <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
           Book Marine Care

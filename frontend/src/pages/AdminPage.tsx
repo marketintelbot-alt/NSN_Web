@@ -122,7 +122,7 @@ export function AdminPage() {
               : 'Admin access is protected with secure session handling and is intended only for North Shore Nautical team members.'
         }
       >
-        <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
+        <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/20 bg-white/15 px-5 py-4 text-left text-sm leading-7 text-white/90">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
           <span>
             Admin access is set up directly by North Shore Nautical and protected with secure, cookie-based sessions.

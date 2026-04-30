@@ -71,12 +71,12 @@ export function HomePage() {
             <h1 className="display-title-inverse mt-4 max-w-5xl">
               Premium Boat Detailing &amp; Marine Care on Chicago&apos;s North Shore
             </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/76 md:text-xl">
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/90 md:text-xl">
               Professional detailing, seasonal upkeep, and owner advisory designed to keep your boat
               clean, protected, and ready to enjoy all summer.
             </p>
-          <p className="mt-6 max-w-2xl text-base leading-8 text-white/76">{brandPromise}</p>
-          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/72">{localSearchFocus}</p>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-white/90">{brandPromise}</p>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/85">{localSearchFocus}</p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
@@ -233,7 +233,7 @@ export function HomePage() {
           <SectionIntro
             align="center"
             label="Direct Contacts"
-            title="Johnny and Carter are your direct North Shore Nautical contacts."
+            title="Johnny Maris and Carter Ellis are your direct North Shore Nautical contacts."
             copy="Reach the right person quickly for marine care questions, scheduling details, condition review, and customer follow-up."
           />
           <div className="mt-12 grid gap-5 md:grid-cols-2">

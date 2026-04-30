@@ -43,7 +43,7 @@ export function BookingPage() {
         title="Request marine care, review the estimate, and move to secure authorization when the service qualifies."
         description="Routine per-foot marine care for boats from 10-30 feet can move to Stripe Checkout after server-side pricing validation. Larger boats, quote-only work, and condition-heavy work stay in the inquiry-review path."
       >
-        <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
+        <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/20 bg-white/15 px-5 py-4 text-left text-sm leading-7 text-white/90">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
           <span>
             Checkout authorizes payment only. North Shore Nautical reviews the request before any payment is captured or the appointment is considered confirmed.

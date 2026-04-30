@@ -116,7 +116,7 @@ export function PortalPage() {
               : 'This route is not linked from the public site and is only for invited portal users.'
         }
       >
-        <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
+        <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/20 bg-white/15 px-5 py-4 text-left text-sm leading-7 text-white/90">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
           <span>
             Portal access is provisioned directly by North Shore Nautical and protected with secure, cookie-based sessions.

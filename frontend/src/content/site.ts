@@ -70,7 +70,7 @@ export const localSearchFocus =
 export const teamMembers = [
   {
     name: 'Johnny Maris',
-    role: 'Co-Founder & Marine Care Lead',
+    role: 'Vice President',
     phoneDisplay: '(847) 331-0927',
     phoneHref: 'tel:+18473310927',
     initials: 'JM',
@@ -78,11 +78,11 @@ export const teamMembers = [
       'Leads detailing standards, boat-condition review, and the service scope that turns a request into a clean plan.',
   },
   {
-    name: 'Carter',
-    role: 'Co-Founder & Client Operations',
+    name: 'Carter Ellis',
+    role: 'President',
     phoneDisplay: '(314) 606-2112',
     phoneHref: 'tel:+13146062112',
-    initials: 'C',
+    initials: 'CE',
     description:
       'Coordinates scheduling, customer follow-up, and the details that keep each marine care visit organized.',
   },

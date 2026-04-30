@@ -28,7 +28,7 @@ export function CtaBanner({
             <div className="max-w-2xl">
               <span className="eyebrow">Plan Ahead</span>
               <h2 className="display-title-inverse text-4xl md:text-5xl">{title}</h2>
-              <p className="mt-5 max-w-xl text-base leading-8 text-white/70 md:text-lg">
+              <p className="mt-5 max-w-xl text-base leading-8 text-white/85 md:text-lg">
                 {copy}
               </p>
             </div>

@@ -33,7 +33,7 @@ export default {
       },
       backgroundImage: {
         'hero-overlay':
-          'linear-gradient(180deg, rgba(13, 39, 64, 0.14) 0%, rgba(13, 39, 64, 0.46) 46%, rgba(13, 39, 64, 0.82) 100%)',
+          'linear-gradient(180deg, rgba(13, 39, 64, 0.34) 0%, rgba(13, 39, 64, 0.6) 46%, rgba(13, 39, 64, 0.88) 100%)',
         'section-glow':
           'radial-gradient(circle at top, rgba(139, 183, 212, 0.28), transparent 58%)',
       },

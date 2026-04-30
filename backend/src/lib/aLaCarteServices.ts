@@ -1,4 +1,5 @@
 import { normalizeText } from './sanitize.js'
+import { maximumBoatLengthFeet, minimumBoatLengthFeet } from './serviceCatalog.js'
 import { getSupabaseAdminClient } from './supabaseAdmin.js'
 
 type FlatRangePricing = {
@@ -318,6 +319,19 @@ function computeCheckoutRange(
         }
       }
 
+      if (
+        normalizedBoatLengthFeet < minimumBoatLengthFeet ||
+        normalizedBoatLengthFeet > maximumBoatLengthFeet
+      ) {
+        return {
+          requiresBoatLength: true,
+          customQuoteOnly: true,
+          minimumCheckoutAmountCents: null,
+          maximumCheckoutAmountCents: null,
+          defaultCheckoutAmountCents: null,
+        }
+      }
+
       const minimumByFoot = normalizeAmountCents(
         normalizedBoatLengthFeet * entry.pricing.minRateCentsPerFoot,
       )
@@ -357,7 +371,10 @@ function normalizeCatalogEntry(
     category: entry.category,
     description: entry.description,
     pricingDisplay: entry.pricingDisplay,
-    checkoutBlurb: entry.checkoutBlurb,
+    checkoutBlurb:
+      checkoutRange.customQuoteOnly && checkoutRange.requiresBoatLength
+        ? `Boats outside ${minimumBoatLengthFeet}-${maximumBoatLengthFeet} ft are quoted directly. Contact North Shore Nautical for a custom quote.`
+        : entry.checkoutBlurb,
     requiresBoatLength: checkoutRange.requiresBoatLength,
     customQuoteOnly: checkoutRange.customQuoteOnly,
     checkoutEnabled:

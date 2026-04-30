@@ -889,7 +889,7 @@ export function ClientPortal({ session, onSignedOut }: ClientPortalProps) {
 
                     {service.customQuoteOnly ? (
                       <p className="mt-4 rounded-3xl border border-ink/10 bg-white px-4 py-4 text-sm leading-7 text-slate">
-                        This service stays custom-quoted, so it is intentionally not sold through Stripe.
+                        This service or boat size stays custom-quoted, so it is intentionally not sold through Stripe. Contact North Shore Nautical for a quote.
                       </p>
                     ) : !canPayNow ? (
                       <p className="mt-4 rounded-3xl border border-ink/10 bg-white px-4 py-4 text-sm leading-7 text-slate">

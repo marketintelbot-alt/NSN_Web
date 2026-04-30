@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { ArrowRight, LoaderCircle } from 'lucide-react'
+import { ArrowRight, AlertTriangle, LoaderCircle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Seo } from '../components/seo/Seo'
 import { FadeIn } from '../components/ui/FadeIn'
 import { PageHero } from '../components/ui/PageHero'
 import { SectionIntro } from '../components/ui/SectionIntro'
+import { pricingConditionNotes } from '../content/site'
 import { apiRequest } from '../lib/api'
 import type { PublicServiceCatalogResponse, ServiceCatalogItem } from '../types/service'
 
@@ -15,7 +16,7 @@ function groupServices(services: ServiceCatalogItem[]) {
     instantCheckout: services.filter(
       (service) => service.category === 'marine_care' && !service.quoteOnly,
     ),
-    quoteOnly: services.filter((service) => service.quoteOnly),
+    quoteOnly: services.filter((service) => service.category === 'marine_care' && service.quoteOnly),
     advisory: services.filter((service) => service.category === 'advisory'),
   }
 }
@@ -73,11 +74,28 @@ export function PricingPage() {
           <SectionIntro
             label="How Pricing Works"
             title="Per-foot pricing stays clear. Heavier-condition work gets reviewed first."
-            copy="Boat length is rounded up to the nearest whole foot for instant checkout services. Requests above 60 feet, condition-heavy jobs, and advisory work are routed to manual review."
+            copy="Online per-foot pricing is for boats from 10-30 feet and assumes routine condition. Boats over 30 feet, heavier-condition jobs, and unusual access are quoted directly after review."
           />
 
+          <div className="mt-8 grid gap-4 lg:grid-cols-2">
+            {pricingConditionNotes.map((note) => (
+              <div
+                key={note.title}
+                className="rounded-3xl border border-gold/25 bg-[#f8fbf7]/88 px-5 py-5 shadow-soft backdrop-blur-sm"
+              >
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-1 h-5 w-5 shrink-0 text-gold" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-ink">{note.title}</h2>
+                    <p className="mt-2 text-sm leading-7 text-slate">{note.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {loading ? (
-            <div className="mt-10 flex items-center gap-3 rounded-3xl border border-ink/10 bg-white/80 px-5 py-4 text-sm text-slate">
+            <div className="mt-10 flex items-center gap-3 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-4 text-sm text-slate">
               <LoaderCircle className="h-4 w-4 animate-spin text-lake" />
               Loading pricing...
             </div>
@@ -108,11 +126,11 @@ export function PricingPage() {
                         <span className="status-pill">{service.pricingLabel}</span>
                       </div>
                       <div className="mt-5 flex flex-wrap gap-3">
-                        <span className="rounded-full border border-ink/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate">
+                        <span className="rounded-full border border-ink/10 bg-[#f8fbf7] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate">
                           Instant checkout eligible
                         </span>
                         {service.requiresBoatLength ? (
-                          <span className="rounded-full border border-ink/10 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate">
+                          <span className="rounded-full border border-ink/10 bg-[#f8fbf7] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate">
                             {service.minBoatLengthFeet}-{service.maxBoatLengthFeet} ft
                           </span>
                         ) : null}
@@ -120,6 +138,14 @@ export function PricingPage() {
                       {service.warningNotes.length > 0 ? (
                         <p className="mt-4 text-sm leading-7 text-slate">{service.warningNotes[0]}</p>
                       ) : null}
+                        <p className="mt-3 text-sm leading-7 text-slate">
+                          Final price can change after review when condition, access, oxidation, mildew, staining, or restoration needs fall outside routine service assumptions.
+                        </p>
+                        {service.requiresBoatLength ? (
+                          <p className="mt-2 text-sm leading-7 text-slate">
+                            Larger than {service.maxBoatLengthFeet} ft? Contact North Shore Nautical for a custom quote.
+                          </p>
+                        ) : null}
                       <div className="mt-6">
                         <Link className="button-primary" to={`/booking?service=${service.id}`}>
                           {service.quoteOnly ? 'Request an Estimate' : 'Book This Service'}

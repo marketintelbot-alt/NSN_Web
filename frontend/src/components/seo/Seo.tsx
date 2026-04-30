@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async'
 
-import { siteMeta } from '../../content/site'
+import { seoKeywords, siteMeta } from '../../content/site'
 
 type SeoProps = {
   title: string
@@ -8,6 +8,7 @@ type SeoProps = {
   path: string
   image?: string
   structuredData?: Record<string, unknown> | Array<Record<string, unknown>>
+  keywords?: string[]
   noIndex?: boolean
 }
 
@@ -17,6 +18,7 @@ export function Seo({
   path,
   image = siteMeta.socialImage,
   structuredData,
+  keywords = seoKeywords,
   noIndex = false,
 }: SeoProps) {
   const canonicalUrl = new URL(path, siteMeta.siteUrl).toString()
@@ -32,6 +34,7 @@ export function Seo({
     <Helmet prioritizeSeoTags>
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
+      {keywords.length > 0 ? <meta name="keywords" content={keywords.join(', ')} /> : null}
       <link rel="canonical" href={canonicalUrl} />
 
       <meta property="og:type" content="website" />

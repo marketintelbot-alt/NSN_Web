@@ -16,9 +16,13 @@ export function PageHero({
   children,
 }: PageHeroProps) {
   return (
-    <section className="relative overflow-hidden pb-12 pt-28 text-white md:pb-24 md:pt-40">
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,19,31,0.7),rgba(6,19,31,0.48))]" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white/10" />
+    <section className="relative isolate overflow-hidden pb-12 pt-28 text-white md:pb-24 md:pt-40">
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-30 bg-[url('/images/north-shore-hero.jpeg')] bg-cover bg-center md:bg-fixed"
+      />
+      <div className="absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(6,19,31,0.58),rgba(6,19,31,0.3)_56%,rgba(6,19,31,0.2))]" />
+      <div className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-b from-transparent to-[#edf6f2]/20" />
       <div className="container relative">
         <FadeIn className="max-w-4xl">
           <span className="eyebrow">{eyebrow}</span>

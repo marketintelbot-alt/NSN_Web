@@ -12,12 +12,25 @@ export const siteMeta = {
   titleSuffix: 'North Shore Nautical',
   tagline: 'Premium Marine Care & Advisory',
   description:
-    "Premium boat detailing, marine care, and practical owner advisory for Chicago's North Shore and Lake Michigan marinas.",
+    "Premium boat detailing, marine care, and practical owner advisory for Chicago's North Shore, Wilmette, Winnetka, Wilmette Harbor, and Lake Michigan marinas.",
   siteUrl: import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') || 'https://nsnautical.com',
   heroImage: '/images/north-shore-hero.jpeg',
   socialImage: '/images/social-card.svg',
   timeZone: 'America/Chicago',
 }
+
+export const seoKeywords = [
+  'North Shore Nautical',
+  'Wilmette boat detailing',
+  'Winnetka boat detailing',
+  'Wilmette Harbor boat detailing',
+  'Wilmette marine care',
+  'Winnetka marine care',
+  'Wilmette Harbor marine care',
+  'North Shore boat detailing',
+  'Lake Michigan boat detailing',
+  'Chicago North Shore marine detailing',
+]
 
 export const navigation: PublicNavigationItem[] = [
   { label: 'Home', to: '/' },
@@ -32,12 +45,14 @@ export const navigation: PublicNavigationItem[] = [
   { label: 'Pricing', to: '/pricing' },
   { label: 'Gallery', to: '/gallery' },
   { label: 'Advisory', to: '/advisory' },
+  { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ]
 
 export const serviceAreas = [
   'Chicago',
   'Wilmette',
+  'Wilmette Harbor',
   'Kenilworth',
   'Winnetka',
   'Glencoe',
@@ -49,11 +64,48 @@ export const serviceAreas = [
 export const brandPromise =
   'We help North Shore boat owners keep their boats clean, protected, and ready to enjoy all summer.'
 
+export const localSearchFocus =
+  'Local service focus includes Wilmette, Winnetka, Wilmette Harbor, Chicago’s North Shore, and select nearby Lake Michigan marinas by request review.'
+
+export const teamMembers = [
+  {
+    name: 'Johnny Maris',
+    role: 'Co-Founder & Marine Care Lead',
+    phoneDisplay: '(847) 331-0927',
+    phoneHref: 'tel:+18473310927',
+    initials: 'JM',
+    description:
+      'Leads detailing standards, boat-condition review, and the service scope that turns a request into a clean plan.',
+  },
+  {
+    name: 'Carter',
+    role: 'Co-Founder & Client Operations',
+    phoneDisplay: '(314) 606-2112',
+    phoneHref: 'tel:+13146062112',
+    initials: 'C',
+    description:
+      'Coordinates scheduling, customer follow-up, and the details that keep each marine care visit organized.',
+  },
+]
+
 export const trustHighlights = [
   'Premium detailing and upkeep-first service plans',
   'Manual request review before any payment is captured',
   'Chicago North Shore and Lake Michigan scheduling fluency',
   'Practical advisory support for confident ownership decisions',
+]
+
+export const pricingConditionNotes = [
+  {
+    title: 'Boat condition changes pricing',
+    description:
+      'Published rates assume routine condition and boats from 10-30 feet. Heavy oxidation, mildew, severe staining, neglected surfaces, unusual access, restoration needs, or boats over 30 feet may increase price or move the request to manual quote review.',
+  },
+  {
+    title: 'Larger boats are quoted directly',
+    description:
+      'If your boat is larger than 30 feet, contact North Shore Nautical for a custom quote so the team can review size, access, timing, and condition before pricing the work.',
+  },
 ]
 
 export const homeMetrics = [
@@ -151,7 +203,7 @@ export const faqItems = [
   {
     question: 'Which services can I check out online?',
     answer:
-      'Routine per-foot marine care services can move to secure checkout online. Heavier condition work and advisory requests are reviewed through an inquiry-first process.',
+      'Routine per-foot marine care services for boats from 10-30 feet can move to secure checkout online. Boats over 30 feet, heavier condition work, and advisory requests are reviewed through an inquiry-first process.',
   },
   {
     question: 'When is my card actually charged?',

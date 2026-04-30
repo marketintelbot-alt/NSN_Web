@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Sparkles } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Phone, Sparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { Seo } from '../components/seo/Seo'
@@ -12,9 +12,11 @@ import {
   faqItems,
   galleryStories,
   homeMetrics,
+  localSearchFocus,
   marineCareHighlights,
   serviceAreas,
   siteMeta,
+  teamMembers,
   trustHighlights,
 } from '../content/site'
 
@@ -34,6 +36,18 @@ export function HomePage() {
           url: siteMeta.siteUrl,
           description: siteMeta.description,
           areaServed: serviceAreas,
+          address: {
+            '@type': 'PostalAddress',
+            addressLocality: 'Wilmette',
+            addressRegion: 'IL',
+            addressCountry: 'US',
+          },
+          knowsAbout: [
+            'Wilmette boat detailing',
+            'Winnetka boat detailing',
+            'Wilmette Harbor marine care',
+            'Lake Michigan boat detailing',
+          ],
           serviceType: ['Marine detailing', 'Boat cleaning', 'Marine care', 'Boat owner advisory'],
         }}
       />
@@ -61,7 +75,8 @@ export function HomePage() {
               Professional detailing, seasonal upkeep, and owner advisory designed to keep your boat
               clean, protected, and ready to enjoy all summer.
             </p>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-white/76">{brandPromise}</p>
+          <p className="mt-6 max-w-2xl text-base leading-8 text-white/76">{brandPromise}</p>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-white/72">{localSearchFocus}</p>
 
             <div className="mt-10 flex flex-col gap-4 sm:flex-row">
               <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
@@ -120,7 +135,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="section-pad bg-white/60">
+      <section className="section-pad bg-[#edf6f2]/60">
         <div className="container grid gap-12 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <div className="grid gap-5">
             {advisoryHighlights.map((item, index) => (
@@ -148,7 +163,7 @@ export function HomePage() {
           />
           <div className="mt-12 grid gap-4 lg:grid-cols-2">
             {trustHighlights.map((highlight, index) => (
-              <FadeIn key={highlight} className="rounded-3xl border border-ink/10 bg-white/80 px-5 py-5" delay={index * 0.05}>
+              <FadeIn key={highlight} className="rounded-3xl border border-ink/10 bg-[#f8fbf7]/85 px-5 py-5 backdrop-blur-sm" delay={index * 0.05}>
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-lake" />
                   <p className="text-base leading-8 text-slate">{highlight}</p>
@@ -159,7 +174,7 @@ export function HomePage() {
         </div>
       </section>
 
-      <section className="section-pad bg-white/60">
+      <section className="section-pad bg-[#edf6f2]/60">
         <div className="container">
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <SectionIntro
@@ -173,7 +188,7 @@ export function HomePage() {
           </div>
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
             {galleryStories.slice(0, 2).map((story, index) => (
-              <FadeIn key={story.title} className="overflow-hidden rounded-[2rem] border border-ink/10 bg-white/84 shadow-soft" delay={index * 0.08}>
+              <FadeIn key={story.title} className="overflow-hidden rounded-[2rem] border border-ink/10 bg-[#f8fbf7]/90 shadow-soft" delay={index * 0.08}>
                 <div className="aspect-[4/3] overflow-hidden">
                   <img
                     alt={story.title}
@@ -212,6 +227,39 @@ export function HomePage() {
         secondaryLabel="View Pricing"
         secondaryTo="/pricing"
       />
+
+      <section className="section-pad bg-[#edf6f2]/60">
+        <div className="container">
+          <SectionIntro
+            align="center"
+            label="Direct Contacts"
+            title="Johnny and Carter are your direct North Shore Nautical contacts."
+            copy="Reach the right person quickly for marine care questions, scheduling details, condition review, and customer follow-up."
+          />
+          <div className="mt-12 grid gap-5 md:grid-cols-2">
+            {teamMembers.map((member, index) => (
+              <FadeIn key={member.name} className="panel p-6 md:p-7" delay={index * 0.08}>
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-[#edf6f2]/90 font-display text-3xl font-semibold text-ink shadow-soft">
+                    {member.initials}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-semibold text-ink">{member.name}</h2>
+                    <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-navy/70">
+                      {member.role}
+                    </p>
+                    <p className="mt-3 text-sm leading-7 text-slate">{member.description}</p>
+                  </div>
+                </div>
+                <a className="button-secondary mt-6 w-full justify-center" href={member.phoneHref}>
+                  <Phone className="h-4 w-4" />
+                  {member.phoneDisplay}
+                </a>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
     </>
   )
 }

@@ -28,22 +28,27 @@ const agreementSections = [
       'The client is responsible for ensuring North Shore Nautical has safe, lawful, and reasonable access to the vessel at the scheduled service location. If access is unavailable, restricted, unsafe, or materially different than described, the appointment may be rescheduled, modified, or treated as a late cancellation.',
   },
   {
-    title: '6. Boat Condition Disclaimer',
+    title: '6. Unsafe Conditions and Right to Decline Work',
+    body:
+      'North Shore Nautical may decline, pause, reschedule, modify, or stop work if North Shore Nautical determines, in its sole reasonable judgment, that the work area, vessel access, weather, marina conditions, electrical or mechanical condition, biological contamination, chemicals, confined spaces, unstable surfaces, aggressive animals, hazardous materials, abusive conduct, or any other condition creates an unsafe, unlawful, or unreasonable risk to staff, contractors, the vessel, surrounding property, or the public. North Shore Nautical is not required to perform work that is outside the agreed scope or unsafe for its staff.',
+  },
+  {
+    title: '7. Boat Condition Disclaimer',
     body:
       'North Shore Nautical does not guarantee full removal of stains, oxidation, mold, mildew, scratches, discoloration, odors, sun damage, or pre-existing wear. Results depend on the vessel’s age, materials, prior maintenance, and condition.',
   },
   {
-    title: '7. Pre-Existing Damage',
+    title: '8. Pre-Existing Damage',
     body:
       'Client acknowledges that boats may have pre-existing wear, fading, cracking, corrosion, loose hardware, weak stitching, brittle vinyl, oxidized gelcoat, or other age-related issues. North Shore Nautical is not responsible for pre-existing damage or defects revealed during cleaning.',
   },
   {
-    title: '8. Weather and Operational Delays',
+    title: '9. Weather and Operational Delays',
     body:
       'Marine detailing may be affected by weather, temperature, wind, rain, marina access, or other operational conditions. North Shore Nautical may reschedule service when conditions prevent safe or effective work.',
   },
   {
-    title: '9. Advisory Limitations',
+    title: '10. Advisory Limitations',
     body:
       'Advisory services are general owner support, upkeep planning, purchasing guidance, and referral guidance. North Shore Nautical does not provide legal, financial, surveyor, mechanical certification, captain, transport, or vessel operation services.',
   },
@@ -60,7 +65,7 @@ export function ServiceAgreementPage() {
       <PageHero
         eyebrow="Service Agreement"
         title="Service terms for marine care, scheduling, approval, cancellations, and advisory support."
-        description="Policy version service-agreement-v1.0. Effective April 23, 2026."
+        description="Policy version service-agreement-v1.1. Effective April 30, 2026."
       />
 
       <section className="section-pad">

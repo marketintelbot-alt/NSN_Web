@@ -1,7 +1,7 @@
-export const SERVICE_AGREEMENT_POLICY_VERSION = 'service-agreement-v1.0'
+export const SERVICE_AGREEMENT_POLICY_VERSION = 'service-agreement-v1.1'
 export const businessTimeZone = 'America/Chicago'
 export const minimumBoatLengthFeet = 10
-export const maximumBoatLengthFeet = 60
+export const maximumBoatLengthFeet = 30
 
 export type ServiceCategory = 'marine_care' | 'advisory'
 export type PaymentType = 'instant_checkout' | 'quote_only'

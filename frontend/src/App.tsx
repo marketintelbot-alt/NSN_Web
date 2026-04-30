@@ -20,6 +20,9 @@ const GalleryPage = lazy(() =>
 const AdvisoryPage = lazy(() =>
   import('./pages/AdvisoryPage').then((module) => ({ default: module.AdvisoryPage })),
 )
+const AboutPage = lazy(() =>
+  import('./pages/AboutPage').then((module) => ({ default: module.AboutPage })),
+)
 const ContactPage = lazy(() =>
   import('./pages/ContactPage').then((module) => ({ default: module.ContactPage })),
 )
@@ -77,13 +80,13 @@ function App() {
           <Route element={<PricingPage />} path="/pricing" />
           <Route element={<GalleryPage />} path="/gallery" />
           <Route element={<AdvisoryPage />} path="/advisory" />
+          <Route element={<AboutPage />} path="/about" />
           <Route element={<ContactPage />} path="/contact" />
           <Route element={<BookingPage />} path="/booking" />
           <Route element={<ConfirmationPage />} path="/booking/confirmation" />
           <Route element={<AdminPage />} path="/admin" />
           <Route element={<PortalPage />} path="/portal" />
           <Route element={<Navigate replace to="/services" />} path="/storage" />
-          <Route element={<Navigate replace to="/advisory" />} path="/about" />
           <Route element={<Navigate replace to="/contact" />} path="/faq" />
           <Route element={<Navigate replace to="/portal" />} path="/reserve-launch" />
           <Route element={<Navigate replace to="/portal" />} path="/reserve-driver" />

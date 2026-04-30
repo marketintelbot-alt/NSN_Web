@@ -10,13 +10,15 @@ import {
   sendChangesRequestedEmail,
   sendCompletedServiceEmail,
   sendDeclinedRequestEmail,
+  sendPaymentLinkEmail,
   type ServiceRequestEmailOptions,
 } from '../lib/serviceRequestEmailDelivery.js'
-import { adminRequestNoteSchema } from '../lib/serviceRequestSchemas.js'
+import { adminPaymentLinkSchema, adminRequestNoteSchema } from '../lib/serviceRequestSchemas.js'
 import {
   cancelServiceRequest,
   captureAuthorizedServiceRequest,
   completeServiceRequest,
+  createServiceRequestPaymentLink,
   declineServiceRequest,
   listAdminServiceRequests,
   requestServiceChanges,
@@ -77,6 +79,27 @@ export async function approveServiceRequestHandler(request: Request, response: R
     return response.status(200).json({
       request: updatedRequest,
       message: 'Payment captured and request confirmed.',
+    })
+  } catch (error) {
+    return respondWithAdminRequestError(error, response)
+  }
+}
+
+export async function createServiceRequestPaymentLinkHandler(request: Request, response: Response) {
+  try {
+    const payload = adminPaymentLinkSchema.parse(request.body)
+    const result = await createServiceRequestPaymentLink(
+      getRouteParam(request, 'requestId'),
+      payload.amountCents,
+      payload.adminNotes,
+    )
+
+    void sendPaymentLinkEmail(result.request, result.checkoutUrl, getEmailOptions())
+
+    return response.status(200).json({
+      request: result.request,
+      checkoutUrl: result.checkoutUrl,
+      message: 'Payment link created and sent to the customer.',
     })
   } catch (error) {
     return respondWithAdminRequestError(error, response)

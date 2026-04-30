@@ -11,7 +11,7 @@ const bookingSteps = [
   {
     title: 'Choose the service',
     copy:
-      'Start with the marine care service that best fits the boat. If the condition is heavier or you are unsure, the flow routes the request to review instead.',
+      'Start with the marine care service that best fits the boat. If the condition is heavier, the boat is over 30 feet, or you are unsure, the flow routes the request to review instead.',
   },
   {
     title: 'Enter boat and scheduling details',
@@ -41,7 +41,7 @@ export function BookingPage() {
       <PageHero
         eyebrow="Booking"
         title="Request marine care, review the estimate, and move to secure authorization when the service qualifies."
-        description="Routine per-foot marine care can move to Stripe Checkout after server-side pricing validation. Quote-only and condition-heavy work stays in the inquiry-review path."
+        description="Routine per-foot marine care for boats from 10-30 feet can move to Stripe Checkout after server-side pricing validation. Larger boats, quote-only work, and condition-heavy work stay in the inquiry-review path."
       >
         <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/10 bg-white/10 px-5 py-4 text-left text-sm leading-7 text-white/80">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />

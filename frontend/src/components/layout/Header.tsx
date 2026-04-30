@@ -46,8 +46,8 @@ export function Header() {
       <div
         className={`mx-auto max-w-7xl rounded-full border transition duration-300 ${
           scrolled || mobileOpen
-            ? 'border-white/70 bg-white/92 shadow-soft backdrop-blur-xl'
-            : 'border-white/70 bg-white/78 backdrop-blur-xl'
+            ? 'border-white/70 bg-[#f8fbf7]/95 shadow-soft backdrop-blur-xl'
+            : 'border-white/70 bg-[#f8fbf7]/95 backdrop-blur-xl'
         }`}
       >
         <div className="flex items-center justify-between gap-4 px-4 py-3 lg:px-6">
@@ -82,20 +82,24 @@ export function Header() {
                     />
                   </NavLink>
                   {desktopServicesOpen ? (
-                    <div className="absolute left-0 top-full mt-4 min-w-[220px] rounded-3xl border border-ink/10 bg-white/96 p-3 shadow-soft backdrop-blur-xl">
-                      {item.children.map((child) => (
-                        <NavLink
-                          key={child.to}
-                          className={({ isActive }) =>
-                            `block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                              isActive ? 'bg-lake/10 text-ink' : 'text-slate hover:bg-foam hover:text-ink'
-                            }`
-                          }
-                          to={child.to}
-                        >
-                          {child.label}
-                        </NavLink>
-                      ))}
+                    <div className="absolute left-0 top-full z-50 w-64 pt-3">
+                      <div className="overflow-hidden rounded-2xl border border-navy/20 bg-[#f8fbf7] p-2 shadow-panel ring-1 ring-white/90">
+                        {item.children.map((child) => (
+                          <NavLink
+                            key={child.to}
+                            className={({ isActive }) =>
+                              `block rounded-xl px-4 py-3 text-[0.95rem] font-semibold transition ${
+                                isActive
+                                  ? 'bg-lake/20 text-ink'
+                                  : 'text-ink/80 hover:bg-[#edf6f2] hover:text-ink'
+                              }`
+                            }
+                            to={child.to}
+                          >
+                            {child.label}
+                          </NavLink>
+                        ))}
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -118,7 +122,7 @@ export function Header() {
             <button
               aria-expanded={mobileOpen}
               aria-label={mobileOpen ? 'Close navigation menu' : 'Open navigation menu'}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-ink/10 bg-white text-ink transition hover:bg-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake lg:hidden"
+              className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-ink/10 bg-[#f8fbf7] text-ink transition hover:bg-[#edf6f2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake lg:hidden"
               type="button"
               onClick={() => setMobileOpen((current) => !current)}
             >
@@ -132,7 +136,7 @@ export function Header() {
             <nav className="grid gap-2">
               {navigation.map((item) =>
                 item.children?.length ? (
-                  <div key={item.label} className="rounded-3xl border border-ink/10 bg-white/80 p-2">
+                  <div key={item.label} className="rounded-3xl border border-ink/10 bg-[#f8fbf7] p-2 shadow-soft">
                     <button
                       aria-expanded={mobileServicesOpen}
                       className="flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm font-semibold text-ink"
@@ -152,8 +156,8 @@ export function Header() {
                             className={({ isActive }) =>
                               `rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                                 isActive
-                                  ? 'bg-lake/10 text-ink'
-                                  : 'text-slate hover:bg-foam hover:text-ink'
+                                  ? 'bg-lake/20 text-ink'
+                                  : 'text-ink/80 hover:bg-[#edf6f2] hover:text-ink'
                               }`
                             }
                             to={child.to}
@@ -172,7 +176,7 @@ export function Header() {
                       `rounded-3xl border px-4 py-3 text-sm font-semibold transition ${
                         isActive
                           ? 'border-lake/30 bg-lake/10 text-ink'
-                          : 'border-ink/10 bg-white/80 text-slate hover:bg-foam hover:text-ink'
+                          : 'border-ink/10 bg-[#f8fbf7]/95 text-slate hover:bg-[#edf6f2] hover:text-ink'
                       }`
                     }
                     to={item.to}

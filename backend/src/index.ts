@@ -38,6 +38,7 @@ import {
   approveServiceRequestHandler,
   cancelServiceRequestHandler,
   completeServiceRequestHandler,
+  createServiceRequestPaymentLinkHandler,
   declineServiceRequestHandler,
   readAdminServiceRequestsHandler,
   requestServiceChangesHandler,
@@ -161,6 +162,11 @@ app.post(
   '/api/admin/service-requests/:requestId/approve-capture',
   requireAdminSession,
   approveServiceRequestHandler,
+)
+app.post(
+  '/api/admin/service-requests/:requestId/payment-link',
+  requireAdminSession,
+  createServiceRequestPaymentLinkHandler,
 )
 app.post(
   '/api/admin/service-requests/:requestId/request-changes',

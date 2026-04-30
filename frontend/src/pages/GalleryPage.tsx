@@ -45,7 +45,7 @@ export function GalleryPage() {
             {galleryStories.map((story, index) => (
               <FadeIn
                 key={story.title}
-                className="overflow-hidden rounded-[2rem] border border-ink/10 bg-white/84 shadow-soft"
+                className="overflow-hidden rounded-[2rem] border border-ink/10 bg-[#f8fbf7]/90 shadow-soft"
                 delay={index * 0.06}
               >
                 <div className="aspect-[4/3] overflow-hidden bg-[#edf5fa]">

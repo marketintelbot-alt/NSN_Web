@@ -142,5 +142,10 @@ export const adminRequestNoteSchema = z.object({
     ),
 })
 
+export const adminPaymentLinkSchema = adminRequestNoteSchema.extend({
+  amountCents: z.number().int().min(100, 'Enter a quote amount of at least $1.'),
+})
+
 export type PublicServiceRequestInput = z.infer<typeof publicServiceRequestSchema>
 export type AdminRequestNoteInput = z.infer<typeof adminRequestNoteSchema>
+export type AdminPaymentLinkInput = z.infer<typeof adminPaymentLinkSchema>

@@ -9,6 +9,7 @@ import {
   createDeclinedRequestEmail,
   createInquiryReceivedEmail,
   createInternalNewRequestEmail,
+  createPaymentLinkEmail,
   createRefundedBookingEmail,
 } from './serviceRequestEmails.js'
 import {
@@ -150,6 +151,37 @@ export async function sendBookingApprovedEmail(
     sendCustomerEmail(request, 'booking_approved', createBookingApprovedEmail, options),
     request.id,
     'booking_approved customer',
+  )
+}
+
+export async function sendPaymentLinkEmail(
+  request: ServiceRequestRecord,
+  checkoutUrl: string,
+  options: ServiceRequestEmailOptions,
+) {
+  await safelySendEmail(
+    (async () => {
+      if (!isEmailConfigured(options)) {
+        return
+      }
+
+      const resend = new Resend(options.resendApiKey)
+      const email = createPaymentLinkEmail(request, checkoutUrl)
+      const result = await resend.emails.send({
+        from: options.fromEmail!,
+        to: request.customerEmail,
+        replyTo: options.businessNotificationEmails,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+      })
+
+      if (result.error) {
+        throw new Error(result.error.message || 'Unable to send the payment link email.')
+      }
+    })(),
+    request.id,
+    'payment_link customer',
   )
 }
 

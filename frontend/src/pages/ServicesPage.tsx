@@ -94,7 +94,7 @@ export function ServicesPage() {
         </div>
       </section>
 
-      <section className="section-pad bg-white/60">
+      <section className="section-pad bg-[#edf6f2]/60">
         <div className="container">
           <SectionIntro
             label="Service Categories"
@@ -124,7 +124,7 @@ export function ServicesPage() {
                 {specialtyServices.map((service) => (
                   <div
                     key={service}
-                    className="rounded-2xl border border-ink/10 bg-white px-4 py-4 text-sm font-semibold text-ink"
+                    className="rounded-2xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4 text-sm font-semibold text-ink"
                   >
                     {service}
                   </div>
@@ -135,7 +135,7 @@ export function ServicesPage() {
           <SectionIntro
             label="How Requests Are Reviewed"
             title="Instant checkout where it makes sense. Inquiry review when it does not."
-            copy="Routine per-foot services can move to secure checkout after the estimate is calculated. Heavier oxidation, mildew, neglected condition, unusual access, restoration work, and advisory needs go to manual review instead."
+            copy="Routine per-foot services for boats from 10-30 feet can move to secure checkout after the estimate is calculated. Larger boats, heavier oxidation, mildew, neglected condition, unusual access, restoration work, and advisory needs go to manual review instead."
           />
         </div>
       </section>

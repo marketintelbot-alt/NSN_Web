@@ -1,7 +1,13 @@
 import { ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
-import { advisoryHighlights, brandPromise, navigation, serviceAreas } from '../../content/site'
+import {
+  advisoryHighlights,
+  brandPromise,
+  localSearchFocus,
+  navigation,
+  serviceAreas,
+} from '../../content/site'
 import { LogoMark } from '../ui/LogoMark'
 
 const marineCareLinks = [
@@ -14,19 +20,18 @@ const marineCareLinks = [
 
 export function Footer() {
   return (
-    <footer className="border-t border-ink/10 bg-white/70">
+    <footer className="site-footer">
       <div className="container py-14 md:py-16">
         <div className="grid gap-12 lg:grid-cols-[1.25fr_0.85fr_0.85fr_1fr]">
           <div className="max-w-md">
             <LogoMark size="footer" />
             <p className="mt-5 text-sm leading-7 text-slate md:text-base">{brandPromise}</p>
-            <div className="mt-6 rounded-3xl border border-ink/10 bg-white/80 px-5 py-5">
+            <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-5">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
                 Chicago&apos;s North Shore
               </p>
               <p className="mt-3 text-sm leading-7 text-slate">
-                Serving marina-based boat owners across Chicago&apos;s North Shore with premium detailing,
-                marine care, and practical ownership support.
+                {localSearchFocus}
               </p>
             </div>
           </div>

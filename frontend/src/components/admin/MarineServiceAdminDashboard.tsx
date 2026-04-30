@@ -33,6 +33,7 @@ type MarineServiceAdminDashboardProps = {
 
 type AdminActionResponse = {
   request?: AdminServiceRequest
+  checkoutUrl?: string
   message?: string
 }
 
@@ -109,6 +110,13 @@ function canCancel(request: AdminServiceRequest) {
   return !['completed', 'declined', 'canceled', 'refunded'].includes(request.bookingStatus)
 }
 
+function canCreatePaymentLink(request: AdminServiceRequest) {
+  return (
+    !['completed', 'declined', 'canceled', 'refunded'].includes(request.bookingStatus) &&
+    !['authorized', 'captured', 'refunded'].includes(request.paymentStatus)
+  )
+}
+
 async function copyToClipboard(value: string) {
   if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
     return false
@@ -138,8 +146,10 @@ export function MarineServiceAdminDashboard({
   const [requestKindFilter, setRequestKindFilter] =
     useState<(typeof requestKindOptions)[number]>('all')
   const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({})
+  const [quoteAmountDrafts, setQuoteAmountDrafts] = useState<Record<string, string>>({})
   const [actionState, setActionState] = useState<'idle' | 'submitting'>('idle')
   const [copiedField, setCopiedField] = useState('')
+  const [paymentLinkUrl, setPaymentLinkUrl] = useState('')
 
   async function loadRequests(showRefreshingState = false) {
     if (showRefreshingState) {
@@ -211,6 +221,12 @@ export function MarineServiceAdminDashboard({
   const adminNotes = selectedRequest
     ? notesDrafts[selectedRequest.id] ?? selectedRequest.adminNotes ?? ''
     : ''
+  const quoteAmountDraft = selectedRequest
+    ? quoteAmountDrafts[selectedRequest.id] ??
+      (typeof selectedRequest.calculatedPriceCents === 'number'
+        ? (selectedRequest.calculatedPriceCents / 100).toFixed(2)
+        : '')
+    : ''
 
   async function handleSignOut() {
     await destroyAccountSession()
@@ -241,6 +257,7 @@ export function MarineServiceAdminDashboard({
 
     setActionState('submitting')
     setMessage('')
+    setPaymentLinkUrl('')
 
     const response = await adminApiRequest<AdminActionResponse>(path, {
       method: 'POST',
@@ -274,6 +291,64 @@ export function MarineServiceAdminDashboard({
         paymentStatus: updatedRequest.paymentStatus,
       })
     }
+  }
+
+  async function handlePaymentLinkAction() {
+    if (!selectedRequest) {
+      return
+    }
+
+    const quoteAmount = Number(quoteAmountDraft)
+
+    if (!Number.isFinite(quoteAmount) || quoteAmount <= 0) {
+      setMessage('Enter the accepted quote amount before sending a payment link.')
+      return
+    }
+
+    setActionState('submitting')
+    setMessage('')
+    setPaymentLinkUrl('')
+
+    const response = await adminApiRequest<AdminActionResponse>(
+      `/api/admin/service-requests/${selectedRequest.id}/payment-link`,
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          adminNotes,
+          amountCents: Math.round(quoteAmount * 100),
+        }),
+      },
+    )
+
+    setActionState('idle')
+
+    if (!response.ok || !response.payload.request) {
+      setMessage(response.payload.message || 'We could not create that payment link right now.')
+      return
+    }
+
+    const updatedRequest = response.payload.request
+    setRequests((current) =>
+      current.map((request) => (request.id === updatedRequest.id ? updatedRequest : request)),
+    )
+    setNotesDrafts((current) => ({
+      ...current,
+      [updatedRequest.id]: updatedRequest.adminNotes || '',
+    }))
+    setQuoteAmountDrafts((current) => ({
+      ...current,
+      [updatedRequest.id]: updatedRequest.calculatedPriceCents
+        ? (updatedRequest.calculatedPriceCents / 100).toFixed(2)
+        : quoteAmountDraft,
+    }))
+    setSelectedRequestId(updatedRequest.id)
+    setPaymentLinkUrl(response.payload.checkoutUrl || '')
+    setMessage(response.payload.message || 'Payment link created and sent to the customer.')
+    trackEvent('payment_link_sent', {
+      requestId: updatedRequest.id,
+      bookingStatus: updatedRequest.bookingStatus,
+      paymentStatus: updatedRequest.paymentStatus,
+    })
   }
 
   return (
@@ -655,6 +730,76 @@ export function MarineServiceAdminDashboard({
                   }
                 />
               </label>
+
+              {canCreatePaymentLink(selectedRequest) ? (
+                <div className="rounded-3xl border border-ink/10 bg-white/82 p-5">
+                  <label className="field-label">
+                    Accepted Quote Amount
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate">
+                        $
+                      </span>
+                      <input
+                        className="input-field pl-8"
+                        inputMode="decimal"
+                        min="1"
+                        placeholder="0.00"
+                        step="0.01"
+                        type="number"
+                        value={quoteAmountDraft}
+                        onChange={(event) =>
+                          setQuoteAmountDrafts((current) => ({
+                            ...current,
+                            [selectedRequest.id]: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </label>
+                  <button
+                    className="button-primary mt-4 w-full justify-center"
+                    disabled={actionState === 'submitting'}
+                    type="button"
+                    onClick={() => void handlePaymentLinkAction()}
+                  >
+                    {actionState === 'submitting' ? (
+                      <>
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-4 w-4" />
+                        Accept & Send Payment Link
+                      </>
+                    )}
+                  </button>
+
+                  {paymentLinkUrl ? (
+                    <div className="mt-4 rounded-2xl border border-lake/30 bg-lake/10 px-4 py-4 text-sm leading-7 text-slate">
+                      <p className="font-semibold text-ink">Payment link ready</p>
+                      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <a
+                          className="break-all font-semibold text-ink underline decoration-lake underline-offset-4"
+                          href={paymentLinkUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Open secure checkout
+                        </a>
+                        <button
+                          className="button-quiet min-h-0 self-start px-2 py-1 text-xs"
+                          type="button"
+                          onClick={() => void handleCopy(paymentLinkUrl, 'payment-link')}
+                        >
+                          <Copy className="h-4 w-4" />
+                          {copiedField === 'payment-link' ? 'Copied' : 'Copy'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="grid gap-3 md:grid-cols-2">
                 {selectedRequest.paymentStatus === 'authorized' ? (

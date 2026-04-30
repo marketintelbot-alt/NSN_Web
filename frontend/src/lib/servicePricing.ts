@@ -1,8 +1,8 @@
 import type { ServiceCatalogItem } from '../types/service'
 
-export const serviceAgreementPolicyVersion = 'service-agreement-v1.0'
+export const serviceAgreementPolicyVersion = 'service-agreement-v1.1'
 export const minimumBoatLengthFeet = 10
-export const maximumBoatLengthFeet = 60
+export const maximumBoatLengthFeet = 30
 
 export function roundBoatLengthFeet(value: number) {
   return Math.ceil(value)

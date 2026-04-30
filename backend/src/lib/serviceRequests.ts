@@ -306,6 +306,11 @@ function getLatestChargeId(paymentIntent: Stripe.PaymentIntent | null | undefine
     : paymentIntent.latest_charge.id
 }
 
+function getQuotedAmountCentsFromMetadata(metadata: Record<string, string> | null | undefined) {
+  const amount = Number(metadata?.quotedAmountCents || metadata?.amountCents || '')
+  return Number.isInteger(amount) && amount > 0 ? amount : null
+}
+
 function buildQuoteTriggerReasons(
   input: PublicServiceRequestInput,
   roundedBoatLengthFeet: number | null,
@@ -506,6 +511,8 @@ async function createServiceRequestCheckoutSession(
   const priceId = await resolveStripePrice(service.id, expectedUnitAmountCents, stripe)
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
+    // NSN currently does not enable Stripe Tax automatically. Do not enable automatic_tax unless NSN has confirmed tax registration/compliance requirements.
+    automatic_tax: { enabled: false },
     payment_method_types: ['card'],
     client_reference_id: request.id,
     customer_email: request.customerEmail,
@@ -544,11 +551,79 @@ async function createServiceRequestCheckoutSession(
     },
   })
 
-  if (!session.url) {
+  const checkoutUrl = session.url
+
+  if (!checkoutUrl) {
     throw new Error('Stripe did not return a checkout URL.')
   }
 
-  return session
+  return {
+    id: session.id,
+    url: checkoutUrl,
+  }
+}
+
+async function createQuotedServiceRequestCheckoutSession(
+  request: ServiceRequestRecord,
+  amountCents: number,
+) {
+  const stripe = getStripeClient()
+  const serviceName = request.selectedServiceName || 'North Shore Nautical service'
+  const metadata = {
+    checkoutKind: 'service_request_quote',
+    requestId: request.id,
+    requestKind: 'booking',
+    serviceId: request.selectedServiceId || '',
+    serviceName,
+    quotedAmountCents: String(amountCents),
+    customerName: request.customerName,
+    customerEmail: request.customerEmail,
+    requestedDateTime: request.requestedDateTime || '',
+    agreementPolicyVersion: request.agreementPolicyVersion || '',
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    // NSN currently does not enable Stripe Tax automatically. Do not enable automatic_tax unless NSN has confirmed tax registration/compliance requirements.
+    automatic_tax: { enabled: false },
+    payment_method_types: ['card'],
+    client_reference_id: request.id,
+    customer_email: request.customerEmail,
+    success_url: getSuccessUrl(request.id),
+    cancel_url: getCancelUrl(request.selectedServiceId),
+    metadata,
+    payment_intent_data: {
+      metadata,
+    },
+    line_items: [
+      {
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: amountCents,
+          product_data: {
+            name: serviceName,
+            description: 'Approved North Shore Nautical service request',
+            metadata: {
+              requestId: request.id,
+              serviceId: request.selectedServiceId || '',
+            },
+          },
+        },
+      },
+    ],
+  })
+
+  const checkoutUrl = session.url
+
+  if (!checkoutUrl) {
+    throw new Error('Stripe did not return a checkout URL.')
+  }
+
+  return {
+    id: session.id,
+    url: checkoutUrl,
+  }
 }
 
 function getStoredRequestIdFromMetadata(
@@ -691,6 +766,54 @@ export async function listAdminServiceRequests() {
   return ((data as StoredServiceRequestRow[] | null) || []).map((row) =>
     normalizeServiceRequestRow(row),
   )
+}
+
+export async function createServiceRequestPaymentLink(
+  requestId: string,
+  amountCents: number,
+  adminNotes = '',
+) {
+  const request = await readServiceRequestById(requestId)
+
+  if (!request) {
+    throw new Error('That request could not be found.')
+  }
+
+  if (['completed', 'declined', 'canceled', 'refunded'].includes(request.bookingStatus)) {
+    throw new Error('This request can no longer be accepted for payment.')
+  }
+
+  if (request.paymentStatus === 'captured') {
+    throw new Error('This request has already been charged.')
+  }
+
+  if (request.paymentStatus === 'authorized') {
+    throw new Error('This request already has a card authorization. Use Approve & Capture Payment instead.')
+  }
+
+  if (!Number.isInteger(amountCents) || amountCents < 100) {
+    throw new Error('Enter a quote amount of at least $1.')
+  }
+
+  const checkoutSession = await createQuotedServiceRequestCheckoutSession(request, amountCents)
+  const updatedRequest = await updateServiceRequestRow(request.id, {
+    request_kind: 'booking',
+    booking_status: 'pending_review',
+    payment_status: 'not_started',
+    calculated_price_cents: amountCents,
+    stripe_checkout_session_id: checkoutSession.id,
+    stripe_payment_intent_id: null,
+    stripe_charge_id: null,
+    payment_authorized_at: null,
+    payment_captured_at: null,
+    payment_canceled_at: null,
+    admin_notes: adminNotes || request.adminNotes || null,
+  })
+
+  return {
+    request: updatedRequest,
+    checkoutUrl: checkoutSession.url,
+  }
 }
 
 export async function markCustomerEmailSent(requestId: string, emailType: CustomerEmailType) {
@@ -845,6 +968,11 @@ export async function syncServiceRequestAuthorizationFromCheckoutSession(
     stripe_payment_intent_id: paymentIntent?.id || existingRequest.stripePaymentIntentId,
     stripe_charge_id: getLatestChargeId(paymentIntent) || existingRequest.stripeChargeId,
   }
+  const quotedAmountCents = getQuotedAmountCentsFromMetadata(session.metadata)
+
+  if (quotedAmountCents) {
+    patch.calculated_price_cents = quotedAmountCents
+  }
 
   if (
     paymentIntent &&
@@ -858,6 +986,11 @@ export async function syncServiceRequestAuthorizationFromCheckoutSession(
       : 'pending_review'
     patch.payment_status = 'authorized'
     patch.payment_authorized_at = existingRequest.paymentAuthorizedAt || new Date().toISOString()
+  }
+
+  if (paymentIntent?.status === 'succeeded') {
+    await updateServiceRequestRow(existingRequest.id, patch)
+    return syncServiceRequestCaptureFromPaymentIntent(paymentIntent, existingRequest.adminNotes || '')
   }
 
   return updateServiceRequestRow(existingRequest.id, patch)
@@ -925,6 +1058,8 @@ export async function syncServiceRequestCaptureFromPaymentIntent(
       : 'confirmed',
     payment_status: canMoveToCaptured(request) ? 'captured' : request.paymentStatus,
     payment_captured_at: request.paymentCapturedAt || new Date().toISOString(),
+    calculated_price_cents:
+      getQuotedAmountCentsFromMetadata(paymentIntent.metadata) || request.calculatedPriceCents,
     admin_notes: adminNotes || request.adminNotes || null,
   })
 }

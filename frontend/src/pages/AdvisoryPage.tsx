@@ -82,7 +82,7 @@ export function AdvisoryPage() {
         </div>
       </section>
 
-      <section className="section-pad bg-white/60">
+      <section className="section-pad bg-[#edf6f2]/60">
         <div className="container">
           <SectionIntro
             label="Advisory Topics"

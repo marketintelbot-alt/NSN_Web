@@ -14,8 +14,7 @@
   :root {
     font-family: 'Manrope', sans-serif;
     color: #0d2740;
-    background:
-      linear-gradient(180deg, #fcfeff 0%, #f7fbff 38%, #f2f8fc 100%);
+    background: #071724;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -33,6 +32,9 @@
 
   body {
     @apply m-0 min-h-screen overflow-x-hidden bg-transparent text-slate;
+    background:
+      linear-gradient(180deg, rgba(7, 23, 36, 0.3), rgba(226, 238, 235, 0.58)),
+      url('/images/north-shore-hero.jpeg') center center / cover fixed;
   }
 
   #root {
@@ -56,42 +58,53 @@
 @layer components {
   .page-shell {
     @apply relative min-h-screen overflow-hidden;
+    background: transparent;
   }
 
   .site-backdrop {
-    @apply fixed inset-0;
+    @apply pointer-events-none fixed inset-0;
   }
 
   .site-backdrop-image {
     @apply absolute inset-0;
-    background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.94), transparent 34%),
-      radial-gradient(circle at top right, rgba(139, 183, 212, 0.18), transparent 28%),
-      radial-gradient(circle at 50% 12%, rgba(242, 231, 211, 0.42), transparent 30%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 251, 255, 0.98) 42%, rgba(239, 247, 252, 0.98) 100%);
+    background-image: url('/images/north-shore-hero.jpeg');
+    background-attachment: fixed;
+    background-position: center center;
+    background-size: cover;
+    filter: saturate(1.02) contrast(0.94);
+    transform: scale(1.02);
   }
 
   .site-backdrop-overlay {
     @apply absolute inset-0;
     background:
-      radial-gradient(circle at 12% 18%, rgba(139, 183, 212, 0.12), transparent 24%),
-      radial-gradient(circle at 82% 26%, rgba(198, 164, 107, 0.12), transparent 18%);
+      linear-gradient(180deg, rgba(7, 23, 36, 0.46) 0%, rgba(13, 39, 64, 0.28) 30%, rgba(226, 238, 235, 0.52) 62%, rgba(226, 238, 235, 0.62) 100%),
+      radial-gradient(circle at 12% 18%, rgba(139, 183, 212, 0.14), transparent 28%),
+      radial-gradient(circle at 82% 26%, rgba(198, 164, 107, 0.12), transparent 22%);
   }
 
   .site-backdrop-vignette {
     @apply absolute inset-0;
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 18%, rgba(255, 255, 255, 0.22) 100%);
+      linear-gradient(180deg, rgba(6, 19, 31, 0.32) 0%, rgba(13, 39, 64, 0) 22%, rgba(13, 39, 64, 0.16) 100%);
   }
 
   .site-backdrop-private .site-backdrop-image {
-    background:
-      radial-gradient(circle at top left, rgba(255, 255, 255, 0.94), transparent 34%),
-      linear-gradient(180deg, rgba(247, 251, 255, 0.98) 0%, rgba(241, 247, 251, 0.98) 100%);
+    background-image: url('/images/north-shore-hero.jpeg');
   }
 
   .section-pad {
-    @apply py-16 md:py-24;
+    @apply relative py-16 md:py-24;
+    background:
+      linear-gradient(180deg, rgba(237, 246, 242, 0.24), rgba(226, 238, 235, 0.18)),
+      url('/images/north-shore-hero.jpeg') center top / cover fixed;
+  }
+
+  .site-footer {
+    @apply border-t border-white/40 backdrop-blur-md;
+    background:
+      linear-gradient(180deg, rgba(234, 244, 239, 0.4), rgba(226, 238, 235, 0.34)),
+      url('/images/north-shore-hero.jpeg') center top / cover fixed;
   }
 
   .eyebrow {
@@ -99,7 +112,7 @@
   }
 
   .section-label {
-    @apply inline-flex items-center rounded-full border border-ink/10 bg-white/80 px-4 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-navy/70;
+    @apply inline-flex items-center rounded-full border border-ink/10 bg-[#f8fbf7]/90 px-4 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-navy/70;
   }
 
   .display-title {
@@ -129,11 +142,11 @@
   }
 
   .panel {
-    @apply rounded-4xl border border-white/80 bg-white/90 shadow-panel backdrop-blur-md;
+    @apply rounded-4xl border border-white/70 bg-[#f6faf7]/90 shadow-panel backdrop-blur-md;
   }
 
   .soft-panel {
-    @apply rounded-3xl border border-ink/10 bg-white/80 shadow-soft backdrop-blur-sm;
+    @apply rounded-3xl border border-ink/10 bg-[#edf6f2]/80 shadow-soft backdrop-blur-sm;
   }
 
   .nav-link {
@@ -149,7 +162,7 @@
   }
 
   .button-secondary {
-    @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-ink/10 bg-white px-6 py-3.5 text-sm font-semibold tracking-[0.08em] text-ink transition duration-300 hover:-translate-y-0.5 hover:border-lake/40 hover:bg-lake/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    @apply inline-flex min-h-14 items-center justify-center gap-2 rounded-full border border-ink/10 bg-[#f8fbf7]/90 px-6 py-3.5 text-sm font-semibold tracking-[0.08em] text-ink transition duration-300 hover:-translate-y-0.5 hover:border-lake/40 hover:bg-lake/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
 
   .button-dark {
@@ -157,15 +170,15 @@
   }
 
   .button-quiet {
-    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-transparent bg-transparent px-4 py-2 text-sm font-semibold text-ink/75 transition hover:bg-white/70 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+    @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-transparent bg-transparent px-4 py-2 text-sm font-semibold text-ink/75 transition hover:bg-[#f8fbf7]/80 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-white;
   }
 
   .input-field {
-    @apply h-14 w-full rounded-2xl border border-ink/10 bg-white px-4 text-sm text-ink placeholder:text-slate/70 focus:border-lake focus:outline-none focus:ring-2 focus:ring-lake/25;
+    @apply h-14 w-full rounded-2xl border border-ink/10 bg-[#f8fbf7]/95 px-4 text-sm text-ink placeholder:text-slate/70 focus:border-lake focus:outline-none focus:ring-2 focus:ring-lake/25;
   }
 
   .text-area {
-    @apply min-h-36 w-full rounded-2xl border border-ink/10 bg-white px-4 py-4 text-sm text-ink placeholder:text-slate/70 focus:border-lake focus:outline-none focus:ring-2 focus:ring-lake/25;
+    @apply min-h-36 w-full rounded-2xl border border-ink/10 bg-[#f8fbf7]/95 px-4 py-4 text-sm text-ink placeholder:text-slate/70 focus:border-lake focus:outline-none focus:ring-2 focus:ring-lake/25;
   }
 
   .field-label {
@@ -173,7 +186,7 @@
   }
 
   .slot-button {
-    @apply flex items-start justify-between gap-4 rounded-3xl border border-ink/10 bg-white px-5 py-5 text-left transition hover:border-lake/40;
+    @apply flex items-start justify-between gap-4 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-5 text-left transition hover:border-lake/40;
   }
 
   .slot-button-active {

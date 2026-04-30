@@ -57,7 +57,7 @@ export function ContactPage() {
             })}
           </div>
 
-          <FadeIn className="rounded-3xl border border-ink/10 bg-white/76 px-5 py-4 text-sm leading-7 text-slate">
+          <FadeIn className="rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-4 text-sm leading-7 text-slate">
             <div className="flex items-start gap-3">
               <Sparkles className="mt-1 h-5 w-5 shrink-0 text-lake" />
               <span>

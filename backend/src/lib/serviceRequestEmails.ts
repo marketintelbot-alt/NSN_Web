@@ -176,6 +176,48 @@ export function createBookingApprovedEmail(request: ServiceRequestRecord) {
   }
 }
 
+export function createPaymentLinkEmail(request: ServiceRequestRecord, checkoutUrl: string) {
+  const html = renderEmailShell(
+    'Quote Approved',
+    `North Shore Nautical reviewed your request and is ready to move forward.`,
+    `
+      ${renderRequestSummary(request)}
+      <p style="margin:22px 0 0;color:#5c7386;font-size:14px;line-height:1.8;">
+        Use the secure payment link below to pay the quoted amount. Once payment is complete, your service request will be confirmed.
+      </p>
+      <p style="margin:24px 0 0;">
+        <a href="${escapeHtml(checkoutUrl)}" style="display:inline-block;background:#0d2740;color:#ffffff;text-decoration:none;border-radius:999px;padding:14px 22px;font-size:14px;font-weight:700;">
+          Pay Securely
+        </a>
+      </p>
+      ${
+        request.adminNotes
+          ? `<p style="margin:16px 0 0;color:#0d2740;font-size:14px;line-height:1.8;"><strong>Team note:</strong> ${escapeHtml(request.adminNotes)}</p>`
+          : ''
+      }
+    `,
+  )
+
+  const text = [
+    'Quote Approved | North Shore Nautical',
+    '',
+    'North Shore Nautical reviewed your request and is ready to move forward.',
+    'Use the secure payment link below to pay the quoted amount. Once payment is complete, your service request will be confirmed.',
+    '',
+    `Pay securely: ${checkoutUrl}`,
+    `Service: ${request.selectedServiceName || 'Not sure what I need'}`,
+    `Requested date: ${request.requestedDateTimeLabel || 'Pending review'}`,
+    `Quote: ${formatCurrency(request.calculatedPriceCents)}`,
+    ...(request.adminNotes ? [`Team note: ${request.adminNotes}`] : []),
+  ].join('\n')
+
+  return {
+    subject: 'Quote Approved | North Shore Nautical',
+    html,
+    text,
+  }
+}
+
 export function createChangesRequestedEmail(request: ServiceRequestRecord) {
   const html = renderEmailShell(
     'More Information Needed',

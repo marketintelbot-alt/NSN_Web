@@ -81,6 +81,8 @@ export async function createALaCarteCheckoutSession(
   const stripe = getStripeClient()
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
+    // NSN currently does not enable Stripe Tax automatically. Do not enable automatic_tax unless NSN has confirmed tax registration/compliance requirements.
+    automatic_tax: { enabled: false },
     client_reference_id: clientAccount.id,
     customer_email: clientAccount.email,
     success_url: `${siteUrl}/portal?checkout=success&service=${checkout.service.serviceKey}&session_id={CHECKOUT_SESSION_ID}`,

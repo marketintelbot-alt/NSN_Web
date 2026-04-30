@@ -3,6 +3,7 @@ create extension if not exists pgcrypto;
 create or replace function public.set_updated_at_timestamp()
 returns trigger
 language plpgsql
+set search_path = ''
 as $$
 begin
   new.updated_at = timezone('utc', now());
@@ -345,6 +346,7 @@ create or replace function public.fulfill_stripe_add_on_purchase(
 )
 returns boolean
 language plpgsql
+set search_path = ''
 as $$
 declare
   inserted_rows integer := 0;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 
-import { AlertCircle, ArrowRight, CheckCircle2, LoaderCircle } from 'lucide-react'
+import { AlertCircle, ArrowRight, CalendarClock, CheckCircle2, LoaderCircle } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import { FadeIn } from '../ui/FadeIn'
@@ -329,7 +329,7 @@ export function MarineServiceRequestForm({
       </div>
 
       {catalogState === 'loading' ? (
-        <div className="mt-8 flex items-center gap-3 rounded-3xl border border-ink/10 bg-white/70 px-5 py-4 text-sm text-slate">
+        <div className="mt-8 flex items-center gap-3 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-4 text-sm text-slate">
           <LoaderCircle className="h-4 w-4 animate-spin text-lake" />
           Loading services and pricing...
         </div>
@@ -368,7 +368,7 @@ export function MarineServiceRequestForm({
                   className={`rounded-3xl border p-5 transition ${
                     form.selectedServiceId === service.id && !form.notSureWhatINeed
                       ? 'border-lake bg-lake/10'
-                      : 'border-ink/10 bg-white/82 hover:border-lake/35'
+                      : 'border-ink/10 bg-[#f8fbf7]/90 hover:border-lake/35'
                   }`}
                   delay={index * 0.03}
                 >
@@ -400,7 +400,7 @@ export function MarineServiceRequestForm({
                 className={`rounded-3xl border p-5 transition ${
                   form.notSureWhatINeed
                     ? 'border-lake bg-lake/10'
-                    : 'border-dashed border-ink/14 bg-white/70 hover:border-lake/35'
+                    : 'border-dashed border-ink/14 bg-[#f8fbf7]/85 hover:border-lake/35'
                 }`}
               >
                 <button
@@ -500,23 +500,36 @@ export function MarineServiceRequestForm({
                 </label>
               </div>
 
-              <label className="field-label">
-                Preferred Date & Time
-                <input
-                  className="input-field"
-                  name="requestedDateTimeLocal"
-                  type="datetime-local"
-                  value={form.requestedDateTimeLocal}
-                  onChange={handleInputChange}
-                />
-              </label>
+              <div className="rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 p-5 shadow-soft">
+                <div className="flex items-start gap-3">
+                  <CalendarClock className="mt-1 h-5 w-5 shrink-0 text-lake" />
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-navy/70">
+                      Preferred Service Window
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-slate">
+                      Pick the date and time that works best. North Shore Nautical reviews timing, marina access, weather, and current workload before confirming.
+                    </p>
+                  </div>
+                </div>
+                <label className="field-label mt-4">
+                  Requested Date & Time
+                  <input
+                    className="input-field"
+                    name="requestedDateTimeLocal"
+                    type="datetime-local"
+                    value={form.requestedDateTimeLocal}
+                    onChange={handleInputChange}
+                  />
+                </label>
+              </div>
 
-              <div className="rounded-3xl border border-ink/10 bg-white/72 p-5">
+              <div className="rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 p-5">
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-navy/70">
                   Condition flags
                 </p>
                 <p className="mt-2 text-sm leading-7 text-slate">
-                  These route heavier-condition projects into quote review instead of instant checkout.
+                  These route heavier-condition projects into quote review instead of instant checkout. Boat condition can also change the final price after review.
                 </p>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   {[
@@ -529,7 +542,7 @@ export function MarineServiceRequestForm({
                   ].map(([name, label]) => (
                     <label
                       key={name}
-                      className="flex items-center gap-3 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm text-ink"
+                      className="flex items-center gap-3 rounded-2xl border border-ink/10 bg-[#f8fbf7] px-4 py-3 text-sm text-ink"
                     >
                       <input
                         checked={Boolean(form[name as keyof FormState])}
@@ -586,13 +599,13 @@ export function MarineServiceRequestForm({
                   </p>
                   <p className="mt-3 text-sm leading-7 text-slate">
                     {routesToInquiry
-                      ? 'Quote-only and condition-heavy requests are reviewed manually before pricing is finalized.'
-                      : `Boat length is rounded up to the nearest whole foot for checkout. Routine online checkout is designed for boats between ${minimumBoatLengthFeet} and ${maximumBoatLengthFeet} feet.`}
+                      ? `Quote-only, condition-heavy, and boats over ${maximumBoatLengthFeet} feet are reviewed manually before pricing is finalized.`
+                      : `Boat length is rounded up to the nearest whole foot for checkout. Routine online checkout is designed for boats between ${minimumBoatLengthFeet} and ${maximumBoatLengthFeet} feet, and condition can still affect approval or final pricing.`}
                   </p>
                 </div>
               ) : null}
 
-              <label className="flex items-start gap-3 rounded-3xl border border-ink/10 bg-white/78 px-4 py-4 text-sm leading-7 text-slate">
+              <label className="flex items-start gap-3 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4 text-sm leading-7 text-slate">
                 <input
                   checked={form.agreementAccepted}
                   className="mt-1"
@@ -636,7 +649,7 @@ export function MarineServiceRequestForm({
                 )}
               </button>
 
-              <div className="rounded-3xl border border-ink/10 bg-white/78 px-5 py-4 text-sm leading-7 text-slate">
+              <div className="rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-4 text-sm leading-7 text-slate">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-lake" />
                   <span>

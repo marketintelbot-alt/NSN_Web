@@ -5,12 +5,12 @@ const agreementSections = [
   {
     title: '1. Scope of Services',
     body:
-      'North Shore Nautical provides marine detailing, cleaning, upkeep support, and advisory services only. North Shore Nautical does not provide boat transportation, towing, launching, retrieval, trailering, vessel operation, captain services, or moving services.',
+      'North Shore Nautical provides marine detailing, cleaning, upkeep support, and advisory services only. Services outside an approved written scope are not included.',
   },
   {
     title: '2. Pricing and Boat Length',
     body:
-      'For per-foot services, pricing is calculated based on boat length provided by the client. Boat length may be rounded up to the nearest whole foot. If boat length is entered incorrectly, North Shore Nautical may adjust or decline the request before approval.',
+      'Flat services are priced as listed. For per-foot services, pricing is calculated based on boat length provided by the client. Boat length may be rounded up to the nearest whole foot. If boat length is entered incorrectly, North Shore Nautical may adjust or decline the request before approval.',
   },
   {
     title: '3. Payment Authorization and Approval',
@@ -50,7 +50,7 @@ const agreementSections = [
   {
     title: '10. Advisory Limitations',
     body:
-      'Advisory services are general owner support, upkeep planning, purchasing guidance, and referral guidance. North Shore Nautical does not provide legal, financial, surveyor, mechanical certification, captain, transport, or vessel operation services.',
+      'Advisory services are general owner support, upkeep planning, purchasing guidance, and referral guidance. North Shore Nautical does not provide legal, financial, surveyor, mechanical certification, or other licensed professional services.',
   },
 ]
 

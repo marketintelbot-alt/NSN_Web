@@ -1,10 +1,6 @@
 export const supportPhoneNumbers = [
   {
-    phoneDisplay: '(847) 331-0927',
-    phoneHref: 'tel:+18473310927',
-  },
-  {
-    phoneDisplay: '(314) 606-2112',
+    phoneDisplay: '314-606-2112',
     phoneHref: 'tel:+13146062112',
   },
 ]

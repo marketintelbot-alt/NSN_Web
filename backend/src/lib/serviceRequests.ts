@@ -365,6 +365,21 @@ function buildQuoteTriggerReasons(
   return reasons
 }
 
+function getCheckoutQuantity(
+  service: NonNullable<ReturnType<typeof findServiceById>>,
+  roundedBoatLengthFeet: number | null,
+) {
+  if (service.pricingModel === 'per_foot') {
+    if (!roundedBoatLengthFeet) {
+      throw new Error('Boat length is required for the selected service.')
+    }
+
+    return roundedBoatLengthFeet
+  }
+
+  return 1
+}
+
 function canMoveToAuthorized(record: ServiceRequestRecord) {
   return !['captured', 'canceled', 'refunded'].includes(record.paymentStatus)
 }
@@ -494,7 +509,8 @@ async function resolveStripePrice(
 async function createServiceRequestCheckoutSession(
   request: ServiceRequestRecord,
   serviceId: string,
-  roundedBoatLengthFeet: number,
+  checkoutQuantity: number,
+  roundedBoatLengthFeet: number | null,
 ) {
   const service = findServiceById(serviceId)
 
@@ -521,7 +537,7 @@ async function createServiceRequestCheckoutSession(
     line_items: [
       {
         price: priceId,
-        quantity: roundedBoatLengthFeet,
+        quantity: checkoutQuantity,
       },
     ],
     metadata: {
@@ -529,7 +545,7 @@ async function createServiceRequestCheckoutSession(
       requestKind: request.requestKind,
       serviceId: service.id,
       serviceName: service.name,
-      boatLengthFeet: String(roundedBoatLengthFeet),
+      boatLengthFeet: roundedBoatLengthFeet ? String(roundedBoatLengthFeet) : '',
       customerName: request.customerName,
       customerEmail: request.customerEmail,
       requestedDateTime: request.requestedDateTime || '',
@@ -542,7 +558,7 @@ async function createServiceRequestCheckoutSession(
         requestKind: request.requestKind,
         serviceId: service.id,
         serviceName: service.name,
-        boatLengthFeet: String(roundedBoatLengthFeet),
+        boatLengthFeet: roundedBoatLengthFeet ? String(roundedBoatLengthFeet) : '',
         customerName: request.customerName,
         customerEmail: request.customerEmail,
         requestedDateTime: request.requestedDateTime || '',
@@ -658,10 +674,12 @@ export async function createPublicServiceRequest(input: PublicServiceRequestInpu
     quoteTriggerReasons.length > 0 ||
     !service ||
     service.paymentType !== 'instant_checkout'
+  const checkoutQuantity =
+    !shouldRouteToInquiry && service ? getCheckoutQuantity(service, roundedBoatLengthFeet) : null
 
   const requestedDateTime = parseRequestedDateTimeLocal(input.requestedDateTimeLocal).toISOString()
   const calculatedPriceCents =
-    !shouldRouteToInquiry && service && roundedBoatLengthFeet
+    !shouldRouteToInquiry && service
       ? calculateServicePriceCents(service, roundedBoatLengthFeet)
       : null
   const request = await insertServiceRequest({
@@ -704,7 +722,7 @@ export async function createPublicServiceRequest(input: PublicServiceRequestInpu
     last_internal_email_sent_at: null,
   })
 
-  if (shouldRouteToInquiry || !service || !roundedBoatLengthFeet) {
+  if (shouldRouteToInquiry || !service || !checkoutQuantity) {
     return {
       kind: 'inquiry' as const,
       request,
@@ -714,6 +732,7 @@ export async function createPublicServiceRequest(input: PublicServiceRequestInpu
   const checkoutSession = await createServiceRequestCheckoutSession(
     request,
     service.id,
+    checkoutQuantity,
     roundedBoatLengthFeet,
   )
   const updatedRequest = await updateServiceRequestRow(request.id, {

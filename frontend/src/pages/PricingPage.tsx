@@ -9,6 +9,7 @@ import { PageHero } from '../components/ui/PageHero'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { pricingConditionNotes } from '../content/site'
 import { apiRequest } from '../lib/api'
+import { formatCurrency } from '../lib/servicePricing'
 import type { PublicServiceCatalogResponse, ServiceCatalogItem } from '../types/service'
 
 function groupServices(services: ServiceCatalogItem[]) {
@@ -66,15 +67,15 @@ export function PricingPage() {
       <PageHero
         eyebrow="Pricing"
         title="Transparent pricing for routine marine care, with quote review for specialty work."
-        description="Per-foot services can move to secure checkout after the estimate is calculated. Restoration, heavier-condition work, and advisory requests stay inquiry-first."
+        description="Routine flat and per-foot services can move to secure checkout after the estimate is calculated. Restoration, heavier-condition work, and advisory requests stay inquiry-first."
       />
 
       <section className="section-pad">
         <div className="container">
           <SectionIntro
             label="How Pricing Works"
-            title="Per-foot pricing stays clear. Heavier-condition work gets reviewed first."
-            copy="Online per-foot pricing is for boats from 10-30 feet and assumes routine condition. Boats over 30 feet, heavier-condition jobs, and unusual access are quoted directly after review."
+            title="Flat and per-foot pricing stay clear. Heavier-condition work gets reviewed first."
+            copy="Online pricing assumes routine condition. Per-foot services are for boats from 10-30 feet; boats over 30 feet, heavier-condition jobs, and unusual access are quoted directly after review."
           />
 
           <div className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -138,14 +139,21 @@ export function PricingPage() {
                       {service.warningNotes.length > 0 ? (
                         <p className="mt-4 text-sm leading-7 text-slate">{service.warningNotes[0]}</p>
                       ) : null}
+                      {service.contractValueCents ? (
                         <p className="mt-3 text-sm leading-7 text-slate">
-                          Final price can change after review when condition, access, oxidation, mildew, staining, or restoration needs fall outside routine service assumptions.
+                          Interior Refresh visits are valued at{' '}
+                          {formatCurrency(service.contractValueCents)} per visit for approved
+                          seasonal or invoiced contract clients.
                         </p>
-                        {service.requiresBoatLength ? (
-                          <p className="mt-2 text-sm leading-7 text-slate">
-                            Larger than {service.maxBoatLengthFeet} ft? Contact North Shore Nautical for a custom quote.
-                          </p>
-                        ) : null}
+                      ) : null}
+                      <p className="mt-3 text-sm leading-7 text-slate">
+                        Final price can change after review when condition, access, oxidation, mildew, staining, or restoration needs fall outside routine service assumptions.
+                      </p>
+                      {service.requiresBoatLength ? (
+                        <p className="mt-2 text-sm leading-7 text-slate">
+                          Larger than {service.maxBoatLengthFeet} ft? Contact North Shore Nautical for a custom quote.
+                        </p>
+                      ) : null}
                       <div className="mt-6">
                         <Link className="button-primary" to={`/booking?service=${service.id}`}>
                           {service.quoteOnly ? 'Request an Estimate' : 'Book This Service'}

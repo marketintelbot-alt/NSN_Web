@@ -20,23 +20,26 @@ export function formatCurrency(amountCents: number | null) {
 }
 
 export function calculateEstimateCents(service: ServiceCatalogItem | null, boatLengthFeet: number | null) {
-  if (!service || typeof boatLengthFeet !== 'number' || !Number.isFinite(boatLengthFeet)) {
+  if (!service) {
     return null
-  }
-
-  const roundedBoatLengthFeet = roundBoatLengthFeet(boatLengthFeet)
-
-  if (service.pricingModel === 'per_foot') {
-    const numericRate = Number(
-      service.pricingLabel.replace('$', '').replace('/ft', '').replace(',', ''),
-    )
-
-    return Number.isFinite(numericRate) ? Math.round(numericRate * 100) * roundedBoatLengthFeet : null
   }
 
   if (service.pricingModel === 'flat') {
     const numericAmount = Number(service.pricingLabel.replace('$', '').replace(',', ''))
     return Number.isFinite(numericAmount) ? Math.round(numericAmount * 100) : null
+  }
+
+  if (
+    service.pricingModel === 'per_foot' &&
+    typeof boatLengthFeet === 'number' &&
+    Number.isFinite(boatLengthFeet)
+  ) {
+    const numericRate = Number(
+      service.pricingLabel.replace('$', '').replace('/ft', '').replace(',', ''),
+    )
+    const roundedBoatLengthFeet = roundBoatLengthFeet(boatLengthFeet)
+
+    return Number.isFinite(numericRate) ? Math.round(numericRate * 100) * roundedBoatLengthFeet : null
   }
 
   return null

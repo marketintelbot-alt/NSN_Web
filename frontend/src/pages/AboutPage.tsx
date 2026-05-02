@@ -6,14 +6,14 @@ import { CtaBanner } from '../components/ui/CtaBanner'
 import { FadeIn } from '../components/ui/FadeIn'
 import { PageHero } from '../components/ui/PageHero'
 import { SectionIntro } from '../components/ui/SectionIntro'
-import { teamMembers } from '../content/site'
+import { publicContact, serviceAreas, teamMembers } from '../content/site'
 
 export function AboutPage() {
   return (
     <>
       <Seo
         title="About Us"
-        description="Meet the North Shore Nautical team behind the marine care, detailing, scheduling, and customer follow-up."
+        description="About North Shore Nautical, the official website for marine detailing and care across Chicago’s North Shore."
         path="/about"
       />
 
@@ -29,6 +29,31 @@ export function AboutPage() {
       </PageHero>
 
       <section className="section-pad">
+        <div className="container">
+          <FadeIn className="panel p-6 md:p-8">
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+              <SectionIntro
+                label="About North Shore Nautical"
+                title="Marine detailing and care for Chicago’s North Shore."
+                copy="North Shore Nautical provides marine detailing, interior refreshes, maintenance details, exterior washes, restoration support, and owner advisory services for boat owners across Chicago’s North Shore."
+              />
+              <div className="grid gap-4 text-sm leading-7 text-slate">
+                <p className="rounded-2xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4 font-semibold text-ink">
+                  This is the official website for North Shore Nautical.
+                </p>
+                <p>
+                  {publicContact.mobileServiceStatement}
+                </p>
+                <p>
+                  Service area includes {serviceAreas.join(', ')}.
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      <section className="section-pad">
         <div className="container grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <SectionIntro
             label="The Team"
@@ -40,6 +65,9 @@ export function AboutPage() {
             {teamMembers.map((member, index) => (
               <FadeIn key={member.name} className="panel p-6 md:p-7" delay={index * 0.08}>
                 <h2 className="text-3xl font-semibold text-ink">{member.name}</h2>
+                <p className="mt-2 text-sm font-semibold uppercase tracking-[0.16em] text-navy/70">
+                  {member.role}
+                </p>
                 <div className="mt-6 grid gap-3">
                   <a className="button-secondary w-full justify-center" href={member.phoneHref}>
                     <Phone className="h-4 w-4" />

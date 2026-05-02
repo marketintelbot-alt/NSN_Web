@@ -6,6 +6,7 @@ export const maximumBoatLengthFeet = 30
 export type ServiceCategory = 'marine_care' | 'advisory'
 export type PaymentType = 'instant_checkout' | 'quote_only'
 export type PricingModel = 'per_foot' | 'flat' | 'starting_at_per_foot' | 'custom'
+export type ScopeType = 'interior_only' | 'exterior' | 'detail' | 'specialty' | 'advisory'
 
 type ServiceDefinition = {
   id: string
@@ -16,6 +17,8 @@ type ServiceDefinition = {
   pricePerFootCents: number | null
   flatPriceCents: number | null
   startingPricePerFootCents: number | null
+  contractValueCents: number | null
+  scopeType: ScopeType
   paymentType: PaymentType
   quoteOnly: boolean
   stripePriceEnvVarName: string | null
@@ -35,6 +38,8 @@ export type PublicServiceCatalogItem = {
   categoryLabel: string
   pricingModel: PricingModel
   pricingLabel: string
+  contractValueCents: number | null
+  scopeType: ScopeType
   paymentType: PaymentType
   quoteOnly: boolean
   minBoatLengthFeet: number | null
@@ -47,15 +52,42 @@ export type PublicServiceCatalogItem = {
 
 const serviceCatalog: ServiceDefinition[] = [
   {
+    id: 'quick-reset',
+    name: 'Interior Refresh',
+    description:
+      'A light interior-only reset for routine upkeep between deeper details. Includes light vacuum if needed, vinyl seating wipe-down, helm touch-point cleaning, cupholder/high-touch-area wipe-down, quick debris removal, and a dry microfiber finish. Exterior cleaning, wax, ceramic, polishing, shampooing, and heavy stain or mildew work are not included.',
+    category: 'marine_care',
+    pricingModel: 'flat',
+    pricePerFootCents: null,
+    flatPriceCents: 7995,
+    startingPricePerFootCents: null,
+    contractValueCents: 6000,
+    scopeType: 'interior_only',
+    paymentType: 'instant_checkout',
+    quoteOnly: false,
+    stripePriceEnvVarName: 'STRIPE_PRICE_INTERIOR_REFRESH',
+    minBoatLengthFeet: null,
+    maxBoatLengthFeet: null,
+    requiresBoatLength: false,
+    addOnsAllowed: false,
+    warningNotes: [
+      'Interior-only service for routine upkeep between deeper details.',
+      'Approved seasonal or invoiced contract clients value Interior Refresh visits at $60 per visit.',
+    ],
+    displayOrder: 5,
+  },
+  {
     id: 'maintenance-detail',
     name: 'Maintenance Detail',
     description:
-      'A dependable seasonal reset for routine upkeep, light interior attention, and a clean exterior finish.',
+      'A dependable seasonal reset for routine upkeep with a full exterior wash and dry, light interior attention, and a clean exterior finish.',
     category: 'marine_care',
     pricingModel: 'per_foot',
     pricePerFootCents: 1600,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'detail',
     paymentType: 'instant_checkout',
     quoteOnly: false,
     stripePriceEnvVarName: 'STRIPE_PRICE_MAINTENANCE_DETAIL',
@@ -76,6 +108,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: 2900,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'detail',
     paymentType: 'instant_checkout',
     quoteOnly: false,
     stripePriceEnvVarName: 'STRIPE_PRICE_SIGNATURE_DETAIL',
@@ -96,6 +130,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: 4200,
+    contractValueCents: null,
+    scopeType: 'detail',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -116,6 +152,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: 500,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'exterior',
     paymentType: 'instant_checkout',
     quoteOnly: false,
     stripePriceEnvVarName: 'STRIPE_PRICE_EXTERIOR_WASH',
@@ -136,6 +174,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: 2300,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'exterior',
     paymentType: 'instant_checkout',
     quoteOnly: false,
     stripePriceEnvVarName: 'STRIPE_PRICE_BUFF_WAX',
@@ -156,6 +196,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: 600,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'interior_only',
     paymentType: 'instant_checkout',
     quoteOnly: false,
     stripePriceEnvVarName: 'STRIPE_PRICE_VINYL_DEEP_CLEAN',
@@ -176,6 +218,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'interior_only',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -196,6 +240,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: 500,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'interior_only',
     paymentType: 'instant_checkout',
     quoteOnly: false,
     stripePriceEnvVarName: 'STRIPE_PRICE_CARPET_MAT_SHAMPOO',
@@ -216,6 +262,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: 600,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'exterior',
     paymentType: 'instant_checkout',
     quoteOnly: false,
     stripePriceEnvVarName: 'STRIPE_PRICE_NON_SKID_DECK_SCRUB',
@@ -236,6 +284,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'exterior',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -256,6 +306,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'specialty',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -276,6 +328,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'exterior',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -296,6 +350,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'specialty',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -316,6 +372,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'specialty',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -336,6 +394,8 @@ const serviceCatalog: ServiceDefinition[] = [
     pricePerFootCents: null,
     flatPriceCents: null,
     startingPricePerFootCents: null,
+    contractValueCents: null,
+    scopeType: 'advisory',
     paymentType: 'quote_only',
     quoteOnly: true,
     stripePriceEnvVarName: null,
@@ -381,6 +441,8 @@ export function listPublicServiceCatalog(): PublicServiceCatalogItem[] {
       categoryLabel: getServiceCategoryLabel(service.category),
       pricingModel: service.pricingModel,
       pricingLabel: getServicePricingLabel(service),
+      contractValueCents: service.contractValueCents,
+      scopeType: service.scopeType,
       paymentType: service.paymentType,
       quoteOnly: service.quoteOnly,
       minBoatLengthFeet: service.minBoatLengthFeet,
@@ -400,12 +462,19 @@ export function roundBoatLengthFeet(boatLengthFeet: number) {
   return Math.ceil(boatLengthFeet)
 }
 
-export function calculateServicePriceCents(service: ServiceDefinition, roundedBoatLengthFeet: number) {
+export function calculateServicePriceCents(
+  service: ServiceDefinition,
+  roundedBoatLengthFeet: number | null,
+) {
   if (service.paymentType !== 'instant_checkout') {
     throw new Error('This service is not eligible for instant checkout.')
   }
 
   if (service.pricingModel === 'per_foot' && service.pricePerFootCents) {
+    if (!roundedBoatLengthFeet) {
+      throw new Error('Boat length is required for the selected service.')
+    }
+
     return service.pricePerFootCents * roundedBoatLengthFeet
   }
 

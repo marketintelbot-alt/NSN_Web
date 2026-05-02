@@ -5,7 +5,7 @@ function getSiteUrl() {
   return (
     process.env.SITE_URL?.replace(/\/$/, '') ||
     process.env.VITE_SITE_URL?.replace(/\/$/, '') ||
-    'https://nsnautical.com'
+    'https://www.nsnautical.com'
   )
 }
 

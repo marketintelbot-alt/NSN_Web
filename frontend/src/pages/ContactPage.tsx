@@ -1,10 +1,11 @@
-import { CalendarClock, Mail, ShieldCheck, Sparkles } from 'lucide-react'
+import { CalendarClock, Globe2, Mail, MapPin, Phone, ShieldCheck, Sparkles } from 'lucide-react'
 
 import { MarineServiceRequestForm } from '../components/service-request/MarineServiceRequestForm'
 import { Seo } from '../components/seo/Seo'
 import { CtaBanner } from '../components/ui/CtaBanner'
 import { FadeIn } from '../components/ui/FadeIn'
 import { PageHero } from '../components/ui/PageHero'
+import { publicContact, serviceAreas, siteMeta } from '../content/site'
 
 const contactCards = [
   {
@@ -32,8 +33,20 @@ export function ContactPage() {
     <>
       <Seo
         title="Contact"
-        description="Submit a professional North Shore Nautical inquiry for marine care estimates, advisory support, and scheduling review."
+        description="Contact North Shore Nautical for marine detailing, boat detailing, and marine care across Chicago’s North Shore."
         path="/contact"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'LocalBusiness',
+          name: siteMeta.name,
+          url: publicContact.websiteUrl,
+          telephone: publicContact.phoneE164,
+          email: publicContact.emailDisplay,
+          description:
+            'Marine detailing and care services for boat owners across Chicago’s North Shore.',
+          areaServed: serviceAreas,
+          serviceType: ['Marine detailing', 'Boat detailing', 'Marine care'],
+        }}
       />
 
       <PageHero
@@ -44,6 +57,56 @@ export function ContactPage() {
 
       <section className="section-pad">
         <div className="container grid gap-10">
+          <FadeIn className="panel p-6 md:p-8">
+            <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-navy/70">
+                  Contact North Shore Nautical
+                </p>
+                <h2 className="mt-3 font-display text-4xl font-semibold text-ink">
+                  {publicContact.businessName}
+                </h2>
+                <p className="mt-4 text-base leading-8 text-slate">
+                  {publicContact.categoryLine}. {publicContact.serviceAreaLine}.
+                </p>
+                <p className="mt-3 text-sm leading-7 text-slate">
+                  {publicContact.mobileServiceStatement}
+                </p>
+              </div>
+
+              <div className="grid gap-4 text-sm leading-7 text-slate">
+                <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4">
+                  <Phone className="mt-1 h-5 w-5 shrink-0 text-lake" />
+                  <a className="font-semibold text-ink hover:text-lake" href={publicContact.phoneHref}>
+                    Phone: {publicContact.phoneDisplay}
+                  </a>
+                </div>
+                <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4">
+                  <Mail className="mt-1 h-5 w-5 shrink-0 text-lake" />
+                  <a className="font-semibold text-ink hover:text-lake" href={publicContact.emailHref}>
+                    Email: {publicContact.emailDisplay}
+                  </a>
+                </div>
+                <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4">
+                  <Globe2 className="mt-1 h-5 w-5 shrink-0 text-lake" />
+                  <a className="font-semibold text-ink hover:text-lake" href={publicContact.websiteUrl}>
+                    Website: {publicContact.websiteUrl}
+                  </a>
+                </div>
+                <div className="flex items-start gap-3 rounded-2xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4">
+                  <MapPin className="mt-1 h-5 w-5 shrink-0 text-lake" />
+                  <p>
+                    Service area: Chicago’s North Shore / North Shore suburbs, including{' '}
+                    {serviceAreas.slice(1, 10).join(', ')}.
+                  </p>
+                </div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-navy/70">
+                  {publicContact.officialWebsiteLine}
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+
           <div className="grid gap-5 lg:grid-cols-3">
             {contactCards.map((item, index) => {
               const Icon = item.icon

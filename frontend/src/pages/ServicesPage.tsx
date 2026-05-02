@@ -10,9 +10,15 @@ import { marineCareHighlights } from '../content/site'
 
 const coreServices = [
   {
+    title: 'Interior Refresh',
+    description:
+      'A light interior-only reset for routine upkeep between deeper details, without protection, polishing, shampooing, or heavy-condition cleanup.',
+    icon: Sparkles,
+  },
+  {
     title: 'Maintenance Detail',
     description:
-      'A seasonal reset for recurring upkeep, light interior care, clean exterior surfaces, and a polished ready-to-enjoy feel.',
+      'A seasonal reset for recurring upkeep, full exterior wash and dry, light interior care, and a polished ready-to-enjoy feel.',
     icon: Sparkles,
   },
   {
@@ -32,13 +38,16 @@ const coreServices = [
 const specialtyServices = [
   'Exterior Wash',
   'Buff & Wax',
-  'Oxidation Removal',
-  'Interior Cleaning',
   'Vinyl Deep Clean',
+  'Interior Cleaning',
   'Carpet / Mat Shampoo',
   'Non-Skid Deck Scrub',
-  'Metal Polishing',
+  'Heavy Oxidation Removal',
+  'Mold / Mildew Treatment',
+  'Multi-Stage Gelcoat Correction',
   'Teak Cleaning & Oiling',
+  'Metal Polishing',
+  'Owner Advisory Support',
 ]
 
 export function ServicesPage() {
@@ -135,7 +144,7 @@ export function ServicesPage() {
           <SectionIntro
             label="How Requests Are Reviewed"
             title="Instant checkout where it makes sense. Inquiry review when it does not."
-            copy="Routine per-foot services for boats from 10-30 feet can move to secure checkout after the estimate is calculated. Larger boats, heavier oxidation, mildew, neglected condition, unusual access, restoration work, and advisory needs go to manual review instead."
+            copy="Routine flat and per-foot services can move to secure checkout after the estimate is calculated. Larger boats, heavier oxidation, mildew, neglected condition, unusual access, restoration work, and advisory needs go to manual review instead."
           />
         </div>
       </section>

@@ -2,7 +2,7 @@ import type { AdminBooking } from './bookingStore.js'
 import { escapeHtml } from './sanitize.js'
 import { formatReturnTimeLabel, formatStoredDateTime } from './time.js'
 
-const supportPhoneNumbers = ['(847) 331-0927', '(314) 606-2112'] as const
+const supportPhoneNumbers = ['314-606-2112'] as const
 
 function renderDetailRow(label: string, value: string) {
   return `<tr><td style="padding:10px 0;color:#5f7080;font-size:13px;vertical-align:top;width:220px;">${escapeHtml(label)}</td><td style="padding:10px 0;color:#06131f;font-size:14px;font-weight:600;">${escapeHtml(value)}</td></tr>`
@@ -12,7 +12,7 @@ function getSiteUrl() {
   return (
     process.env.SITE_URL?.replace(/\/$/, '') ||
     process.env.VITE_SITE_URL?.replace(/\/$/, '') ||
-    'https://nsnautical.com'
+    'https://www.nsnautical.com'
   )
 }
 

@@ -6,11 +6,13 @@ import {
   brandPromise,
   localSearchFocus,
   navigation,
+  publicContact,
   serviceAreas,
 } from '../../content/site'
 import { LogoMark } from '../ui/LogoMark'
 
 const marineCareLinks = [
+  'Interior Refresh',
   'Maintenance Detail',
   'Signature Detail',
   'Exterior Wash',
@@ -28,11 +30,22 @@ export function Footer() {
             <p className="mt-5 text-sm leading-7 text-slate md:text-base">{brandPromise}</p>
             <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-5">
               <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
-                Chicago&apos;s North Shore
+                Official Business Information
               </p>
-              <p className="mt-3 text-sm leading-7 text-slate">
-                {localSearchFocus}
-              </p>
+              <div className="mt-3 grid gap-2 text-sm leading-7 text-slate">
+                <p className="font-semibold text-ink">{publicContact.businessName}</p>
+                <p>{publicContact.categoryLine}</p>
+                <p>{publicContact.serviceAreaLine}</p>
+                <a className="font-semibold text-ink hover:text-lake" href={publicContact.phoneHref}>
+                  Phone: {publicContact.phoneDisplay}
+                </a>
+                <a className="font-semibold text-ink hover:text-lake" href={publicContact.emailHref}>
+                  Email: {publicContact.emailDisplay}
+                </a>
+                <a className="font-semibold text-ink hover:text-lake" href={publicContact.websiteUrl}>
+                  Website: {publicContact.websiteDisplay}
+                </a>
+              </div>
             </div>
           </div>
 
@@ -71,7 +84,8 @@ export function Footer() {
 
         <div className="mt-12 grid gap-6 border-t border-ink/10 pt-6 md:grid-cols-[1fr_auto] md:items-center">
           <p className="text-sm leading-7 text-slate">
-            Service area includes {serviceAreas.join(', ')}, plus select nearby Lake Michigan marinas by request review.
+            {publicContact.officialWebsiteLine}. {localSearchFocus} Service area includes{' '}
+            {serviceAreas.join(', ')}.
           </p>
           <div className="flex flex-wrap gap-4 text-sm text-slate">
             <Link className="inline-flex items-center gap-2 hover:text-ink" to="/service-agreement">

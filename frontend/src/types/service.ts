@@ -1,6 +1,7 @@
 export type ServiceCategory = 'marine_care' | 'advisory'
 export type PaymentType = 'instant_checkout' | 'quote_only'
 export type PricingModel = 'per_foot' | 'flat' | 'starting_at_per_foot' | 'custom'
+export type ScopeType = 'interior_only' | 'exterior' | 'detail' | 'specialty' | 'advisory'
 
 export type ServiceCatalogItem = {
   id: string
@@ -10,6 +11,8 @@ export type ServiceCatalogItem = {
   categoryLabel: string
   pricingModel: PricingModel
   pricingLabel: string
+  contractValueCents: number | null
+  scopeType: ScopeType
   paymentType: PaymentType
   quoteOnly: boolean
   minBoatLengthFeet: number | null

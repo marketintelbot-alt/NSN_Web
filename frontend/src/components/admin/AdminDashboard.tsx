@@ -1185,7 +1185,7 @@ export function AdminDashboard({ accountSession, onSignedOut }: AdminDashboardPr
                         Service name
                         <input
                           className="input-field"
-                          placeholder="Quick Reset"
+                          placeholder="Interior Refresh"
                           value={service.serviceName}
                           onChange={(event) =>
                             updateServiceRow(service.id, 'serviceName', event.target.value)

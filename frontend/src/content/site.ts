@@ -10,13 +10,29 @@ export type PublicNavigationItem = {
 export const siteMeta = {
   name: 'North Shore Nautical',
   titleSuffix: 'North Shore Nautical',
-  tagline: 'Premium Marine Care & Advisory',
+  tagline: 'Marine Detailing & Care',
   description:
-    "Premium boat detailing, marine care, and practical owner advisory for Chicago's North Shore, Wilmette, Winnetka, Wilmette Harbor, and Lake Michigan marinas.",
-  siteUrl: import.meta.env.VITE_SITE_URL?.replace(/\/$/, '') || 'https://nsnautical.com',
+    "Marine detailing, boat detailing, marine care, and practical owner advisory for boat owners across Chicago's North Shore.",
+  siteUrl: 'https://www.nsnautical.com',
   heroImage: '/images/north-shore-hero.jpeg',
   socialImage: '/images/social-card.svg',
   timeZone: 'America/Chicago',
+}
+
+export const publicContact = {
+  businessName: 'North Shore Nautical',
+  categoryLine: 'Marine Detailing & Care',
+  serviceAreaLine: 'Serving Chicago’s North Shore',
+  phoneDisplay: '314-606-2112',
+  phoneHref: 'tel:+13146062112',
+  phoneE164: '+1-314-606-2112',
+  emailDisplay: 'carter@ellismarinegroup.com',
+  emailHref: 'mailto:carter@ellismarinegroup.com',
+  websiteDisplay: 'nsnautical.com',
+  websiteUrl: 'https://www.nsnautical.com',
+  officialWebsiteLine: 'Official website: nsnautical.com',
+  mobileServiceStatement:
+    'We are a mobile/service-area marine care business. Clients are served at boats, docks, marinas, storage locations, and approved service locations.',
 }
 
 export const seoKeywords = [
@@ -50,38 +66,42 @@ export const navigation: PublicNavigationItem[] = [
 ]
 
 export const serviceAreas = [
-  'Chicago',
-  'Wilmette',
-  'Wilmette Harbor',
-  'Kenilworth',
+  'Chicago’s North Shore',
   'Winnetka',
+  'Wilmette',
   'Glencoe',
+  'Kenilworth',
   'Highland Park',
   'Lake Forest',
-  'Lake Bluff',
+  'Evanston',
+  'Northbrook',
+  'Glenview',
+  'Nearby North Shore areas',
 ]
 
 export const brandPromise =
   'We help North Shore boat owners keep their boats clean, protected, and ready to enjoy all summer.'
 
 export const localSearchFocus =
-  'Local service focus includes Wilmette, Winnetka, Wilmette Harbor, Chicago’s North Shore, and select nearby Lake Michigan marinas by request review.'
+  'Serving Chicago’s North Shore and nearby boating communities, including Winnetka, Wilmette, Glencoe, Kenilworth, Highland Park, Lake Forest, Evanston, Northbrook, Glenview, and nearby North Shore areas.'
 
 export const teamMembers = [
   {
     name: 'Carter Ellis',
-    phoneDisplay: '(314) 606-2112',
-    phoneHref: 'tel:+13146062112',
-    emailDisplay: 'carter@ellismarinegroup.com',
-    emailHref: 'mailto:carter@ellismarinegroup.com',
+    role: 'Primary contact',
+    phoneDisplay: publicContact.phoneDisplay,
+    phoneHref: publicContact.phoneHref,
+    emailDisplay: publicContact.emailDisplay,
+    emailHref: publicContact.emailHref,
     initials: 'CE',
   },
   {
     name: 'Johnny Maris',
-    phoneDisplay: '(847) 331-0927',
-    phoneHref: 'tel:+18473310927',
-    emailDisplay: 'johnny@ellismarinegroup.com',
-    emailHref: 'mailto:johnny@ellismarinegroup.com',
+    role: 'Operations support',
+    phoneDisplay: publicContact.phoneDisplay,
+    phoneHref: publicContact.phoneHref,
+    emailDisplay: publicContact.emailDisplay,
+    emailHref: publicContact.emailHref,
     initials: 'JM',
   },
 ]
@@ -126,8 +146,14 @@ export const homeMetrics = [
 
 export const marineCareHighlights = [
   {
+    title: 'Interior Refresh',
+    description:
+      'A light interior-only visit for routine upkeep between deeper details, focused on seating, helm touchpoints, cupholders, debris removal, and a dry microfiber finish.',
+  },
+  {
     title: 'Maintenance Detail',
-    description: 'For recurring seasonal upkeep, light interior care, and a fresh-ready exterior.',
+    description:
+      'For recurring seasonal upkeep with full exterior wash and dry, light interior care, and a fresh-ready exterior.',
   },
   {
     title: 'Signature Detail',
@@ -201,7 +227,7 @@ export const faqItems = [
   {
     question: 'Which services can I check out online?',
     answer:
-      'Routine per-foot marine care services for boats from 10-30 feet can move to secure checkout online. Boats over 30 feet, heavier condition work, and advisory requests are reviewed through an inquiry-first process.',
+      'Routine flat and per-foot marine care services can move to secure checkout online. Boats over 30 feet, heavier condition work, and advisory requests are reviewed through an inquiry-first process.',
   },
   {
     question: 'When is my card actually charged?',
@@ -212,6 +238,11 @@ export const faqItems = [
     question: 'What if I am not sure which service fits my boat?',
     answer:
       'Choose the “not sure what I need” option in the booking flow or contact form. Those requests are routed directly to a quote-and-review path.',
+  },
+  {
+    question: 'What is included in Interior Refresh?',
+    answer:
+      'Interior Refresh is a light interior-only reset for routine upkeep between deeper details. It includes light vacuum if needed, vinyl seating wipe-down, helm touch-point cleaning, cupholder and high-touch-area wipe-down, quick debris removal, and a dry microfiber finish. Exterior cleaning, wax, ceramic, polishing, shampooing, and heavy stain or mildew work are not included.',
   },
   {
     question: 'Do you offer advisory without detailing?',

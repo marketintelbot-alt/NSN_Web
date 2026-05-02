@@ -110,6 +110,8 @@ export type ClientPasswordChangeInput = {
 
 const missingSchemaMessage =
   'Client account storage is not configured yet. Run the latest Supabase schema before using client account management.'
+const interiorRefreshServiceKey = 'quick-reset'
+const interiorRefreshDisplayName = 'Interior Refresh'
 
 function isMissingClientAccountsSchemaError(error: { message?: string } | null) {
   const message = error?.message?.toLowerCase() || ''
@@ -136,7 +138,27 @@ function normalizeServiceKey(serviceName: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
 
-  return normalized.slice(0, 120) || 'service'
+  const serviceKey = normalized.slice(0, 120) || 'service'
+
+  if (serviceKey === interiorRefreshServiceKey || serviceKey === 'interior-refresh') {
+    return interiorRefreshServiceKey
+  }
+
+  return serviceKey
+}
+
+function getDisplayServiceName(serviceKey: string, serviceName: string) {
+  const normalizedName = normalizeServiceKey(serviceName)
+
+  if (
+    serviceKey === interiorRefreshServiceKey ||
+    serviceKey === 'interior-refresh' ||
+    normalizedName === interiorRefreshServiceKey
+  ) {
+    return interiorRefreshDisplayName
+  }
+
+  return serviceName
 }
 
 function normalizeServiceInputs(services: ClientServiceInput[] | undefined) {
@@ -153,7 +175,7 @@ function normalizeServiceInputs(services: ClientServiceInput[] | undefined) {
     const totalUnits = Math.max(0, Math.floor(Number(service.totalUnits) || 0))
     entries.set(serviceKey, {
       serviceKey,
-      serviceName,
+      serviceName: getDisplayServiceName(serviceKey, serviceName),
       totalUnits,
       notes: normalizeOptionalNotes(service.notes, 500),
     })
@@ -204,7 +226,7 @@ function normalizeServiceEntitlementRow(
     id: row.id,
     clientAccountId: row.client_account_id,
     serviceKey: row.service_key,
-    serviceName: row.service_name,
+    serviceName: getDisplayServiceName(row.service_key, row.service_name),
     totalUnits,
     reservedUnits,
     remainingUnits: Math.max(0, totalUnits - reservedUnits),

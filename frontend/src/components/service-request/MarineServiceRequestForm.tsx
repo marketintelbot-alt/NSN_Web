@@ -121,6 +121,7 @@ export function MarineServiceRequestForm({
     () => services.find((service) => service.id === form.selectedServiceId) || null,
     [form.selectedServiceId, services],
   )
+  const selectedServiceRequiresBoatLength = Boolean(selectedService?.requiresBoatLength)
 
   const numericBoatLength = useMemo(() => parseBoatLength(form.boatLengthFeet), [form.boatLengthFeet])
   const routesToInquiry = useMemo(
@@ -205,12 +206,12 @@ export function MarineServiceRequestForm({
       return 'Please accept the Service Agreement before submitting.'
     }
 
-    if (selectedService?.requiresBoatLength && numericBoatLength === null) {
+    if (selectedServiceRequiresBoatLength && numericBoatLength === null) {
       return 'Please enter your boat length in feet.'
     }
 
     if (
-      selectedService?.requiresBoatLength &&
+      selectedServiceRequiresBoatLength &&
       typeof numericBoatLength === 'number' &&
       numericBoatLength < minimumBoatLengthFeet
     ) {
@@ -218,7 +219,7 @@ export function MarineServiceRequestForm({
     }
 
     if (
-      selectedService?.requiresBoatLength &&
+      selectedServiceRequiresBoatLength &&
       typeof numericBoatLength === 'number' &&
       numericBoatLength > 200
     ) {
@@ -444,7 +445,7 @@ export function MarineServiceRequestForm({
                   <input
                     className="input-field"
                     name="customerEmail"
-                    placeholder="you@example.com"
+                    placeholder="Your email address"
                     type="email"
                     value={form.customerEmail}
                     onChange={handleInputChange}
@@ -462,7 +463,7 @@ export function MarineServiceRequestForm({
                   />
                 </label>
                 <label className="field-label">
-                  Boat Length (ft)
+                  Boat Length (ft){selectedServiceRequiresBoatLength ? '' : ' (optional)'}
                   <input
                     className="input-field"
                     inputMode="decimal"
@@ -600,7 +601,9 @@ export function MarineServiceRequestForm({
                   <p className="mt-3 text-sm leading-7 text-slate">
                     {routesToInquiry
                       ? `Quote-only, condition-heavy, and boats over ${maximumBoatLengthFeet} feet are reviewed manually before pricing is finalized.`
-                      : `Boat length is rounded up to the nearest whole foot for checkout. Routine online checkout is designed for boats between ${minimumBoatLengthFeet} and ${maximumBoatLengthFeet} feet, and condition can still affect approval or final pricing.`}
+                      : selectedServiceRequiresBoatLength
+                        ? `Boat length is rounded up to the nearest whole foot for checkout. Routine online checkout is designed for boats between ${minimumBoatLengthFeet} and ${maximumBoatLengthFeet} feet, and condition can still affect approval or final pricing.`
+                        : 'This flat visit price does not require boat length for checkout, though condition can still affect approval or move the request to review.'}
                   </p>
                 </div>
               ) : null}

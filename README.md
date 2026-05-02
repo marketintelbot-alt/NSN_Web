@@ -55,7 +55,8 @@ North Shore Nautical is now positioned as a premium marine detailing, marine car
 ### Stripe behavior
 
 - instant-checkout services use Stripe Checkout Sessions created on the backend
-- line item quantity equals rounded-up boat length in feet
+- per-foot service line item quantity equals rounded-up boat length in feet
+- flat service line item quantity is `1`
 - `payment_intent_data.capture_method` is set to `manual`
 - checkout authorizes the card but does not confirm the appointment
 - admin approval captures the PaymentIntent and changes the request to `confirmed`
@@ -125,6 +126,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_PUBLISHABLE_KEY=
+STRIPE_PRICE_INTERIOR_REFRESH=
 STRIPE_PRICE_MAINTENANCE_DETAIL=price_1TPubeCobOhggrgBFtN5kPlc
 STRIPE_PRICE_SIGNATURE_DETAIL=price_1TPujvCobOhggrgBNXw0hiqs
 STRIPE_PRICE_EXTERIOR_WASH=price_1TPukPCobOhggrgBeEaSfxpP
@@ -132,8 +134,8 @@ STRIPE_PRICE_BUFF_WAX=price_1TPukvCobOhggrgBI1gCnPHz
 STRIPE_PRICE_VINYL_DEEP_CLEAN=price_1TPulKCobOhggrgBi3IHdn4Y
 STRIPE_PRICE_CARPET_MAT_SHAMPOO=price_1TPuloCobOhggrgBUAtakSk0
 STRIPE_PRICE_NON_SKID_DECK_SCRUB=price_1TPumECobOhggrgBcSx9r6Gf
-SUCCESS_URL=https://nsnautical.com/booking/confirmation?request={REQUEST_ID}&session_id={CHECKOUT_SESSION_ID}
-CANCEL_URL=https://nsnautical.com/booking?cancelled=1&service={SERVICE_ID}
+SUCCESS_URL=https://www.nsnautical.com/booking/confirmation?request={REQUEST_ID}&session_id={CHECKOUT_SESSION_ID}
+CANCEL_URL=https://www.nsnautical.com/booking?cancelled=1&service={SERVICE_ID}
 ADMIN_EMAILS=
 ADMIN_EMAIL=
 ADMIN_PASSWORD_HASH=
@@ -145,7 +147,7 @@ Frontend `.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000
-VITE_SITE_URL=https://nsnautical.com
+VITE_SITE_URL=https://www.nsnautical.com
 ```
 
 Notes:
@@ -234,7 +236,7 @@ Key deployment notes:
 
 1. Run `supabase/schema.sql` or the new migration set in production.
 2. Configure admin auth, Supabase, and Resend env vars.
-3. Create Stripe prices for the instant-checkout services and paste those IDs into env vars.
+3. Create Stripe prices for the instant-checkout services, including the $79.95 Interior Refresh price, and paste those IDs into env vars.
 4. Configure the Stripe webhook endpoint and secret.
 5. Deploy frontend and backend.
 6. Test:

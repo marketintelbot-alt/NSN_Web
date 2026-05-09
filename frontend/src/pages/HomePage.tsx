@@ -156,7 +156,7 @@ export function HomePage() {
             align="center"
             label="Why Owners Choose North Shore Nautical"
             title="Clear communication, polished work, and a summer-ready feel without the clutter."
-            copy="Every section of the public site is built to feel bright, calm, and intentional because that is the same standard the service experience should carry."
+            copy="Owners get straightforward communication, tidy scheduling expectations, and care work focused on keeping the boat protected for the season."
           />
           <div className="mt-12 grid gap-4 lg:grid-cols-2">
             {trustHighlights.map((highlight, index) => (
@@ -176,8 +176,8 @@ export function HomePage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <SectionIntro
               label="Gallery"
-              title="The gallery is ready for richer media, and the structure already feels polished."
-              copy="The current image set is enough to support a polished public debut while keeping the gallery ready for seasonal updates, fresh project photos, and before-and-after stories."
+              title="Clean finishes, careful details, and a closer look at the work."
+              copy="A concise gallery highlights the presentation owners can expect, with room for fresh seasonal photos and before-and-after projects as the season grows."
             />
             <Link className="button-quiet justify-start md:justify-center" to="/gallery">
               View full gallery
@@ -208,7 +208,7 @@ export function HomePage() {
           <SectionIntro
             label="Common Questions"
             title="A few clear answers before you submit."
-            copy="The public site should make the flow obvious: care first, advisory second, and request review before any appointment is confirmed."
+            copy="Start with the service that fits your boat. Routine care can go through booking, while heavier-condition work and advisory requests go through review first."
           />
           <div className="mt-10">
             <FaqList items={faqItems} />

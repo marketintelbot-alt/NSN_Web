@@ -20,7 +20,7 @@ export function GalleryPage() {
       <PageHero
         eyebrow="Gallery"
         title="A bright, premium look built around clean finishes and summer-ready boats."
-        description="The current gallery structure is ready for new seasonal media while already supporting a polished public debut with strong storytelling, clean alt text, and flexible image blocks."
+        description="Browse selected details, seasonal presentation, and project-ready imagery from North Shore Nautical."
       >
         <div className="flex flex-col gap-4 sm:flex-row">
           <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
@@ -37,8 +37,8 @@ export function GalleryPage() {
         <div className="container">
           <SectionIntro
             label="Seasonal Presentation"
-            title="The gallery is built to feel premium now and flexible later."
-            copy="North Shore Nautical does not need a huge media library to look finished. What matters is a clean structure, consistent spacing, and image presentation that supports trust."
+            title="Clean presentation for boats that should look ready to use."
+            copy="The gallery focuses on finish quality, practical upkeep, and the kind of refreshed presentation owners want before time on the water."
           />
 
           <div className="mt-12 grid gap-6 lg:grid-cols-2">

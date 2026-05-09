@@ -13,7 +13,7 @@ export function AboutPage() {
     <>
       <Seo
         title="About Us"
-        description="About North Shore Nautical, the official website for marine detailing and care across Chicago’s North Shore."
+        description="About North Shore Nautical, a marine detailing and care team serving Chicago’s North Shore."
         path="/about"
       />
 
@@ -38,9 +38,6 @@ export function AboutPage() {
                 copy="North Shore Nautical provides marine detailing, interior refreshes, maintenance details, exterior washes, restoration support, and owner advisory services for boat owners across Chicago’s North Shore."
               />
               <div className="grid gap-4 text-sm leading-7 text-slate">
-                <p className="rounded-2xl border border-ink/10 bg-[#f8fbf7]/90 px-4 py-4 font-semibold text-ink">
-                  This is the official website for North Shore Nautical.
-                </p>
                 <p>
                   {publicContact.mobileServiceStatement}
                 </p>

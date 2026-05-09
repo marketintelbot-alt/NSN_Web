@@ -100,9 +100,6 @@ export function ContactPage() {
                     {serviceAreas.slice(1, 10).join(', ')}.
                   </p>
                 </div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-navy/70">
-                  {publicContact.officialWebsiteLine}
-                </p>
               </div>
             </div>
           </FadeIn>

@@ -4,9 +4,7 @@ import { Link } from 'react-router-dom'
 import {
   advisoryHighlights,
   brandPromise,
-  localSearchFocus,
   navigation,
-  publicContact,
   serviceAreas,
 } from '../../content/site'
 import { LogoMark } from '../ui/LogoMark'
@@ -24,29 +22,10 @@ export function Footer() {
   return (
     <footer className="site-footer">
       <div className="container py-14 md:py-16">
-        <div className="grid gap-12 lg:grid-cols-[1.25fr_0.85fr_0.85fr_1fr]">
+        <div className="grid gap-12 lg:grid-cols-[1.05fr_0.8fr_0.9fr_1.25fr]">
           <div className="max-w-md">
             <LogoMark size="footer" />
             <p className="mt-5 text-sm leading-7 text-slate md:text-base">{brandPromise}</p>
-            <div className="mt-6 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 px-5 py-5">
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
-                Official Business Information
-              </p>
-              <div className="mt-3 grid gap-2 text-sm leading-7 text-slate">
-                <p className="font-semibold text-ink">{publicContact.businessName}</p>
-                <p>{publicContact.categoryLine}</p>
-                <p>{publicContact.serviceAreaLine}</p>
-                <a className="font-semibold text-ink hover:text-lake" href={publicContact.phoneHref}>
-                  Phone: {publicContact.phoneDisplay}
-                </a>
-                <a className="font-semibold text-ink hover:text-lake" href={publicContact.emailHref}>
-                  Email: {publicContact.emailDisplay}
-                </a>
-                <a className="font-semibold text-ink hover:text-lake" href={publicContact.websiteUrl}>
-                  Website: {publicContact.websiteDisplay}
-                </a>
-              </div>
-            </div>
           </div>
 
           <div>
@@ -84,8 +63,7 @@ export function Footer() {
 
         <div className="mt-12 grid gap-6 border-t border-ink/10 pt-6 md:grid-cols-[1fr_auto] md:items-center">
           <p className="text-sm leading-7 text-slate">
-            {publicContact.officialWebsiteLine}. {localSearchFocus} Service area includes{' '}
-            {serviceAreas.join(', ')}.
+            Service area includes {serviceAreas.join(', ')}.
           </p>
           <div className="flex flex-wrap gap-4 text-sm text-slate">
             <Link className="inline-flex items-center gap-2 hover:text-ink" to="/service-agreement">

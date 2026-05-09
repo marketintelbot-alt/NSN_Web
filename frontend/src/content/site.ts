@@ -30,7 +30,6 @@ export const publicContact = {
   emailHref: 'mailto:carter@ellismarinegroup.com',
   websiteDisplay: 'nsnautical.com',
   websiteUrl: 'https://www.nsnautical.com',
-  officialWebsiteLine: 'Official website: nsnautical.com',
   mobileServiceStatement:
     'We are a mobile/service-area marine care business. Clients are served at boats, docks, marinas, storage locations, and approved service locations.',
 }

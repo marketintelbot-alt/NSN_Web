@@ -225,40 +225,6 @@ export function HomePage() {
         secondaryTo="/pricing"
       />
 
-      <section className="section-pad">
-        <div className="container">
-          <FadeIn className="panel p-6 md:p-8">
-            <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-navy/70">
-                  Official Website
-                </p>
-                <h2 className="mt-3 font-display text-4xl font-semibold text-ink">
-                  Official Website of North Shore Nautical
-                </h2>
-                <p className="mt-4 text-base leading-8 text-slate">
-                  Marine detailing and care for Chicago’s North Shore.
-                </p>
-                <p className="mt-3 text-sm leading-7 text-slate">{localSearchFocus}</p>
-              </div>
-              <div className="grid gap-3 rounded-3xl border border-ink/10 bg-[#f8fbf7]/90 p-5 text-sm leading-7 text-slate">
-                <p className="font-semibold text-ink">{publicContact.businessName}</p>
-                <p>{publicContact.categoryLine}</p>
-                <a className="font-semibold text-ink hover:text-lake" href={publicContact.phoneHref}>
-                  Phone: {publicContact.phoneDisplay}
-                </a>
-                <a className="font-semibold text-ink hover:text-lake" href={publicContact.emailHref}>
-                  Email: {publicContact.emailDisplay}
-                </a>
-                <a className="font-semibold text-ink hover:text-lake" href={publicContact.websiteUrl}>
-                  {publicContact.officialWebsiteLine}
-                </a>
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
       <section className="section-pad bg-[#edf6f2]/60">
         <div className="container">
           <SectionIntro

@@ -33,6 +33,60 @@ function getRouteParam(request: Request, key: string) {
   return Array.isArray(value) ? value[0] || '' : value || ''
 }
 
+function getErrorField(error: unknown, key: 'code' | 'details' | 'hint' | 'message') {
+  if (!error || typeof error !== 'object' || !(key in error)) {
+    return ''
+  }
+
+  const value = error[key as keyof typeof error]
+  return typeof value === 'string' ? value : ''
+}
+
+function summarizeRequestError(error: unknown) {
+  return {
+    name: error instanceof Error ? error.name : getErrorField(error, 'code') || 'UnknownError',
+    message:
+      error instanceof Error
+        ? error.message
+        : getErrorField(error, 'message') || 'Unknown service request error.',
+    code: getErrorField(error, 'code'),
+    details: getErrorField(error, 'details'),
+    hint: getErrorField(error, 'hint'),
+  }
+}
+
+function isServiceDependencyError(error: unknown) {
+  const summary = summarizeRequestError(error)
+  const searchableError = [
+    summary.message,
+    summary.code,
+    summary.details,
+    summary.hint,
+  ].join(' ')
+
+  return /SUPABASE|service_requests|schema cache|relation .* does not exist|fetch failed|ENOTFOUND|JWT|permission denied|row-level security/i.test(
+    searchableError,
+  )
+}
+
+function isCheckoutConfigurationError(error: unknown) {
+  const summary = summarizeRequestError(error)
+  const searchableError = [
+    summary.message,
+    summary.code,
+    summary.details,
+    summary.hint,
+  ].join(' ')
+
+  return /Stripe is not configured|site URL is not configured|Online checkout .* not configured|Stripe price|checkout URL/i.test(
+    searchableError,
+  )
+}
+
+function logRequestError(context: string, error: unknown) {
+  console.error(context, summarizeRequestError(error))
+}
+
 function respondWithRequestError(error: unknown, response: Response) {
   if (error instanceof ZodError) {
     return response.status(400).json({
@@ -40,11 +94,33 @@ function respondWithRequestError(error: unknown, response: Response) {
     })
   }
 
+  if (isServiceDependencyError(error)) {
+    logRequestError('Service request dependency failure.', error)
+
+    return response.status(503).json({
+      message:
+        'Online requests are temporarily unavailable. Please call or email North Shore Nautical and we will help directly.',
+    })
+  }
+
+  if (isCheckoutConfigurationError(error)) {
+    logRequestError('Service request checkout configuration failure.', error)
+
+    return response.status(503).json({
+      message:
+        'Secure checkout is temporarily unavailable. Please submit the request for review or contact North Shore Nautical directly.',
+    })
+  }
+
   if (error instanceof Error) {
+    logRequestError('Service request validation failure.', error)
+
     return response.status(400).json({
       message: error.message,
     })
   }
+
+  logRequestError('Unexpected service request failure.', error)
 
   return response.status(500).json({
     message: 'An unexpected service request error occurred.',

@@ -48,6 +48,13 @@ import {
   listServiceCatalogHandler,
   readServiceRequestConfirmationHandler,
 } from './routes/serviceRequests.js'
+import {
+  findServiceById,
+  getConfiguredStripePriceId,
+  listPublicServiceCatalog,
+} from './lib/serviceCatalog.js'
+import { getSupabaseAdminClient, hasSupabaseAdminConfig } from './lib/supabaseAdmin.js'
+import { hasStripeCheckoutConfig } from './lib/stripeCheckout.js'
 
 const app = express()
 const port = Number(process.env.PORT || 4000)
@@ -147,6 +154,67 @@ app.get('/api/health', (_request, response) => {
   response.status(200).json({
     status: 'ok',
     service: 'north-shore-nautical-api',
+  })
+})
+
+app.get('/api/health/dependencies', async (_request, response) => {
+  const supabaseConfigured = hasSupabaseAdminConfig()
+  const stripeConfigured = hasStripeCheckoutConfig()
+  const instantCheckoutServices = listPublicServiceCatalog().filter(
+    (service) => service.paymentType === 'instant_checkout',
+  )
+  const missingStripePriceServices = instantCheckoutServices
+    .filter((service) => {
+      const serviceDefinition = findServiceById(service.id)
+      return !serviceDefinition || !getConfiguredStripePriceId(serviceDefinition)
+    })
+    .map((service) => service.id)
+
+  let serviceRequestsTable = {
+    ok: false,
+    message: supabaseConfigured ? 'Not checked yet.' : 'Supabase environment variables are missing.',
+  }
+
+  if (supabaseConfigured) {
+    try {
+      const { error } = await getSupabaseAdminClient()
+        .from('service_requests')
+        .select('id', { count: 'exact', head: true })
+        .limit(1)
+
+      if (error) {
+        serviceRequestsTable = {
+          ok: false,
+          message: error.message || 'Unable to query the service_requests table.',
+        }
+      } else {
+        serviceRequestsTable = {
+          ok: true,
+          message: 'service_requests table is reachable.',
+        }
+      }
+    } catch (error) {
+      serviceRequestsTable = {
+        ok: false,
+        message: error instanceof Error ? error.message : 'Unable to reach Supabase.',
+      }
+    }
+  }
+
+  const dependenciesOk =
+    supabaseConfigured &&
+    serviceRequestsTable.ok &&
+    stripeConfigured &&
+    missingStripePriceServices.length === 0
+
+  response.status(dependenciesOk ? 200 : 503).json({
+    status: dependenciesOk ? 'ok' : 'degraded',
+    checks: {
+      supabaseConfigured,
+      serviceRequestsTable,
+      stripeConfigured,
+      missingStripePriceServices,
+    },
   })
 })
 

@@ -87,7 +87,7 @@ export const localSearchFocus =
 export const teamMembers = [
   {
     name: 'Carter Ellis',
-    role: 'Primary contact',
+    role: 'President',
     phoneDisplay: publicContact.phoneDisplay,
     phoneHref: publicContact.phoneHref,
     emailDisplay: publicContact.emailDisplay,
@@ -96,11 +96,11 @@ export const teamMembers = [
   },
   {
     name: 'Johnny Maris',
-    role: 'Operations support',
+    role: 'Vice President',
     phoneDisplay: publicContact.phoneDisplay,
     phoneHref: publicContact.phoneHref,
-    emailDisplay: publicContact.emailDisplay,
-    emailHref: publicContact.emailHref,
+    emailDisplay: 'johnny@ellismarinegroup.com',
+    emailHref: 'mailto:johnny@ellismarinegroup.com',
     initials: 'JM',
   },
 ]

@@ -242,6 +242,9 @@ export function HomePage() {
                   </div>
                   <div>
                     <h2 className="text-2xl font-semibold text-ink">{member.name}</h2>
+                    <p className="mt-2 text-sm font-semibold uppercase tracking-[0.16em] text-navy/70">
+                      {member.role}
+                    </p>
                   </div>
                 </div>
                 <div className="mt-6 grid gap-3">

@@ -203,6 +203,9 @@ export type GalleryStory = {
 export const galleryCategories: GalleryCategory[] = [
   { label: 'All Work', slug: 'all' },
   { label: 'Sea Doo', slug: 'sea-doo' },
+  { label: 'Sea Ray', slug: 'sea-ray' },
+  { label: 'Tige', slug: 'tige' },
+  { label: 'Mastercraft', slug: 'mastercraft' },
 ]
 
 export const galleryStories: GalleryStory[] = [

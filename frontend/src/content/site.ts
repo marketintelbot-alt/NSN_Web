@@ -203,7 +203,6 @@ export type GalleryStory = {
 export const galleryCategories: GalleryCategory[] = [
   { label: 'All Work', slug: 'all' },
   { label: 'Sea Doo', slug: 'sea-doo' },
-  { label: 'General Marine Care', slug: 'general-marine-care' },
 ]
 
 export const galleryStories: GalleryStory[] = [
@@ -220,38 +219,6 @@ export const galleryStories: GalleryStory[] = [
     afterImage: '/images/gallery/sea-doo-after.jpg',
     afterAlt: 'Clean Sea Doo GTX seat and exterior after detailing',
     tags: ['Personal watercraft', 'Interior cleanup', 'Footwell grime', 'Finished presentation'],
-  },
-  {
-    title: 'Clean exterior finish',
-    caption: 'A bright, polished look that feels ready for a full Lake Michigan weekend.',
-    image: '/images/north-shore-hero.jpeg',
-    imageAlt: 'Clean boat exterior on the water',
-    category: 'General Marine Care',
-    categorySlug: 'general-marine-care',
-  },
-  {
-    title: 'Summer-ready presentation',
-    caption: 'Fresh surfaces, clean interiors, and a service rhythm built around marina life.',
-    image: '/images/north-shore-hero.jpeg',
-    imageAlt: 'Summer-ready boat presentation',
-    category: 'General Marine Care',
-    categorySlug: 'general-marine-care',
-  },
-  {
-    title: 'North Shore detail standards',
-    caption: 'Marine care that looks calm, premium, and intentional from the first walkthrough.',
-    image: '/images/hero-lake-fallback.svg',
-    imageAlt: 'North Shore marine care detail presentation',
-    category: 'General Marine Care',
-    categorySlug: 'general-marine-care',
-  },
-  {
-    title: 'Owner-focused upkeep',
-    caption: 'Support designed around clean boats, clear communication, and practical next steps.',
-    image: '/images/hero-lake-fallback.svg',
-    imageAlt: 'Owner-focused marine upkeep presentation',
-    category: 'General Marine Care',
-    categorySlug: 'general-marine-care',
   },
 ]
 

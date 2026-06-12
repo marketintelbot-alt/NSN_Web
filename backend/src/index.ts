@@ -53,8 +53,10 @@ import {
   getConfiguredStripePriceId,
   listPublicServiceCatalog,
 } from './lib/serviceCatalog.js'
+import { getAdminAuthConfig, getPrimaryAdminEmail } from './lib/adminSession.js'
+import { getBusinessNotificationEmails } from './lib/notificationEmails.js'
 import { getSupabaseAdminClient, hasSupabaseAdminConfig } from './lib/supabaseAdmin.js'
-import { hasStripeCheckoutConfig } from './lib/stripeCheckout.js'
+import { getStripeWebhookSecret, hasStripeCheckoutConfig } from './lib/stripeCheckout.js'
 
 const app = express()
 const port = Number(process.env.PORT || 4000)
@@ -125,7 +127,7 @@ app.use(
     origin(origin, callback) {
       callback(null, isAllowedOrigin(origin))
     },
-    credentials: true,
+    credentials: false,
     methods: ['DELETE', 'GET', 'POST', 'PUT'],
     allowedHeaders: ['Authorization', 'Content-Type'],
     maxAge: 86400,
@@ -157,9 +159,19 @@ app.get('/api/health', (_request, response) => {
   })
 })
 
-app.get('/api/health/dependencies', async (_request, response) => {
+app.get(['/api/health/ready', '/api/health/dependencies'], async (_request, response) => {
   const supabaseConfigured = hasSupabaseAdminConfig()
   const stripeConfigured = hasStripeCheckoutConfig()
+  const stripeWebhookConfigured = Boolean(getStripeWebhookSecret())
+  const adminAuthConfigured = Boolean(getAdminAuthConfig())
+  const emailConfigured = Boolean(
+    process.env.RESEND_API_KEY?.trim() &&
+      process.env.FROM_EMAIL?.trim() &&
+      getBusinessNotificationEmails(getPrimaryAdminEmail()).length > 0,
+  )
+  const operationalConfigReady =
+    process.env.NODE_ENV !== 'production' ||
+    (stripeWebhookConfigured && adminAuthConfigured && emailConfigured)
   const instantCheckoutServices = listPublicServiceCatalog().filter(
     (service) => service.paymentType === 'instant_checkout',
   )
@@ -185,7 +197,7 @@ app.get('/api/health/dependencies', async (_request, response) => {
       if (error) {
         serviceRequestsTable = {
           ok: false,
-          message: error.message || 'Unable to query the service_requests table.',
+          message: 'The service request store is unavailable.',
         }
       } else {
         serviceRequestsTable = {
@@ -196,7 +208,7 @@ app.get('/api/health/dependencies', async (_request, response) => {
     } catch (error) {
       serviceRequestsTable = {
         ok: false,
-        message: error instanceof Error ? error.message : 'Unable to reach Supabase.',
+        message: 'The service request store is unavailable.',
       }
     }
   }
@@ -205,15 +217,21 @@ app.get('/api/health/dependencies', async (_request, response) => {
     supabaseConfigured &&
     serviceRequestsTable.ok &&
     stripeConfigured &&
-    missingStripePriceServices.length === 0
+    missingStripePriceServices.length === 0 &&
+    operationalConfigReady
 
   response.status(dependenciesOk ? 200 : 503).json({
     status: dependenciesOk ? 'ok' : 'degraded',
     checks: {
       supabaseConfigured,
-      serviceRequestsTable,
+      serviceRequestsTable: {
+        ok: serviceRequestsTable.ok,
+      },
       stripeConfigured,
-      missingStripePriceServices,
+      stripePricesConfigured: missingStripePriceServices.length === 0,
+      stripeWebhookConfigured,
+      adminAuthConfigured,
+      emailConfigured,
     },
   })
 })

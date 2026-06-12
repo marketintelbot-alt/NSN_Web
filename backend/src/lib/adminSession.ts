@@ -3,7 +3,6 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
 import bcrypt from 'bcryptjs'
 
-import { readAdminSessionCookie } from './adminCookie.js'
 import { authenticateClientCredentials } from './clientAccounts.js'
 
 export type AccountRole = 'admin' | 'client'
@@ -304,7 +303,7 @@ export function readAccountSessionToken(request: Pick<Request, 'headers'>) {
     }
   }
 
-  return readAdminSessionCookie(request as Request)
+  return ''
 }
 
 export function readVerifiedAccountSession(request: Pick<Request, 'headers'>) {

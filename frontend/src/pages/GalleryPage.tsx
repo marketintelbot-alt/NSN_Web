@@ -102,8 +102,10 @@ export function GalleryPage() {
     return galleryStories.filter((story) => story.categorySlug === activeCategory)
   }, [activeCategory])
 
-  const activeCategoryLabel =
-    galleryCategories.find((category) => category.slug === activeCategory)?.label ?? 'this category'
+  const availableCategories = useMemo(
+    () => galleryCategories.filter((category) => (categoryCounts[category.slug] ?? 0) > 0),
+    [categoryCounts],
+  )
 
   return (
     <>
@@ -138,7 +140,7 @@ export function GalleryPage() {
           />
 
           <div className="mt-10 flex flex-wrap gap-3" aria-label="Gallery categories">
-            {galleryCategories.map((category) => {
+            {availableCategories.map((category) => {
               const isActive = activeCategory === category.slug
               const count = categoryCounts[category.slug] ?? 0
 
@@ -172,18 +174,6 @@ export function GalleryPage() {
               <GalleryStoryCard key={story.title} story={story} index={index} />
             ))}
           </div>
-          {visibleStories.length === 0 ? (
-            <FadeIn className="mt-12 rounded-[2rem] border border-ink/10 bg-[#f8fbf7]/90 p-6 shadow-soft md:p-8">
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
-                {activeCategoryLabel}
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold text-ink">Photos coming soon.</h2>
-              <p className="mt-3 max-w-2xl text-base leading-8 text-slate">
-                This category is ready for real before-and-after work when matching project photos
-                are available.
-              </p>
-            </FadeIn>
-          ) : null}
         </div>
       </section>
 

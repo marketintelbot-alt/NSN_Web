@@ -13,6 +13,7 @@ import {
   createRefundedBookingEmail,
 } from './serviceRequestEmails.js'
 import {
+  listAdminServiceRequests,
   markCustomerEmailSent,
   markInternalEmailSent,
   type CustomerEmailType,
@@ -24,6 +25,7 @@ export type ServiceRequestEmailOptions = {
   resendApiKey?: string
   fromEmail?: string
   businessNotificationEmails?: string[]
+  throwOnFailure?: boolean
 }
 
 function isEmailConfigured(options: ServiceRequestEmailOptions) {
@@ -47,14 +49,19 @@ async function sendCustomerEmail(
 
   const resend = new Resend(options.resendApiKey)
   const email = emailFactory(request)
-  const result = await resend.emails.send({
-    from: options.fromEmail!,
-    to: request.customerEmail,
-    replyTo: options.businessNotificationEmails,
-    subject: email.subject,
-    html: email.html,
-    text: email.text,
-  })
+  const result = await resend.emails.send(
+    {
+      from: options.fromEmail!,
+      to: request.customerEmail,
+      replyTo: options.businessNotificationEmails,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+    },
+    {
+      idempotencyKey: `service-request/${request.id}/customer/${emailType}`,
+    },
+  )
 
   if (result.error) {
     throw new Error(result.error.message || 'Unable to send the customer email.')
@@ -75,14 +82,19 @@ async function sendInternalEmail(
 
   const resend = new Resend(options.resendApiKey)
   const email = emailFactory(request)
-  const result = await resend.emails.send({
-    from: options.fromEmail!,
-    to: options.businessNotificationEmails!,
-    replyTo: request.customerEmail,
-    subject: email.subject,
-    html: email.html,
-    text: email.text,
-  })
+  const result = await resend.emails.send(
+    {
+      from: options.fromEmail!,
+      to: options.businessNotificationEmails!,
+      replyTo: request.customerEmail,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+    },
+    {
+      idempotencyKey: `service-request/${request.id}/internal/${emailType}`,
+    },
+  )
 
   if (result.error) {
     throw new Error(result.error.message || 'Unable to send the internal email.')
@@ -91,7 +103,12 @@ async function sendInternalEmail(
   await markInternalEmailSent(request.id, emailType)
 }
 
-async function safelySendEmail(task: Promise<void>, requestId: string, label: string) {
+async function safelySendEmail(
+  task: Promise<void>,
+  requestId: string,
+  label: string,
+  throwOnFailure = false,
+) {
   try {
     await task
   } catch (error) {
@@ -99,6 +116,10 @@ async function safelySendEmail(task: Promise<void>, requestId: string, label: st
       requestId,
       error: error instanceof Error ? error.message : String(error),
     })
+
+    if (throwOnFailure) {
+      throw error
+    }
   }
 }
 
@@ -111,11 +132,13 @@ export async function sendInquiryReceivedEmails(
       sendCustomerEmail(request, 'inquiry_received', createInquiryReceivedEmail, options),
       request.id,
       'inquiry_received customer',
+      options.throwOnFailure,
     ),
     safelySendEmail(
       sendInternalEmail(request, 'new_inquiry', createInternalNewRequestEmail, options),
       request.id,
       'new_inquiry internal',
+      options.throwOnFailure,
     ),
   ])
 }
@@ -134,11 +157,13 @@ export async function sendAuthorizationReceivedEmails(
       ),
       request.id,
       'authorization_received customer',
+      options.throwOnFailure,
     ),
     safelySendEmail(
       sendInternalEmail(request, 'authorization_received', createInternalNewRequestEmail, options),
       request.id,
       'authorization_received internal',
+      options.throwOnFailure,
     ),
   ])
 }
@@ -151,6 +176,7 @@ export async function sendBookingApprovedEmail(
     sendCustomerEmail(request, 'booking_approved', createBookingApprovedEmail, options),
     request.id,
     'booking_approved customer',
+    options.throwOnFailure,
   )
 }
 
@@ -167,14 +193,19 @@ export async function sendPaymentLinkEmail(
 
       const resend = new Resend(options.resendApiKey)
       const email = createPaymentLinkEmail(request, checkoutUrl)
-      const result = await resend.emails.send({
-        from: options.fromEmail!,
-        to: request.customerEmail,
-        replyTo: options.businessNotificationEmails,
-        subject: email.subject,
-        html: email.html,
-        text: email.text,
-      })
+      const result = await resend.emails.send(
+        {
+          from: options.fromEmail!,
+          to: request.customerEmail,
+          replyTo: options.businessNotificationEmails,
+          subject: email.subject,
+          html: email.html,
+          text: email.text,
+        },
+        {
+          idempotencyKey: `service-request/${request.id}/customer/payment-link/${request.stripeCheckoutSessionId || 'pending'}`,
+        },
+      )
 
       if (result.error) {
         throw new Error(result.error.message || 'Unable to send the payment link email.')
@@ -182,6 +213,7 @@ export async function sendPaymentLinkEmail(
     })(),
     request.id,
     'payment_link customer',
+    options.throwOnFailure,
   )
 }
 
@@ -193,6 +225,7 @@ export async function sendChangesRequestedEmail(
     sendCustomerEmail(request, 'changes_requested', createChangesRequestedEmail, options),
     request.id,
     'changes_requested customer',
+    options.throwOnFailure,
   )
 }
 
@@ -204,6 +237,7 @@ export async function sendDeclinedRequestEmail(
     sendCustomerEmail(request, 'request_declined', createDeclinedRequestEmail, options),
     request.id,
     'request_declined customer',
+    options.throwOnFailure,
   )
 }
 
@@ -215,6 +249,7 @@ export async function sendCanceledBookingEmail(
     sendCustomerEmail(request, 'booking_canceled', createCanceledBookingEmail, options),
     request.id,
     'booking_canceled customer',
+    options.throwOnFailure,
   )
 }
 
@@ -226,6 +261,7 @@ export async function sendCompletedServiceEmail(
     sendCustomerEmail(request, 'service_completed', createCompletedServiceEmail, options),
     request.id,
     'service_completed customer',
+    options.throwOnFailure,
   )
 }
 
@@ -237,5 +273,56 @@ export async function sendRefundedBookingEmail(
     sendCustomerEmail(request, 'booking_refunded', createRefundedBookingEmail, options),
     request.id,
     'booking_refunded customer',
+    options.throwOnFailure,
   )
+}
+
+export async function retryPendingServiceRequestEmails(
+  options: ServiceRequestEmailOptions,
+) {
+  const requests = await listAdminServiceRequests()
+
+  for (const request of requests) {
+    if (request.bookingStatus === 'refunded') {
+      await sendRefundedBookingEmail(request, options)
+      continue
+    }
+
+    if (request.bookingStatus === 'completed') {
+      await sendCompletedServiceEmail(request, options)
+      continue
+    }
+
+    if (request.bookingStatus === 'canceled') {
+      await sendCanceledBookingEmail(request, options)
+      continue
+    }
+
+    if (request.bookingStatus === 'declined') {
+      await sendDeclinedRequestEmail(request, options)
+      continue
+    }
+
+    if (request.bookingStatus === 'changes_requested') {
+      await sendChangesRequestedEmail(request, options)
+      continue
+    }
+
+    if (request.bookingStatus === 'confirmed' && request.paymentStatus === 'captured') {
+      await sendBookingApprovedEmail(request, options)
+      continue
+    }
+
+    if (request.paymentStatus === 'authorized') {
+      await sendAuthorizationReceivedEmails(request, options)
+      continue
+    }
+
+    if (
+      request.requestKind === 'inquiry' &&
+      request.bookingStatus === 'pending_review'
+    ) {
+      await sendInquiryReceivedEmails(request, options)
+    }
+  }
 }

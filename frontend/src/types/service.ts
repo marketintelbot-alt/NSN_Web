@@ -125,6 +125,14 @@ export type AdminServiceRequest = {
   cancellationWindowStatus: 'open' | 'closed' | 'not_scheduled'
   cancellationWindowClosesAt: string | null
   cancellationWindowClosesAtLabel: string | null
+  availableActions: {
+    approveCapture: boolean
+    requestChanges: boolean
+    decline: boolean
+    cancel: boolean
+    complete: boolean
+    createPaymentLink: boolean
+  }
 }
 
 export type AdminServiceRequestsResponse = {

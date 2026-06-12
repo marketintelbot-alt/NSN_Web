@@ -2,14 +2,21 @@
   "name": "north-shore-nautical",
   "private": true,
   "version": "1.0.0",
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd backend && npm run dev",
     "build": "cd frontend && npm run build && cd ../backend && npm run build",
-    "lint": "cd frontend && npm run lint",
+    "lint": "npm --prefix frontend run lint && npm --prefix backend run typecheck",
+    "test": "npm --prefix backend run test",
+    "check": "npm run lint && npm run test && npm run build && npm run audit:business-info && npm run audit:services && npm run audit:stripe-tax && npm run audit:security",
+    "audit:dependencies": "npm --prefix frontend audit --omit=dev --audit-level=high && npm --prefix backend audit --omit=dev --audit-level=high",
     "audit:business-info": "node scripts/audit-public-business-info.mjs",
     "audit:services": "node scripts/audit-service-copy.mjs",
     "audit:stripe-tax": "node scripts/audit-stripe-tax.mjs",
+    "audit:security": "node scripts/audit-security-guardrails.mjs",
     "sync:copy": "bash ./scripts/sync-site-copy.sh"
   }
 }

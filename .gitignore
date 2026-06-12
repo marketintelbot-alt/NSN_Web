@@ -5,5 +5,6 @@ backend/dist
 backend/.env
 frontend/.env
 .playwright-cli
+supabase/.temp
 output
 .DS_Store

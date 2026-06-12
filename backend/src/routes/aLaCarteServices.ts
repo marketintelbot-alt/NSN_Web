@@ -6,13 +6,19 @@ import {
   findALaCarteServiceByKey,
   fulfillALaCarteCheckoutPurchase,
   listPublicALaCarteServices,
+  refundALaCarteCheckoutPurchase,
 } from '../lib/aLaCarteServices.js'
 import { getPrimaryAdminEmail } from '../lib/adminSession.js'
 import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
-import { sendRefundedBookingEmail } from '../lib/serviceRequestEmailDelivery.js'
+import {
+  sendAuthorizationReceivedEmails,
+  sendRefundedBookingEmail,
+} from '../lib/serviceRequestEmailDelivery.js'
 import {
   syncServiceRequestAuthorizationFromCheckoutSession,
   syncServiceRequestAuthorizationFromPaymentIntent,
+  syncServiceRequestCheckoutExpired,
+  syncServiceRequestFailureFromPaymentIntent,
   syncServiceRequestRefundFromCharge,
 } from '../lib/serviceRequests.js'
 import { getStripeClient, getStripeWebhookSecret } from '../lib/stripeCheckout.js'
@@ -64,6 +70,7 @@ function getEmailOptions() {
     resendApiKey: process.env.RESEND_API_KEY,
     fromEmail: process.env.FROM_EMAIL,
     businessNotificationEmails: getBusinessNotificationEmails(getPrimaryAdminEmail()),
+    throwOnFailure: true,
   }
 }
 
@@ -84,10 +91,21 @@ export async function handleStripeWebhook(request: Request, response: Response) 
     })
   }
 
-  try {
-    const stripe = getStripeClient()
-    const event = stripe.webhooks.constructEvent(request.body, signature, webhookSecret)
+  const stripe = getStripeClient()
+  let event: Stripe.Event
 
+  try {
+    event = stripe.webhooks.constructEvent(request.body, signature, webhookSecret)
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unable to verify the Stripe webhook payload.'
+
+    return response.status(400).json({
+      message,
+    })
+  }
+
+  try {
     switch (event.type) {
       case 'checkout.session.async_payment_succeeded':
       case 'checkout.session.completed': {
@@ -109,14 +127,39 @@ export async function handleStripeWebhook(request: Request, response: Response) 
           break
         }
 
-        await syncServiceRequestAuthorizationFromCheckoutSession(session)
+        const updatedRequest = await syncServiceRequestAuthorizationFromCheckoutSession(session)
+
+        if (updatedRequest.paymentStatus === 'authorized') {
+          await sendAuthorizationReceivedEmails(updatedRequest, getEmailOptions())
+        }
+
+        break
+      }
+      case 'checkout.session.expired': {
+        const session = event.data.object as Stripe.Checkout.Session
+        await syncServiceRequestCheckoutExpired(session)
         break
       }
       case 'payment_intent.amount_capturable_updated':
-      case 'payment_intent.succeeded':
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        const updatedRequest =
+          await syncServiceRequestAuthorizationFromPaymentIntent(paymentIntent)
+
+        if (updatedRequest?.paymentStatus === 'authorized') {
+          await sendAuthorizationReceivedEmails(updatedRequest, getEmailOptions())
+        }
+
+        break
+      }
       case 'payment_intent.canceled': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         await syncServiceRequestAuthorizationFromPaymentIntent(paymentIntent)
+        break
+      }
+      case 'payment_intent.payment_failed': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        await syncServiceRequestFailureFromPaymentIntent(paymentIntent)
         break
       }
       case 'charge.refunded': {
@@ -124,7 +167,31 @@ export async function handleStripeWebhook(request: Request, response: Response) 
         const refundedRequest = await syncServiceRequestRefundFromCharge(charge)
 
         if (refundedRequest) {
-          void sendRefundedBookingEmail(refundedRequest, getEmailOptions())
+          await sendRefundedBookingEmail(refundedRequest, getEmailOptions())
+          break
+        }
+
+        const paymentIntent =
+          typeof charge.payment_intent === 'string'
+            ? await stripe.paymentIntents.retrieve(charge.payment_intent)
+            : charge.payment_intent
+
+        if (!paymentIntent) {
+          break
+        }
+
+        const refundResult = await refundALaCarteCheckoutPurchase(
+          paymentIntent.id,
+          charge.id,
+        )
+
+        if (
+          refundResult === 'not_found' &&
+          paymentIntent.metadata.checkoutKind === 'a_la_carte'
+        ) {
+          throw new Error(
+            'The refunded add-on purchase has not been fulfilled yet. Stripe will retry this event.',
+          )
         }
 
         break
@@ -135,10 +202,15 @@ export async function handleStripeWebhook(request: Request, response: Response) 
 
     return response.status(200).json({ received: true })
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unable to verify the Stripe webhook payload.'
+    const message = error instanceof Error ? error.message : 'Unable to process the Stripe event.'
 
-    return response.status(400).json({
+    console.error('Stripe webhook processing failed.', {
+      eventId: event.id,
+      eventType: event.type,
+      message,
+    })
+
+    return response.status(500).json({
       message,
     })
   }

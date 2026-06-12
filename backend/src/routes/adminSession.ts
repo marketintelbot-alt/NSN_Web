@@ -7,11 +7,6 @@ import {
   readVerifiedAccountSession,
   verifyAccountSessionToken,
 } from '../lib/adminSession.js'
-import {
-  clearAdminSessionCookie,
-  writeAdminSessionCookie,
-} from '../lib/adminCookie.js'
-
 type AccountSessionResponse = {
   authenticated: boolean
   role?: 'admin' | 'client'
@@ -37,6 +32,12 @@ export const adminLoginLimiter = rateLimit({
 })
 
 export async function createAdminSession(request: Request, response: Response) {
+  if (!request.is('application/json')) {
+    return response.status(415).json({
+      message: 'Sign-in requests must be submitted as JSON.',
+    })
+  }
+
   const email = typeof request.body?.email === 'string' ? request.body.email : ''
   const password = typeof request.body?.password === 'string' ? request.body.password : ''
   const authenticatedAccount = await authenticateAccountCredentials(email, password)
@@ -54,10 +55,6 @@ export async function createAdminSession(request: Request, response: Response) {
   )
   const session = verifyAccountSessionToken(token)
 
-  if (session) {
-    writeAdminSessionCookie(response, token, session.expiresAt)
-  }
-
   return response.status(200).json({
     session: {
       authenticated: true,
@@ -66,8 +63,11 @@ export async function createAdminSession(request: Request, response: Response) {
       clientAccountId: authenticatedAccount.clientAccountId,
       fullName: authenticatedAccount.fullName,
       expiresAt: session?.expiresAt,
-      sessionToken: token,
-    } satisfies AccountSessionResponse,
+    },
+    sessionToken: token,
+  } satisfies {
+    session: AccountSessionResponse
+    sessionToken: string
   })
 }
 
@@ -91,6 +91,5 @@ export function readAdminSession(request: Request, response: Response) {
 }
 
 export function destroyAdminSession(_request: Request, response: Response) {
-  clearAdminSessionCookie(response)
   return response.status(204).send()
 }

@@ -6,7 +6,6 @@ import { getPrimaryAdminEmail } from '../lib/adminSession.js'
 import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
 import { listPublicServiceCatalog } from '../lib/serviceCatalog.js'
 import {
-  sendAuthorizationReceivedEmails,
   sendInquiryReceivedEmails,
   type ServiceRequestEmailOptions,
 } from '../lib/serviceRequestEmailDelivery.js'
@@ -186,13 +185,6 @@ export async function readServiceRequestConfirmationHandler(request: Request, re
       return response.status(404).json({
         message: 'That request could not be found.',
       })
-    }
-
-    if (
-      serviceRequest.paymentStatus === 'authorized' &&
-      serviceRequest.lastCustomerEmailType !== 'authorization_received'
-    ) {
-      void sendAuthorizationReceivedEmails(serviceRequest, getEmailOptions())
     }
 
     return response.status(200).json({

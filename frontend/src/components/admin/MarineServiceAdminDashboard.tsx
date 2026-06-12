@@ -98,25 +98,6 @@ function requestSummary(request: AdminServiceRequest) {
   return 'Request in progress'
 }
 
-function canRequestChanges(request: AdminServiceRequest) {
-  return !['completed', 'declined', 'refunded'].includes(request.bookingStatus)
-}
-
-function canDecline(request: AdminServiceRequest) {
-  return !['completed', 'declined', 'refunded'].includes(request.bookingStatus)
-}
-
-function canCancel(request: AdminServiceRequest) {
-  return !['completed', 'declined', 'canceled', 'refunded'].includes(request.bookingStatus)
-}
-
-function canCreatePaymentLink(request: AdminServiceRequest) {
-  return (
-    !['completed', 'declined', 'canceled', 'refunded'].includes(request.bookingStatus) &&
-    !['authorized', 'captured', 'refunded'].includes(request.paymentStatus)
-  )
-}
-
 async function copyToClipboard(value: string) {
   if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
     return false
@@ -731,7 +712,7 @@ export function MarineServiceAdminDashboard({
                 />
               </label>
 
-              {canCreatePaymentLink(selectedRequest) ? (
+              {selectedRequest.availableActions.createPaymentLink ? (
                 <div className="rounded-3xl border border-ink/10 bg-white/82 p-5">
                   <label className="field-label">
                     Accepted Quote Amount
@@ -802,7 +783,7 @@ export function MarineServiceAdminDashboard({
               ) : null}
 
               <div className="grid gap-3 md:grid-cols-2">
-                {selectedRequest.paymentStatus === 'authorized' ? (
+                {selectedRequest.availableActions.approveCapture ? (
                   <button
                     className="button-primary w-full justify-center"
                     disabled={actionState === 'submitting'}
@@ -829,7 +810,7 @@ export function MarineServiceAdminDashboard({
                   </button>
                 ) : null}
 
-                {canRequestChanges(selectedRequest) ? (
+                {selectedRequest.availableActions.requestChanges ? (
                   <button
                     className="button-secondary w-full justify-center"
                     disabled={actionState === 'submitting'}
@@ -846,7 +827,7 @@ export function MarineServiceAdminDashboard({
                   </button>
                 ) : null}
 
-                {canDecline(selectedRequest) ? (
+                {selectedRequest.availableActions.decline ? (
                   <button
                     className="button-dark w-full justify-center"
                     disabled={actionState === 'submitting'}
@@ -864,7 +845,7 @@ export function MarineServiceAdminDashboard({
                   </button>
                 ) : null}
 
-                {selectedRequest.bookingStatus === 'confirmed' ? (
+                {selectedRequest.availableActions.complete ? (
                   <button
                     className="button-secondary w-full justify-center"
                     disabled={actionState === 'submitting'}
@@ -882,7 +863,7 @@ export function MarineServiceAdminDashboard({
                   </button>
                 ) : null}
 
-                {canCancel(selectedRequest) ? (
+                {selectedRequest.availableActions.cancel ? (
                   <button
                     className="button-secondary w-full justify-center"
                     disabled={actionState === 'submitting'}
@@ -890,7 +871,7 @@ export function MarineServiceAdminDashboard({
                     onClick={() =>
                       void handleAction(
                         `/api/admin/service-requests/${selectedRequest.id}/cancel`,
-                        'Booking marked canceled.',
+                        'Booking canceled. Check the payment status for any required refund.',
                       )
                     }
                   >

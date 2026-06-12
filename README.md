@@ -134,8 +134,8 @@ STRIPE_PRICE_BUFF_WAX=price_1TPukvCobOhggrgBI1gCnPHz
 STRIPE_PRICE_VINYL_DEEP_CLEAN=price_1TPulKCobOhggrgBi3IHdn4Y
 STRIPE_PRICE_CARPET_MAT_SHAMPOO=price_1TPuloCobOhggrgBUAtakSk0
 STRIPE_PRICE_NON_SKID_DECK_SCRUB=price_1TPumECobOhggrgBcSx9r6Gf
-SUCCESS_URL=https://www.nsnautical.com/booking/confirmation?request={REQUEST_ID}&session_id={CHECKOUT_SESSION_ID}
-CANCEL_URL=https://www.nsnautical.com/booking?cancelled=1&service={SERVICE_ID}
+SUCCESS_URL=https://nsnautical.com/booking/confirmation?request={REQUEST_ID}&session_id={CHECKOUT_SESSION_ID}
+CANCEL_URL=https://nsnautical.com/booking?cancelled=1&service={SERVICE_ID}
 ADMIN_EMAILS=
 ADMIN_EMAIL=
 ADMIN_PASSWORD_HASH=
@@ -147,7 +147,7 @@ Frontend `.env`:
 
 ```env
 VITE_API_BASE_URL=http://localhost:4000
-VITE_SITE_URL=https://www.nsnautical.com
+VITE_SITE_URL=https://nsnautical.com
 ```
 
 Notes:
@@ -204,9 +204,12 @@ Point Stripe to:
 Subscribe to:
 
 - `checkout.session.completed`
+- `checkout.session.async_payment_succeeded`
+- `checkout.session.expired`
 - `payment_intent.amount_capturable_updated`
 - `payment_intent.succeeded`
 - `payment_intent.canceled`
+- `payment_intent.payment_failed`
 - `charge.refunded`
 
 The webhook handlers are idempotent and update booking/payment status without creating duplicates.

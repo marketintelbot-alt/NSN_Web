@@ -1,3 +1,16 @@
+create extension if not exists pgcrypto;
+
+create or replace function public.set_updated_at_timestamp()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  new.updated_at = timezone('utc', now());
+  return new;
+end;
+$$;
+
 create table if not exists public.service_requests (
   id uuid primary key default gen_random_uuid(),
   request_kind varchar(20) not null default 'inquiry',

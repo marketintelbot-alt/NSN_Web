@@ -112,10 +112,8 @@ create table if not exists public.stripe_checkout_purchases (
   currency varchar(12) not null default 'usd',
   stripe_checkout_session_id varchar(255) not null,
   stripe_payment_intent_id varchar(255),
-  stripe_charge_id varchar(255),
   customer_email varchar(255),
   fulfilled_at timestamptz not null default timezone('utc', now()),
-  refunded_at timestamptz,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now()),
   constraint stripe_checkout_purchases_quantity_check
@@ -129,16 +127,6 @@ create unique index if not exists stripe_checkout_purchases_session_idx
 
 create index if not exists stripe_checkout_purchases_client_idx
   on public.stripe_checkout_purchases (client_account_id);
-
-create unique index if not exists stripe_checkout_purchases_payment_intent_idx
-  on public.stripe_checkout_purchases (stripe_payment_intent_id)
-  where stripe_payment_intent_id is not null;
-
-alter table public.stripe_checkout_purchases
-  add column if not exists stripe_charge_id varchar(255);
-
-alter table public.stripe_checkout_purchases
-  add column if not exists refunded_at timestamptz;
 
 create table if not exists public.launch_bookings (
   id uuid primary key default gen_random_uuid(),
@@ -364,48 +352,6 @@ alter table public.service_requests enable row level security;
 revoke all on all tables in schema public from anon, authenticated;
 revoke all on all sequences in schema public from anon, authenticated;
 
-drop policy if exists "Backend service role only" on public.booking_slots;
-create policy "Backend service role only"
-  on public.booking_slots for all to anon, authenticated
-  using (false)
-  with check (false);
-
-drop policy if exists "Backend service role only" on public.client_accounts;
-create policy "Backend service role only"
-  on public.client_accounts for all to anon, authenticated
-  using (false)
-  with check (false);
-
-drop policy if exists "Backend service role only" on public.client_service_entitlements;
-create policy "Backend service role only"
-  on public.client_service_entitlements for all to anon, authenticated
-  using (false)
-  with check (false);
-
-drop policy if exists "Backend service role only" on public.client_paid_add_on_credits;
-create policy "Backend service role only"
-  on public.client_paid_add_on_credits for all to anon, authenticated
-  using (false)
-  with check (false);
-
-drop policy if exists "Backend service role only" on public.stripe_checkout_purchases;
-create policy "Backend service role only"
-  on public.stripe_checkout_purchases for all to anon, authenticated
-  using (false)
-  with check (false);
-
-drop policy if exists "Backend service role only" on public.launch_bookings;
-create policy "Backend service role only"
-  on public.launch_bookings for all to anon, authenticated
-  using (false)
-  with check (false);
-
-drop policy if exists "Backend service role only" on public.service_requests;
-create policy "Backend service role only"
-  on public.service_requests for all to anon, authenticated
-  using (false)
-  with check (false);
-
 create or replace function public.fulfill_stripe_add_on_purchase(
   p_client_account_id uuid,
   p_service_key varchar,
@@ -476,83 +422,6 @@ begin
 end;
 $$;
 
-revoke execute on function public.fulfill_stripe_add_on_purchase(
-  uuid,
-  varchar,
-  varchar,
-  integer,
-  integer,
-  varchar,
-  varchar,
-  varchar,
-  varchar
-) from public, anon, authenticated;
-
-grant execute on function public.fulfill_stripe_add_on_purchase(
-  uuid,
-  varchar,
-  varchar,
-  integer,
-  integer,
-  varchar,
-  varchar,
-  varchar,
-  varchar
-) to service_role;
-
-create or replace function public.refund_stripe_add_on_purchase(
-  p_stripe_payment_intent_id varchar,
-  p_stripe_charge_id varchar
-)
-returns varchar
-language plpgsql
-set search_path = ''
-as $$
-declare
-  purchase public.stripe_checkout_purchases%rowtype;
-begin
-  select *
-  into purchase
-  from public.stripe_checkout_purchases
-  where stripe_payment_intent_id = p_stripe_payment_intent_id
-  for update;
-
-  if not found then
-    return 'not_found';
-  end if;
-
-  if purchase.refunded_at is not null then
-    return 'already_refunded';
-  end if;
-
-  update public.client_paid_add_on_credits
-  set
-    total_units = greatest(total_units - purchase.quantity, 0),
-    updated_at = timezone('utc', now())
-  where client_account_id = purchase.client_account_id
-    and service_key = purchase.service_key;
-
-  update public.stripe_checkout_purchases
-  set
-    stripe_charge_id = nullif(p_stripe_charge_id, ''),
-    refunded_at = timezone('utc', now()),
-    updated_at = timezone('utc', now())
-  where id = purchase.id;
-
-  return 'refunded';
-end;
-$$;
-
-revoke execute on function public.refund_stripe_add_on_purchase(
-  varchar,
-  varchar
-) from public, anon, authenticated;
-
-grant execute on function public.refund_stripe_add_on_purchase(
-  varchar,
-  varchar
-) to service_role;
-
 drop trigger if exists set_booking_slots_updated_at on public.booking_slots;
 create trigger set_booking_slots_updated_at
 before update on public.booking_slots
@@ -594,3 +463,18 @@ create trigger set_service_requests_updated_at
 before update on public.service_requests
 for each row
 execute function public.set_updated_at_timestamp();
+
+update public.service_requests
+set
+  booking_status = 'failed_payment',
+  payment_status = 'failed',
+  admin_notes = concat_ws(
+    E'\n',
+    nullif(admin_notes, ''),
+    'Recovered from the May 2026 checkout configuration outage; no Stripe session or payment was created.'
+  )
+where request_kind = 'booking'
+  and booking_status = 'draft'
+  and payment_status = 'not_started'
+  and stripe_checkout_session_id is null
+  and stripe_payment_intent_id is null;

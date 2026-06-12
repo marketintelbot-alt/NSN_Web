@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import type { ClientAccount } from './clientAccounts.js'
 import type { ValidatedALaCarteCheckoutAmount } from './aLaCarteServices.js'
 
-const stripeApiVersion = '2026-03-25.dahlia'
+const stripeApiVersion = '2026-05-27.dahlia'
 
 let cachedStripeClient: Stripe | null = null
 

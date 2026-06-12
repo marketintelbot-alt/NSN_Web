@@ -25,10 +25,8 @@ import {
   suggestReturnTime,
   type ReservationFormValues,
 } from '../../lib/reservation'
+import { apiBaseUrl } from '../../lib/api'
 import type { PublicSlot } from '../../types/booking'
-
-const apiBaseUrl =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:4000'
 
 type ApiErrorResponse = {
   message?: string

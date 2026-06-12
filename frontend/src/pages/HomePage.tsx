@@ -72,10 +72,14 @@ export function HomePage() {
               Professional detailing, seasonal upkeep, and owner advisory designed to keep your boat
               clean, protected, and ready to enjoy all summer.
             </p>
-            <p className="mt-6 max-w-2xl text-base leading-8 text-white/90">{brandPromise}</p>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/85">{localSearchFocus}</p>
+            <p className="mt-5 hidden max-w-2xl text-base leading-8 text-white/90 sm:block">
+              {brandPromise}
+            </p>
+            <p className="mt-4 hidden max-w-2xl text-sm leading-7 text-white/85 md:block">
+              {localSearchFocus}
+            </p>
 
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row">
+            <div className="mt-7 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4">
               <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
                 Book Marine Care
                 <ArrowRight className="h-4 w-4" />
@@ -112,7 +116,7 @@ export function HomePage() {
           <SectionIntro
             label="Marine Care"
             title="Marine care is the first conversation, not an add-on."
-            copy="North Shore Nautical is positioned around detailing, upkeep, finish care, and condition-aware service planning. Advisory is available, but the public experience should lead with premium marine care."
+            copy="Detailing, upkeep, finish care, and condition-aware service planning are at the heart of North Shore Nautical. Practical owner advisory is available whenever the next step needs a little more thought."
           />
           <div className="grid gap-5">
             {marineCareHighlights.map((item, index) => (
@@ -145,7 +149,7 @@ export function HomePage() {
           <SectionIntro
             label="Advisory"
             title="Owner advisory that stays practical."
-            copy="Advisory is framed as buying guidance, upkeep planning, seasonal support, and referral direction with clear owner-side boundaries."
+            copy="Get practical buying guidance, upkeep planning, seasonal support, and trusted referral direction without unnecessary complexity."
           />
         </div>
       </section>

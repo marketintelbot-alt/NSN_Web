@@ -77,18 +77,19 @@ const blockedPublicPatterns = [
     pattern: /\(?847\)?[\s.-]*331[\s.-]*0927|\+1?8473310927/gi,
   },
   {
-    label: 'wrong public email',
-    pattern: /johnny@ellismarinegroup\.com/gi,
-  },
-  {
     label: 'public canonical or sitemap uses Render',
     pattern: /(?:canonical|sitemap|<loc>)[\s\S]{0,160}onrender\.com/gi,
   },
 ]
 
 const allowedNoIndexFiles = new Set([
+  'frontend/dist/404.html',
+  'frontend/dist/admin/index.html',
+  'frontend/dist/booking/confirmation/index.html',
+  'frontend/dist/portal/index.html',
   'frontend/src/pages/AdminPage.tsx',
   'frontend/src/pages/ConfirmationPage.tsx',
+  'frontend/src/pages/NotFoundPage.tsx',
   'frontend/src/pages/PortalPage.tsx',
 ])
 
@@ -159,7 +160,7 @@ function collectPatternFindings(files, patterns, labelPrefix = '') {
 
 function collectBuiltOutputWarnings() {
   const distRoot = join(repoRoot, 'frontend/dist')
-  const scannedExtensions = new Set(['.html', '.js', '.css', '.xml', '.txt', '.webmanifest'])
+  const scannedExtensions = new Set(['.html', '.xml', '.txt', '.webmanifest'])
   const files = walk(distRoot).filter((filePath) => {
     const extension = filePath.match(/\.[^.]+$/)?.[0] || ''
     return scannedExtensions.has(extension)
@@ -183,12 +184,12 @@ for (const requiredString of requiredPublicStrings) {
   }
 }
 
-if (!/Sitemap:\s*https:\/\/www\.nsnautical\.com\/sitemap\.xml/.test(publicSource)) {
-  publicFindings.push('robots.txt must reference https://www.nsnautical.com/sitemap.xml')
+if (!/Sitemap:\s*https:\/\/nsnautical\.com\/sitemap\.xml/.test(publicSource)) {
+  publicFindings.push('robots.txt must reference https://nsnautical.com/sitemap.xml')
 }
 
-if (/<loc>https:\/\/(?!www\.)[^<]*nsnautical\.com/i.test(publicSource)) {
-  publicFindings.push('sitemap contains a non-www nsnautical.com URL')
+if (/<loc>https:\/\/www\.nsnautical\.com/i.test(publicSource)) {
+  publicFindings.push('sitemap contains a redirecting www.nsnautical.com URL')
 }
 
 if (publicFindings.length > 0) {

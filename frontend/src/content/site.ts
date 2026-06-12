@@ -13,9 +13,9 @@ export const siteMeta = {
   tagline: 'Marine Detailing & Care',
   description:
     "Marine detailing, boat detailing, marine care, and practical owner advisory for boat owners across Chicago's North Shore.",
-  siteUrl: 'https://www.nsnautical.com',
+  siteUrl: 'https://nsnautical.com',
   heroImage: '/images/north-shore-hero.jpeg',
-  socialImage: '/images/social-card.svg',
+  socialImage: '/images/north-shore-hero.jpeg',
   timeZone: 'America/Chicago',
 }
 
@@ -29,7 +29,7 @@ export const publicContact = {
   emailDisplay: 'carter@ellismarinegroup.com',
   emailHref: 'mailto:carter@ellismarinegroup.com',
   websiteDisplay: 'nsnautical.com',
-  websiteUrl: 'https://www.nsnautical.com',
+  websiteUrl: 'https://nsnautical.com',
   mobileServiceStatement:
     'We are a mobile/service-area marine care business. Clients are served at boats, docks, marinas, storage locations, and approved service locations.',
 }

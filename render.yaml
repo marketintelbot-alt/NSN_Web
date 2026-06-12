@@ -5,9 +5,9 @@ services:
     plan: free
     region: ohio
     rootDir: backend
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm run start
-    healthCheckPath: /api/health
+    healthCheckPath: /api/health/ready
     envVars:
       - key: RESEND_API_KEY
         sync: false
@@ -16,9 +16,9 @@ services:
       - key: FROM_EMAIL
         sync: false
       - key: SITE_URL
-        sync: false
+        value: https://nsnautical.com
       - key: CORS_ORIGIN
-        sync: false
+        value: https://nsnautical.com
       - key: TRUST_PROXY_HOPS
         value: "1"
       - key: SUPABASE_URL
@@ -32,27 +32,27 @@ services:
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_PUBLISHABLE_KEY
-        sync: false
+        value: pk_live_51SvoCsRj5xfuGc0nz0JqgI1QBRrXFwksXyb52DXm8Zg9GszUKiXYHdsY7UXHHipPyB5fa9KRtwBEaBA8HsIwewig00dDXMiqeH
       - key: STRIPE_PRICE_INTERIOR_REFRESH
-        sync: false
+        value: price_1TSkX6CobOhggrgBh4p9hKbw
       - key: STRIPE_PRICE_MAINTENANCE_DETAIL
-        sync: false
+        value: price_1TPubeCobOhggrgBFtN5kPlc
       - key: STRIPE_PRICE_SIGNATURE_DETAIL
-        sync: false
+        value: price_1TPujvCobOhggrgBNXw0hiqs
       - key: STRIPE_PRICE_EXTERIOR_WASH
-        sync: false
+        value: price_1TPukPCobOhggrgBeEaSfxpP
       - key: STRIPE_PRICE_BUFF_WAX
-        sync: false
+        value: price_1TPukvCobOhggrgBI1gCnPHz
       - key: STRIPE_PRICE_VINYL_DEEP_CLEAN
-        sync: false
+        value: price_1TPulKCobOhggrgBi3IHdn4Y
       - key: STRIPE_PRICE_CARPET_MAT_SHAMPOO
-        sync: false
+        value: price_1TPuloCobOhggrgBUAtakSk0
       - key: STRIPE_PRICE_NON_SKID_DECK_SCRUB
-        sync: false
+        value: price_1TPumECobOhggrgBcSx9r6Gf
       - key: SUCCESS_URL
-        sync: false
+        value: https://nsnautical.com/booking/confirmation?request={REQUEST_ID}&session_id={CHECKOUT_SESSION_ID}
       - key: CANCEL_URL
-        sync: false
+        value: https://nsnautical.com/booking?cancelled=1&service={SERVICE_ID}
       - key: BUSINESS_NOTIFICATION_EMAILS
         sync: false
       - key: ADMIN_EMAILS
@@ -74,16 +74,16 @@ services:
     name: north-shore-nautical-site
     runtime: static
     rootDir: frontend
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     domains:
-      - www.nsnautical.com
       - nsnautical.com
+      - www.nsnautical.com
     envVars:
       - key: VITE_API_BASE_URL
-        sync: false
+        value: https://north-shore-nautical-api.onrender.com
       - key: VITE_SITE_URL
-        sync: false
+        value: https://nsnautical.com
     buildFilter:
       paths:
         - frontend/**
@@ -91,7 +91,19 @@ services:
     headers:
       - path: /*
         name: X-Frame-Options
-        value: SAMEORIGIN
+        value: DENY
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; base-uri 'self'; connect-src 'self' https://north-shore-nautical-api.onrender.com; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; upgrade-insecure-requests"
+      - path: /*
+        name: Strict-Transport-Security
+        value: max-age=31536000; includeSubDomains
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), geolocation=(), microphone=()
       - path: /*
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
@@ -99,9 +111,60 @@ services:
         name: Cache-Control
         value: public, max-age=31536000, immutable
     routes:
+      - type: redirect
+        source: /storage
+        destination: /services
+      - type: redirect
+        source: /faq
+        destination: /contact
+      - type: redirect
+        source: /reserve-launch
+        destination: /portal
+      - type: redirect
+        source: /reserve-driver
+        destination: /portal
+      - type: redirect
+        source: /account
+        destination: /portal
+      - type: redirect
+        source: /terms-of-service
+        destination: /service-agreement
       - type: rewrite
-        source: /*
-        destination: /index.html
+        source: /services
+        destination: /services/index.html
+      - type: rewrite
+        source: /pricing
+        destination: /pricing/index.html
+      - type: rewrite
+        source: /gallery
+        destination: /gallery/index.html
+      - type: rewrite
+        source: /advisory
+        destination: /advisory/index.html
+      - type: rewrite
+        source: /about
+        destination: /about/index.html
+      - type: rewrite
+        source: /contact
+        destination: /contact/index.html
+      - type: rewrite
+        source: /booking
+        destination: /booking/index.html
+      - type: rewrite
+        source: /booking/confirmation
+        destination: /booking/confirmation/index.html
+      - type: rewrite
+        source: /privacy-policy
+        destination: /privacy-policy/index.html
+      - type: rewrite
+        source: /service-agreement
+        destination: /service-agreement/index.html
+      - type: rewrite
+        source: /admin
+        destination: /admin/index.html
+      - type: rewrite
+        source: /portal
+        destination: /portal/index.html
 
   - type: cron
     name: north-shore-nautical-reminders
@@ -109,7 +172,7 @@ services:
     plan: starter
     region: ohio
     rootDir: backend
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm run reminders
     schedule: "*/15 * * * *"
     envVars:
@@ -122,7 +185,7 @@ services:
       - key: FROM_EMAIL
         sync: false
       - key: SITE_URL
-        sync: false
+        value: https://nsnautical.com
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SECRET_KEY

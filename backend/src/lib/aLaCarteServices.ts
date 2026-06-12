@@ -393,7 +393,8 @@ function isMissingALaCarteSchemaError(error: { message?: string } | null) {
   return (
     message.includes('client_paid_add_on_credits') ||
     message.includes('stripe_checkout_purchases') ||
-    message.includes('fulfill_stripe_add_on_purchase')
+    message.includes('fulfill_stripe_add_on_purchase') ||
+    message.includes('refund_stripe_add_on_purchase')
   )
 }
 
@@ -657,4 +658,41 @@ export async function fulfillALaCarteCheckoutPurchase(input: {
   }
 
   return Boolean(data)
+}
+
+export type ALaCarteRefundResult = 'refunded' | 'already_refunded' | 'not_found'
+
+export async function refundALaCarteCheckoutPurchase(
+  stripePaymentIntentId: string,
+  stripeChargeId: string,
+): Promise<ALaCarteRefundResult> {
+  if (!stripePaymentIntentId) {
+    return 'not_found'
+  }
+
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { data, error } = await supabaseAdmin.rpc('refund_stripe_add_on_purchase', {
+    p_stripe_payment_intent_id: stripePaymentIntentId,
+    p_stripe_charge_id: stripeChargeId,
+  })
+
+  if (error) {
+    if (isMissingALaCarteSchemaError(error)) {
+      throw new Error(
+        'Stripe refund reconciliation is not configured yet. Run the latest Supabase schema.',
+      )
+    }
+
+    throw error
+  }
+
+  if (
+    data === 'refunded' ||
+    data === 'already_refunded' ||
+    data === 'not_found'
+  ) {
+    return data
+  }
+
+  throw new Error('Stripe refund reconciliation returned an unexpected result.')
 }

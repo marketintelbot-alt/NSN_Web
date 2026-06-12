@@ -40,8 +40,8 @@ export function BookingPage() {
 
       <PageHero
         eyebrow="Booking"
-        title="Request marine care, review the estimate, and move to secure authorization when the service qualifies."
-        description="Routine flat and per-foot marine care can move to Stripe Checkout after server-side pricing validation. Larger boats, quote-only work, and condition-heavy work stay in the inquiry-review path."
+        title="Request marine care and review a clear estimate before anything is charged."
+        description="Routine services can move to secure card authorization. Larger boats, custom work, and condition-heavy projects are reviewed personally before pricing is finalized."
       >
         <div className="flex max-w-2xl items-start gap-3 rounded-3xl border border-white/20 bg-white/15 px-5 py-4 text-left text-sm leading-7 text-white/90">
           <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-lake" />
@@ -67,8 +67,8 @@ export function BookingPage() {
           <div className="grid gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-start">
             <SectionIntro
               label="How The Flow Works"
-              title="A production-ready booking flow should stay simple for the customer and strict on the backend."
-              copy="The frontend shows the estimate, but North Shore Nautical still recalculates service eligibility, boat length when required, and pricing on the server before creating the Stripe Checkout Session."
+              title="A simple request, a clear estimate, and a personal review."
+              copy="The estimate is checked against the selected service, boat length, and project condition before secure checkout is offered. North Shore Nautical reviews every authorized request before confirming the appointment."
             />
             <div className="grid gap-5">
               {bookingSteps.map((step, index) => (

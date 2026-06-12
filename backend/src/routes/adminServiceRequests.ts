@@ -74,7 +74,7 @@ export async function approveServiceRequestHandler(request: Request, response: R
       payload.adminNotes,
     )
 
-    void sendBookingApprovedEmail(updatedRequest, getEmailOptions())
+    await sendBookingApprovedEmail(updatedRequest, getEmailOptions())
 
     return response.status(200).json({
       request: updatedRequest,
@@ -94,7 +94,7 @@ export async function createServiceRequestPaymentLinkHandler(request: Request, r
       payload.adminNotes,
     )
 
-    void sendPaymentLinkEmail(result.request, result.checkoutUrl, getEmailOptions())
+    await sendPaymentLinkEmail(result.request, result.checkoutUrl, getEmailOptions())
 
     return response.status(200).json({
       request: result.request,
@@ -114,7 +114,7 @@ export async function requestServiceChangesHandler(request: Request, response: R
       payload.adminNotes,
     )
 
-    void sendChangesRequestedEmail(updatedRequest, getEmailOptions())
+    await sendChangesRequestedEmail(updatedRequest, getEmailOptions())
 
     return response.status(200).json({
       request: updatedRequest,
@@ -133,11 +133,11 @@ export async function declineServiceRequestHandler(request: Request, response: R
       payload.adminNotes,
     )
 
-    void sendDeclinedRequestEmail(updatedRequest, getEmailOptions())
+    await sendDeclinedRequestEmail(updatedRequest, getEmailOptions())
 
     return response.status(200).json({
       request: updatedRequest,
-      message: 'The request has been declined and any authorization was canceled.',
+      message: 'The request has been declined. Any uncaptured authorization was canceled.',
     })
   } catch (error) {
     return respondWithAdminRequestError(error, response)
@@ -152,7 +152,7 @@ export async function completeServiceRequestHandler(request: Request, response: 
       payload.adminNotes,
     )
 
-    void sendCompletedServiceEmail(updatedRequest, getEmailOptions())
+    await sendCompletedServiceEmail(updatedRequest, getEmailOptions())
 
     return response.status(200).json({
       request: updatedRequest,
@@ -171,11 +171,14 @@ export async function cancelServiceRequestHandler(request: Request, response: Re
       payload.adminNotes,
     )
 
-    void sendCanceledBookingEmail(updatedRequest, getEmailOptions())
+    await sendCanceledBookingEmail(updatedRequest, getEmailOptions())
 
     return response.status(200).json({
       request: updatedRequest,
-      message: 'The request has been marked canceled.',
+      message:
+        updatedRequest.paymentStatus === 'captured'
+          ? 'The booking was canceled. The captured payment is unchanged; handle any refund in Stripe.'
+          : 'The booking was canceled and any uncaptured authorization was released.',
     })
   } catch (error) {
     return respondWithAdminRequestError(error, response)

@@ -2,7 +2,6 @@ import type { NextFunction, Request, Response } from 'express'
 
 import { ZodError } from 'zod'
 
-import { clearAdminSessionCookie } from '../lib/adminCookie.js'
 import {
   getPrimaryAdminEmail,
   readVerifiedAccountSession,
@@ -50,7 +49,6 @@ export function requireAdminSession(request: Request, response: Response, next: 
   const session = readVerifiedAccountSession(request)
 
   if (!session || session.role !== 'admin') {
-    clearAdminSessionCookie(response)
     return response.status(401).json({
       message: 'Admin authorization is required.',
     })

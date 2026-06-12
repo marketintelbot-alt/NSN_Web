@@ -16,6 +16,11 @@ import {
 } from './serviceCatalog.js'
 import { getStripeClient } from './stripeCheckout.js'
 import { getSupabaseAdminClient } from './supabaseAdmin.js'
+import {
+  assertServiceRequestActionAllowed,
+  getServiceRequestAvailableActions,
+  type ServiceRequestAvailableActions,
+} from './serviceRequestTransitions.js'
 
 export type ServiceRequestKind = 'booking' | 'inquiry'
 export type BookingStatus =
@@ -134,6 +139,7 @@ export type ServiceRequestRecord = {
   cancellationWindowStatus: 'open' | 'closed' | 'not_scheduled'
   cancellationWindowClosesAt: string | null
   cancellationWindowClosesAtLabel: string | null
+  availableActions: ServiceRequestAvailableActions
 }
 
 type ServiceRequestInsert = Omit<StoredServiceRequestRow, 'id' | 'created_at' | 'updated_at'>
@@ -293,6 +299,11 @@ function normalizeServiceRequestRow(row: StoredServiceRequestRow): ServiceReques
     cancellationWindowStatus: cancellationWindow.status,
     cancellationWindowClosesAt: cancellationWindow.closesAt,
     cancellationWindowClosesAtLabel: cancellationWindow.closesAtLabel,
+    availableActions: getServiceRequestAvailableActions({
+      requestKind: row.request_kind,
+      bookingStatus: row.booking_status,
+      paymentStatus: row.payment_status,
+    }),
   }
 }
 
@@ -392,6 +403,29 @@ function canMoveToCanceled(record: ServiceRequestRecord) {
   return !['captured', 'refunded'].includes(record.paymentStatus)
 }
 
+async function paymentIntentMatchesCurrentCheckout(
+  request: ServiceRequestRecord,
+  paymentIntentId: string,
+) {
+  if (request.stripePaymentIntentId) {
+    return request.stripePaymentIntentId === paymentIntentId
+  }
+
+  if (!request.stripeCheckoutSessionId) {
+    return false
+  }
+
+  const session = await getStripeClient().checkout.sessions.retrieve(
+    request.stripeCheckoutSessionId,
+  )
+  const currentPaymentIntentId =
+    typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id || ''
+
+  return currentPaymentIntentId === paymentIntentId
+}
+
 async function insertServiceRequest(payload: ServiceRequestInsert) {
   const supabaseAdmin = getSupabaseAdminClient()
   const { data, error } = await supabaseAdmin
@@ -468,6 +502,31 @@ async function updateServiceRequestRow(requestId: string, patch: Partial<StoredS
   return normalizeServiceRequestRow(data as StoredServiceRequestRow)
 }
 
+async function deleteServiceRequestRow(requestId: string) {
+  const supabaseAdmin = getSupabaseAdminClient()
+  const { error } = await supabaseAdmin
+    .from('service_requests')
+    .delete()
+    .eq('id', requestId)
+    .eq('booking_status', 'draft')
+    .eq('payment_status', 'not_started')
+
+  if (error) {
+    throw error
+  }
+}
+
+async function expireCheckoutSession(checkoutSessionId: string) {
+  try {
+    await getStripeClient().checkout.sessions.expire(checkoutSessionId)
+  } catch (error) {
+    console.error('Unable to expire an unused Stripe Checkout Session.', {
+      checkoutSessionId,
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
 async function resolveStripePrice(
   serviceId: string,
   expectedUnitAmountCents: number,
@@ -506,11 +565,33 @@ async function resolveStripePrice(
   return priceId
 }
 
+async function prepareServiceRequestCheckout(serviceId: string) {
+  const service = findServiceById(serviceId)
+
+  if (!service || service.paymentType !== 'instant_checkout') {
+    throw new Error('This service is not eligible for instant checkout.')
+  }
+
+  const stripe = getStripeClient()
+  const expectedUnitAmountCents = service.pricePerFootCents || service.flatPriceCents || 0
+  const priceId = await resolveStripePrice(service.id, expectedUnitAmountCents, stripe)
+
+  // Resolve redirect configuration before inserting a draft request.
+  getSuccessUrl('checkout-readiness-check')
+  getCancelUrl(service.id)
+
+  return {
+    priceId,
+    stripe,
+  }
+}
+
 async function createServiceRequestCheckoutSession(
   request: ServiceRequestRecord,
   serviceId: string,
   checkoutQuantity: number,
   roundedBoatLengthFeet: number | null,
+  checkout: Awaited<ReturnType<typeof prepareServiceRequestCheckout>>,
 ) {
   const service = findServiceById(serviceId)
 
@@ -522,50 +603,42 @@ async function createServiceRequestCheckoutSession(
     throw new Error('This service is not eligible for instant checkout.')
   }
 
-  const stripe = getStripeClient()
-  const expectedUnitAmountCents = service.pricePerFootCents || service.flatPriceCents || 0
-  const priceId = await resolveStripePrice(service.id, expectedUnitAmountCents, stripe)
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    // NSN currently does not enable Stripe Tax automatically. Do not enable automatic_tax unless NSN has confirmed tax registration/compliance requirements.
-    automatic_tax: { enabled: false },
-    payment_method_types: ['card'],
-    client_reference_id: request.id,
-    customer_email: request.customerEmail,
-    success_url: getSuccessUrl(request.id),
-    cancel_url: getCancelUrl(request.selectedServiceId),
-    line_items: [
-      {
-        price: priceId,
-        quantity: checkoutQuantity,
-      },
-    ],
-    metadata: {
-      requestId: request.id,
-      requestKind: request.requestKind,
-      serviceId: service.id,
-      serviceName: service.name,
-      boatLengthFeet: roundedBoatLengthFeet ? String(roundedBoatLengthFeet) : '',
-      customerName: request.customerName,
-      customerEmail: request.customerEmail,
-      requestedDateTime: request.requestedDateTime || '',
-      agreementPolicyVersion: request.agreementPolicyVersion || '',
-    },
-    payment_intent_data: {
-      capture_method: 'manual',
-      metadata: {
-        requestId: request.id,
-        requestKind: request.requestKind,
-        serviceId: service.id,
-        serviceName: service.name,
-        boatLengthFeet: roundedBoatLengthFeet ? String(roundedBoatLengthFeet) : '',
-        customerName: request.customerName,
-        customerEmail: request.customerEmail,
-        requestedDateTime: request.requestedDateTime || '',
-        agreementPolicyVersion: request.agreementPolicyVersion || '',
+  const metadata = {
+    requestId: request.id,
+    requestKind: request.requestKind,
+    serviceId: service.id,
+    serviceName: service.name,
+    boatLengthFeet: roundedBoatLengthFeet ? String(roundedBoatLengthFeet) : '',
+    customerName: request.customerName,
+    customerEmail: request.customerEmail,
+    requestedDateTime: request.requestedDateTime || '',
+    agreementPolicyVersion: request.agreementPolicyVersion || '',
+  }
+  const session = await checkout.stripe.checkout.sessions.create(
+    {
+      mode: 'payment',
+      // NSN currently does not enable Stripe Tax automatically. Do not enable automatic_tax unless NSN has confirmed tax registration/compliance requirements.
+      automatic_tax: { enabled: false },
+      client_reference_id: request.id,
+      customer_email: request.customerEmail,
+      success_url: getSuccessUrl(request.id),
+      cancel_url: getCancelUrl(request.selectedServiceId),
+      line_items: [
+        {
+          price: checkout.priceId,
+          quantity: checkoutQuantity,
+        },
+      ],
+      metadata,
+      payment_intent_data: {
+        capture_method: 'manual',
+        metadata,
       },
     },
-  })
+    {
+      idempotencyKey: `service-request-checkout-${request.id}`,
+    },
+  )
 
   const checkoutUrl = session.url
 
@@ -598,37 +671,42 @@ async function createQuotedServiceRequestCheckoutSession(
     agreementPolicyVersion: request.agreementPolicyVersion || '',
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    // NSN currently does not enable Stripe Tax automatically. Do not enable automatic_tax unless NSN has confirmed tax registration/compliance requirements.
-    automatic_tax: { enabled: false },
-    payment_method_types: ['card'],
-    client_reference_id: request.id,
-    customer_email: request.customerEmail,
-    success_url: getSuccessUrl(request.id),
-    cancel_url: getCancelUrl(request.selectedServiceId),
-    metadata,
-    payment_intent_data: {
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: 'payment',
+      // NSN currently does not enable Stripe Tax automatically. Do not enable automatic_tax unless NSN has confirmed tax registration/compliance requirements.
+      automatic_tax: { enabled: false },
+      client_reference_id: request.id,
+      customer_email: request.customerEmail,
+      success_url: getSuccessUrl(request.id),
+      cancel_url: getCancelUrl(request.selectedServiceId),
       metadata,
-    },
-    line_items: [
-      {
-        quantity: 1,
-        price_data: {
-          currency: 'usd',
-          unit_amount: amountCents,
-          product_data: {
-            name: serviceName,
-            description: 'Approved North Shore Nautical service request',
-            metadata: {
-              requestId: request.id,
-              serviceId: request.selectedServiceId || '',
+      payment_intent_data: {
+        capture_method: 'manual',
+        metadata,
+      },
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: 'usd',
+            unit_amount: amountCents,
+            product_data: {
+              name: serviceName,
+              description: 'Approved North Shore Nautical service request',
+              metadata: {
+                requestId: request.id,
+                serviceId: request.selectedServiceId || '',
+              },
             },
           },
         },
-      },
-    ],
-  })
+      ],
+    },
+    {
+      idempotencyKey: `service-request-quote-${request.id}-${amountCents}`,
+    },
+  )
 
   const checkoutUrl = session.url
 
@@ -682,6 +760,10 @@ export async function createPublicServiceRequest(input: PublicServiceRequestInpu
     !shouldRouteToInquiry && service
       ? calculateServicePriceCents(service, roundedBoatLengthFeet)
       : null
+  const checkoutPreparation =
+    !shouldRouteToInquiry && service && checkoutQuantity
+      ? await prepareServiceRequestCheckout(service.id)
+      : null
   const request = await insertServiceRequest({
     request_kind: shouldRouteToInquiry ? 'inquiry' : 'booking',
     booking_status: shouldRouteToInquiry ? 'pending_review' : 'draft',
@@ -722,27 +804,59 @@ export async function createPublicServiceRequest(input: PublicServiceRequestInpu
     last_internal_email_sent_at: null,
   })
 
-  if (shouldRouteToInquiry || !service || !checkoutQuantity) {
+  if (shouldRouteToInquiry || !service || !checkoutQuantity || !checkoutPreparation) {
     return {
       kind: 'inquiry' as const,
       request,
     }
   }
 
-  const checkoutSession = await createServiceRequestCheckoutSession(
-    request,
-    service.id,
-    checkoutQuantity,
-    roundedBoatLengthFeet,
-  )
-  const updatedRequest = await updateServiceRequestRow(request.id, {
-    stripe_checkout_session_id: checkoutSession.id,
-  })
+  let checkoutSession: Awaited<ReturnType<typeof createServiceRequestCheckoutSession>>
 
-  return {
-    kind: 'checkout' as const,
-    request: updatedRequest,
-    checkoutUrl: checkoutSession.url,
+  try {
+    checkoutSession = await createServiceRequestCheckoutSession(
+      request,
+      service.id,
+      checkoutQuantity,
+      roundedBoatLengthFeet,
+      checkoutPreparation,
+    )
+  } catch (error) {
+    try {
+      await deleteServiceRequestRow(request.id)
+    } catch (cleanupError) {
+      console.error('Unable to remove a failed checkout draft.', {
+        requestId: request.id,
+        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      })
+    }
+
+    throw error
+  }
+
+  try {
+    const updatedRequest = await updateServiceRequestRow(request.id, {
+      stripe_checkout_session_id: checkoutSession.id,
+    })
+
+    return {
+      kind: 'checkout' as const,
+      request: updatedRequest,
+      checkoutUrl: checkoutSession.url,
+    }
+  } catch (error) {
+    await expireCheckoutSession(checkoutSession.id)
+
+    try {
+      await deleteServiceRequestRow(request.id)
+    } catch (cleanupError) {
+      console.error('Unable to remove a checkout draft after persistence failed.', {
+        requestId: request.id,
+        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+      })
+    }
+
+    throw error
   }
 }
 
@@ -758,8 +872,12 @@ export async function readPublicServiceRequestConfirmation(requestId: string, se
     return null
   }
 
+  if (request.requestKind === 'booking' && !sessionId) {
+    throw new Error('The Stripe confirmation session is required for this booking.')
+  }
+
   if (sessionId) {
-    if (request.stripeCheckoutSessionId && request.stripeCheckoutSessionId !== sessionId) {
+    if (!request.stripeCheckoutSessionId || request.stripeCheckoutSessionId !== sessionId) {
       throw new Error('The confirmation session did not match this request.')
     }
 
@@ -798,36 +916,40 @@ export async function createServiceRequestPaymentLink(
     throw new Error('That request could not be found.')
   }
 
-  if (['completed', 'declined', 'canceled', 'refunded'].includes(request.bookingStatus)) {
-    throw new Error('This request can no longer be accepted for payment.')
-  }
-
-  if (request.paymentStatus === 'captured') {
-    throw new Error('This request has already been charged.')
-  }
-
-  if (request.paymentStatus === 'authorized') {
-    throw new Error('This request already has a card authorization. Use Approve & Capture Payment instead.')
-  }
+  assertServiceRequestActionAllowed(request, 'createPaymentLink')
 
   if (!Number.isInteger(amountCents) || amountCents < 100) {
     throw new Error('Enter a quote amount of at least $1.')
   }
 
   const checkoutSession = await createQuotedServiceRequestCheckoutSession(request, amountCents)
-  const updatedRequest = await updateServiceRequestRow(request.id, {
-    request_kind: 'booking',
-    booking_status: 'pending_review',
-    payment_status: 'not_started',
-    calculated_price_cents: amountCents,
-    stripe_checkout_session_id: checkoutSession.id,
-    stripe_payment_intent_id: null,
-    stripe_charge_id: null,
-    payment_authorized_at: null,
-    payment_captured_at: null,
-    payment_canceled_at: null,
-    admin_notes: adminNotes || request.adminNotes || null,
-  })
+  let updatedRequest: ServiceRequestRecord
+
+  try {
+    updatedRequest = await updateServiceRequestRow(request.id, {
+      request_kind: 'booking',
+      booking_status: 'pending_review',
+      payment_status: 'not_started',
+      calculated_price_cents: amountCents,
+      stripe_checkout_session_id: checkoutSession.id,
+      stripe_payment_intent_id: null,
+      stripe_charge_id: null,
+      payment_authorized_at: null,
+      payment_captured_at: null,
+      payment_canceled_at: null,
+      admin_notes: adminNotes || request.adminNotes || null,
+    })
+  } catch (error) {
+    await expireCheckoutSession(checkoutSession.id)
+    throw error
+  }
+
+  if (
+    request.stripeCheckoutSessionId &&
+    request.stripeCheckoutSessionId !== checkoutSession.id
+  ) {
+    void expireCheckoutSession(request.stripeCheckoutSessionId)
+  }
 
   return {
     request: updatedRequest,
@@ -856,14 +978,20 @@ export async function requestServiceChanges(requestId: string, adminNotes = '') 
     throw new Error('That request could not be found.')
   }
 
-  if (['completed', 'declined', 'refunded'].includes(request.bookingStatus)) {
-    throw new Error('This request can no longer be moved into changes requested.')
-  }
+  assertServiceRequestActionAllowed(request, 'requestChanges')
 
-  return updateServiceRequestRow(requestId, {
+  const checkoutSessionId = request.stripeCheckoutSessionId
+  const updatedRequest = await updateServiceRequestRow(requestId, {
     booking_status: 'changes_requested',
+    stripe_checkout_session_id: null,
     admin_notes: adminNotes || request.adminNotes || null,
   })
+
+  if (checkoutSessionId) {
+    void expireCheckoutSession(checkoutSessionId)
+  }
+
+  return updatedRequest
 }
 
 export async function cancelServiceRequest(requestId: string, adminNotes = '') {
@@ -873,14 +1001,47 @@ export async function cancelServiceRequest(requestId: string, adminNotes = '') {
     throw new Error('That request could not be found.')
   }
 
-  if (request.bookingStatus === 'refunded') {
-    throw new Error('Refunded requests cannot be marked canceled.')
+  if (request.bookingStatus === 'canceled') {
+    return adminNotes
+      ? updateServiceRequestRow(requestId, {
+          admin_notes: adminNotes || request.adminNotes || null,
+        })
+      : request
   }
 
-  return updateServiceRequestRow(requestId, {
+  assertServiceRequestActionAllowed(request, 'cancel')
+
+  if (request.stripePaymentIntentId && request.paymentStatus === 'authorized') {
+    const stripe = getStripeClient()
+    const canceledPaymentIntent = await stripe.paymentIntents.cancel(
+      request.stripePaymentIntentId,
+      {
+        cancellation_reason: 'requested_by_customer',
+      },
+    )
+
+    return updateServiceRequestRow(requestId, {
+      booking_status: 'canceled',
+      payment_status: 'canceled',
+      stripe_payment_intent_id: canceledPaymentIntent.id,
+      stripe_charge_id: getLatestChargeId(canceledPaymentIntent) || request.stripeChargeId,
+      payment_canceled_at: request.paymentCanceledAt || new Date().toISOString(),
+      admin_notes: adminNotes || request.adminNotes || null,
+    })
+  }
+
+  const checkoutSessionId = request.stripeCheckoutSessionId
+  const updatedRequest = await updateServiceRequestRow(requestId, {
     booking_status: 'canceled',
+    stripe_checkout_session_id: null,
     admin_notes: adminNotes || request.adminNotes || null,
   })
+
+  if (checkoutSessionId) {
+    void expireCheckoutSession(checkoutSessionId)
+  }
+
+  return updatedRequest
 }
 
 export async function completeServiceRequest(requestId: string, adminNotes = '') {
@@ -890,9 +1051,15 @@ export async function completeServiceRequest(requestId: string, adminNotes = '')
     throw new Error('That request could not be found.')
   }
 
-  if (['declined', 'refunded'].includes(request.bookingStatus)) {
-    throw new Error('This request cannot be marked completed.')
+  if (request.bookingStatus === 'completed') {
+    return adminNotes
+      ? updateServiceRequestRow(requestId, {
+          admin_notes: adminNotes || request.adminNotes || null,
+        })
+      : request
   }
+
+  assertServiceRequestActionAllowed(request, 'complete')
 
   return updateServiceRequestRow(requestId, {
     booking_status: 'completed',
@@ -907,21 +1074,44 @@ export async function declineServiceRequest(requestId: string, adminNotes = '') 
     throw new Error('That request could not be found.')
   }
 
+  if (request.bookingStatus === 'declined') {
+    return adminNotes
+      ? updateServiceRequestRow(requestId, {
+          admin_notes: adminNotes || request.adminNotes || null,
+        })
+      : request
+  }
+
+  assertServiceRequestActionAllowed(request, 'decline')
+
   if (request.stripePaymentIntentId && request.paymentStatus === 'authorized') {
     const stripe = getStripeClient()
     const canceledPaymentIntent = await stripe.paymentIntents.cancel(request.stripePaymentIntentId, {
       cancellation_reason: 'abandoned',
     })
 
-    return syncServiceRequestCancellationFromPaymentIntent(canceledPaymentIntent, adminNotes)
+    return updateServiceRequestRow(requestId, {
+      booking_status: 'declined',
+      payment_status: 'canceled',
+      stripe_payment_intent_id: canceledPaymentIntent.id,
+      stripe_charge_id: getLatestChargeId(canceledPaymentIntent) || request.stripeChargeId,
+      payment_canceled_at: request.paymentCanceledAt || new Date().toISOString(),
+      admin_notes: adminNotes || request.adminNotes || null,
+    })
   }
 
-  return updateServiceRequestRow(requestId, {
+  const checkoutSessionId = request.stripeCheckoutSessionId
+  const updatedRequest = await updateServiceRequestRow(requestId, {
     booking_status: 'declined',
-    payment_status: request.paymentStatus === 'captured' ? request.paymentStatus : 'canceled',
-    payment_canceled_at: request.paymentStatus === 'captured' ? request.paymentCanceledAt : new Date().toISOString(),
+    stripe_checkout_session_id: null,
     admin_notes: adminNotes || request.adminNotes || null,
   })
+
+  if (checkoutSessionId) {
+    void expireCheckoutSession(checkoutSessionId)
+  }
+
+  return updatedRequest
 }
 
 export async function captureAuthorizedServiceRequest(requestId: string, adminNotes = '') {
@@ -931,18 +1121,21 @@ export async function captureAuthorizedServiceRequest(requestId: string, adminNo
     throw new Error('That request could not be found.')
   }
 
-  if (!request.stripePaymentIntentId) {
-    throw new Error('There is no Stripe authorization on file for this request.')
-  }
-
-  if (request.paymentStatus === 'captured') {
+  if (
+    request.bookingStatus === 'confirmed' &&
+    request.paymentStatus === 'captured'
+  ) {
     return adminNotes
-      ? updateServiceRequestRow(requestId, { admin_notes: adminNotes || request.adminNotes || null })
+      ? updateServiceRequestRow(requestId, {
+          admin_notes: adminNotes || request.adminNotes || null,
+        })
       : request
   }
 
-  if (request.paymentStatus !== 'authorized') {
-    throw new Error('Only authorized requests can be captured.')
+  assertServiceRequestActionAllowed(request, 'approveCapture')
+
+  if (!request.stripePaymentIntentId) {
+    throw new Error('There is no Stripe authorization on file for this request.')
   }
 
   const stripe = getStripeClient()
@@ -973,6 +1166,11 @@ export async function syncServiceRequestAuthorizationFromCheckoutSession(
   }
 
   const existingRequest = normalizeServiceRequestRow(storedRequest)
+
+  if (existingRequest.stripeCheckoutSessionId !== session.id) {
+    return existingRequest
+  }
+
   let paymentIntent: Stripe.PaymentIntent | null = null
 
   if (typeof session.payment_intent === 'string') {
@@ -1029,6 +1227,10 @@ export async function syncServiceRequestAuthorizationFromPaymentIntent(
 
   const request = normalizeServiceRequestRow(storedRequest)
 
+  if (!(await paymentIntentMatchesCurrentCheckout(request, paymentIntent.id))) {
+    return request
+  }
+
   if (paymentIntent.status === 'requires_capture' || paymentIntent.amount_capturable > 0) {
     return updateServiceRequestRow(request.id, {
       stripe_payment_intent_id: paymentIntent.id,
@@ -1069,6 +1271,10 @@ export async function syncServiceRequestCaptureFromPaymentIntent(
 
   const request = normalizeServiceRequestRow(storedRequest)
 
+  if (!(await paymentIntentMatchesCurrentCheckout(request, paymentIntent.id))) {
+    return request
+  }
+
   return updateServiceRequestRow(request.id, {
     stripe_payment_intent_id: paymentIntent.id,
     stripe_charge_id: getLatestChargeId(paymentIntent) || request.stripeChargeId,
@@ -1098,18 +1304,91 @@ export async function syncServiceRequestCancellationFromPaymentIntent(
 
   const request = normalizeServiceRequestRow(storedRequest)
 
+  if (!(await paymentIntentMatchesCurrentCheckout(request, paymentIntent.id))) {
+    return request
+  }
+
   return updateServiceRequestRow(request.id, {
     stripe_payment_intent_id: paymentIntent.id,
-    booking_status: ['confirmed', 'completed', 'refunded'].includes(request.bookingStatus)
+    booking_status: ['canceled', 'declined', 'completed', 'refunded'].includes(
+      request.bookingStatus,
+    )
       ? request.bookingStatus
-      : 'declined',
+      : 'failed_payment',
     payment_status: canMoveToCanceled(request) ? 'canceled' : request.paymentStatus,
     payment_canceled_at: request.paymentCanceledAt || new Date().toISOString(),
     admin_notes: adminNotes || request.adminNotes || null,
   })
 }
 
+export async function syncServiceRequestFailureFromPaymentIntent(
+  paymentIntent: Stripe.PaymentIntent,
+) {
+  const requestId = getStoredRequestIdFromMetadata(paymentIntent.metadata, '')
+  const storedRequest =
+    (requestId ? await readStoredServiceRequestById(requestId) : null) ||
+    (await readStoredServiceRequestByPaymentIntentId(paymentIntent.id))
+
+  if (!storedRequest) {
+    return null
+  }
+
+  const request = normalizeServiceRequestRow(storedRequest)
+
+  if (!(await paymentIntentMatchesCurrentCheckout(request, paymentIntent.id))) {
+    return request
+  }
+
+  if (['captured', 'refunded'].includes(request.paymentStatus)) {
+    return request
+  }
+
+  return updateServiceRequestRow(request.id, {
+    stripe_payment_intent_id: paymentIntent.id,
+    stripe_charge_id: getLatestChargeId(paymentIntent) || request.stripeChargeId,
+    booking_status: ['canceled', 'declined'].includes(request.bookingStatus)
+      ? request.bookingStatus
+      : 'failed_payment',
+    payment_status: 'failed',
+  })
+}
+
+export async function syncServiceRequestCheckoutExpired(
+  session: Stripe.Checkout.Session,
+) {
+  const requestId = getStoredRequestIdFromMetadata(
+    session.metadata,
+    session.client_reference_id || '',
+  )
+  const storedRequest =
+    (requestId ? await readStoredServiceRequestById(requestId) : null) ||
+    (await readStoredServiceRequestByCheckoutSessionId(session.id))
+
+  if (!storedRequest) {
+    return null
+  }
+
+  const request = normalizeServiceRequestRow(storedRequest)
+
+  if (
+    request.stripeCheckoutSessionId !== session.id ||
+    request.paymentStatus !== 'not_started'
+  ) {
+    return request
+  }
+
+  return updateServiceRequestRow(request.id, {
+    stripe_checkout_session_id: session.id,
+    booking_status: 'failed_payment',
+    payment_status: 'failed',
+  })
+}
+
 export async function syncServiceRequestRefundFromCharge(charge: Stripe.Charge) {
+  if (!charge.refunded) {
+    return null
+  }
+
   const paymentIntentId =
     typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id || ''
 

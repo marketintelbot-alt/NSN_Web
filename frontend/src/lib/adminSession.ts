@@ -1,7 +1,7 @@
 import type { AccountSession } from '../types/booking'
 
-const apiBaseUrl =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || 'http://localhost:4000'
+import { apiBaseUrl } from './api'
+
 const apiUnavailableMessage =
   'We could not reach the secure booking service. Please try again in a moment.'
 const accountSessionTokenStorageKey = 'nsn_account_session_token'
@@ -23,7 +23,7 @@ function readStoredAccountSessionToken() {
     return ''
   }
 
-  return window.localStorage.getItem(accountSessionTokenStorageKey) || ''
+  return window.sessionStorage.getItem(accountSessionTokenStorageKey) || ''
 }
 
 function writeStoredAccountSessionToken(token: string) {
@@ -32,11 +32,11 @@ function writeStoredAccountSessionToken(token: string) {
   }
 
   if (token) {
-    window.localStorage.setItem(accountSessionTokenStorageKey, token)
+    window.sessionStorage.setItem(accountSessionTokenStorageKey, token)
     return
   }
 
-  window.localStorage.removeItem(accountSessionTokenStorageKey)
+  window.sessionStorage.removeItem(accountSessionTokenStorageKey)
 }
 
 function clearStoredAccountSessionToken() {
@@ -58,7 +58,6 @@ export async function adminApiRequest<T>(path: string, options: RequestInit = {}
   try {
     const response = await fetch(`${apiBaseUrl}${path}`, {
       ...options,
-      credentials: 'include',
       headers,
     })
 
@@ -149,7 +148,6 @@ export async function destroyAccountSession() {
 
   await fetch(`${apiBaseUrl}/api/account/session`, {
     method: 'DELETE',
-    credentials: 'include',
     headers,
   }).catch(() => undefined)
 }

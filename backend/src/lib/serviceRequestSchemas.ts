@@ -123,8 +123,11 @@ export const publicServiceRequestSchema = z.object({
   agreementPolicyVersion: z
     .string()
     .optional()
-    .transform((value) =>
-      value && value.trim().length > 0 ? normalizeText(value).slice(0, 64) : SERVICE_AGREEMENT_POLICY_VERSION,
+    .transform((value) => normalizeText(value || SERVICE_AGREEMENT_POLICY_VERSION))
+    .pipe(
+      z.literal(SERVICE_AGREEMENT_POLICY_VERSION, {
+        error: 'The service agreement has changed. Refresh the page and review it again.',
+      }),
     ),
   companyWebsite: z
     .string()

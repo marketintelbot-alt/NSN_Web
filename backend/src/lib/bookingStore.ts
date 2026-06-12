@@ -373,8 +373,8 @@ async function readBookingById(bookingId: string) {
 }
 
 async function readAllRows<T>(
-  loadPage: (from: number, to: number) => Promise<{
-    data: T[] | null
+  loadPage: (from: number, to: number) => PromiseLike<{
+    data: unknown[] | null
     error: { message?: string } | null
   }>,
 ) {
@@ -387,7 +387,7 @@ async function readAllRows<T>(
       throw error
     }
 
-    const pageRows = data ?? []
+    const pageRows = (data ?? []) as T[]
     rows.push(...pageRows)
 
     if (pageRows.length < queryPageSize) {
@@ -709,7 +709,13 @@ export async function createPublicBooking(input: PublicBookingInput) {
     throw error
   }
 
-  const booking = await readBookingById(data.id as string)
+  const bookingId = data?.id as string | undefined
+
+  if (!bookingId) {
+    throw new Error('The booking was created, but its ID was not returned.')
+  }
+
+  const booking = await readBookingById(bookingId)
 
   if (!booking) {
     throw new Error('The booking was created, but it could not be loaded afterward.')
@@ -798,7 +804,13 @@ export async function createClientBooking(clientAccount: ClientAccount, input: C
     throw error
   }
 
-  const booking = await readBookingById(data.id as string)
+  const bookingId = data?.id as string | undefined
+
+  if (!bookingId) {
+    throw new Error('The booking was created, but its ID was not returned.')
+  }
+
+  const booking = await readBookingById(bookingId)
 
   if (!booking) {
     throw new Error('The booking was created, but it could not be loaded afterward.')

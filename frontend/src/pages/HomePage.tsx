@@ -188,21 +188,64 @@ export function HomePage() {
             </Link>
           </div>
           <div className="mt-10 grid gap-5 lg:grid-cols-2">
-            {galleryStories.slice(0, 2).map((story, index) => (
-              <FadeIn key={story.title} className="overflow-hidden rounded-[2rem] border border-ink/10 bg-[#f8fbf7]/90 shadow-soft" delay={index * 0.08}>
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img
-                    alt={story.title}
-                    className="h-full w-full object-cover"
-                    src={story.image}
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold text-ink">{story.title}</h3>
-                  <p className="mt-3 text-base leading-8 text-slate">{story.caption}</p>
-                </div>
-              </FadeIn>
-            ))}
+            {galleryStories.slice(0, 2).map((story, index) => {
+              const comparisonImages =
+                story.beforeImage && story.afterImage
+                  ? [
+                      {
+                        alt: story.beforeAlt ?? `${story.title} before detailing`,
+                        image: story.beforeImage,
+                        label: 'Before',
+                      },
+                      {
+                        alt: story.afterAlt ?? `${story.title} after detailing`,
+                        image: story.afterImage,
+                        label: 'After',
+                      },
+                    ]
+                  : null
+
+              return (
+                <FadeIn
+                  key={story.title}
+                  className="overflow-hidden rounded-[2rem] border border-ink/10 bg-[#f8fbf7]/90 shadow-soft"
+                  delay={index * 0.08}
+                >
+                  {comparisonImages ? (
+                    <div className="grid grid-cols-2 gap-px bg-ink/10">
+                      {comparisonImages.map((item) => (
+                        <div key={item.label} className="relative aspect-[3/4] overflow-hidden">
+                          <img
+                            alt={item.alt}
+                            className="h-full w-full object-cover"
+                            decoding={index === 0 ? 'sync' : 'async'}
+                            loading={index === 0 ? 'eager' : 'lazy'}
+                            src={item.image}
+                          />
+                          <span className="absolute left-3 top-3 rounded-full bg-ink/85 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-white shadow-soft">
+                            {item.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="aspect-[4/3] overflow-hidden">
+                      <img
+                        alt={story.imageAlt}
+                        className="h-full w-full object-cover"
+                        decoding={index === 0 ? 'sync' : 'async'}
+                        loading={index === 0 ? 'eager' : 'lazy'}
+                        src={story.image}
+                      />
+                    </div>
+                  )}
+                  <div className="p-6">
+                    <h3 className="text-2xl font-semibold text-ink">{story.title}</h3>
+                    <p className="mt-3 text-base leading-8 text-slate">{story.caption}</p>
+                  </div>
+                </FadeIn>
+              )
+            })}
           </div>
         </div>
       </section>

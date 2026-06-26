@@ -203,6 +203,7 @@ export type GalleryStory = {
 export const galleryCategories: GalleryCategory[] = [
   { label: 'All Work', slug: 'all' },
   { label: 'Sea Doo', slug: 'sea-doo' },
+  { label: 'Bayliner', slug: 'bayliner' },
   { label: 'Sea Ray', slug: 'sea-ray' },
   { label: 'Tige', slug: 'tige' },
   { label: 'Mastercraft', slug: 'mastercraft' },
@@ -222,6 +223,44 @@ export const galleryStories: GalleryStory[] = [
     afterImage: '/images/gallery/sea-doo-after.jpg',
     afterAlt: 'Clean Sea Doo GTX seat and exterior after detailing',
     tags: ['Personal watercraft', 'Interior cleanup', 'Footwell grime', 'Finished presentation'],
+  },
+  {
+    title: 'Bayliner cockpit carpet reset',
+    caption:
+      'Before-and-after cockpit carpet cleanup showing stained foot traffic before the service and a brighter walkthrough after the detail pass.',
+    image: '/images/gallery/bayliner/bayliner-cockpit-carpet-after.jpg',
+    imageAlt: 'Bayliner cockpit carpet after cleaning',
+    category: 'Bayliner',
+    categorySlug: 'bayliner',
+    beforeImage: '/images/gallery/bayliner/bayliner-cockpit-carpet-before.jpg',
+    beforeAlt: 'Stained Bayliner cockpit carpet before cleaning',
+    afterImage: '/images/gallery/bayliner/bayliner-cockpit-carpet-after.jpg',
+    afterAlt: 'Bayliner cockpit carpet after cleaning',
+    tags: ['Cockpit carpet', 'Interior cleanup', 'Before and after', 'Detail pass'],
+  },
+  {
+    title: 'Bayliner hull rail cleanup',
+    caption:
+      'Exterior before-and-after focused on rail-line grime, water spotting, and the cleaned hull presentation after the wash and finish work.',
+    image: '/images/gallery/bayliner/bayliner-hull-rail-after.jpg',
+    imageAlt: 'Clean Bayliner hull and rail after exterior detailing',
+    category: 'Bayliner',
+    categorySlug: 'bayliner',
+    beforeImage: '/images/gallery/bayliner/bayliner-hull-rail-before.jpg',
+    beforeAlt: 'Bayliner hull and rail with grime before exterior detailing',
+    afterImage: '/images/gallery/bayliner/bayliner-hull-rail-after.jpg',
+    afterAlt: 'Clean Bayliner hull and rail after exterior detailing',
+    tags: ['Exterior wash', 'Rail-line grime', 'Water spots', 'Before and after'],
+  },
+  {
+    title: 'Bayliner finish presentation',
+    caption:
+      'A close-up finish photo highlighting the cleaned Bayliner side profile, badge line, and reflective hull surface.',
+    image: '/images/gallery/bayliner/bayliner-finish-detail.jpg',
+    imageAlt: 'Clean Bayliner side profile and badge after detailing',
+    category: 'Bayliner',
+    categorySlug: 'bayliner',
+    tags: ['Gelcoat finish', 'Hull presentation', 'Brand detail', 'Final look'],
   },
 ]
 

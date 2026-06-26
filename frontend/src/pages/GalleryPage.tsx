@@ -9,7 +9,29 @@ import { PageHero } from '../components/ui/PageHero'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { galleryCategories, galleryStories, type GalleryStory } from '../content/site'
 
+function GalleryImage({
+  alt,
+  eager,
+  src,
+}: {
+  alt: string
+  eager: boolean
+  src: string
+}) {
+  return (
+    <img
+      alt={alt}
+      className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"
+      decoding={eager ? 'sync' : 'async'}
+      loading={eager ? 'eager' : 'lazy'}
+      sizes="(min-width: 1024px) 50vw, 100vw"
+      src={src}
+    />
+  )
+}
+
 function GalleryStoryCard({ story, index }: { story: GalleryStory; index: number }) {
+  const eager = index === 0
   const comparisonImages =
     story.beforeImage && story.afterImage
       ? [
@@ -38,11 +60,7 @@ function GalleryStoryCard({ story, index }: { story: GalleryStory; index: number
         <div className="grid grid-cols-2 gap-px bg-ink/10">
           {comparisonImages.map((item) => (
             <div key={item.label} className="relative aspect-[3/4] overflow-hidden bg-[#edf5fa]">
-              <img
-                alt={item.alt}
-                className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"
-                src={item.image}
-              />
+              <GalleryImage alt={item.alt} eager={eager} src={item.image} />
               <span className="absolute left-3 top-3 rounded-full bg-ink/85 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-white shadow-soft sm:left-4 sm:top-4">
                 {item.label}
               </span>
@@ -51,11 +69,7 @@ function GalleryStoryCard({ story, index }: { story: GalleryStory; index: number
         </div>
       ) : (
         <div className="aspect-[4/3] overflow-hidden bg-[#edf5fa]">
-          <img
-            alt={story.imageAlt}
-            className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"
-            src={story.image}
-          />
+          <GalleryImage alt={story.imageAlt} eager={eager} src={story.image} />
         </div>
       )}
       <div className="p-6 md:p-7">

@@ -125,20 +125,20 @@
   }
 
   .display-title {
-    @apply font-display text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-ink md:text-6xl lg:text-7xl;
+    @apply font-display text-5xl font-semibold leading-[0.95] tracking-normal text-ink md:text-6xl lg:text-7xl;
   }
 
   .display-title-inverse {
-    @apply font-display text-5xl font-semibold leading-[0.95] tracking-[-0.04em] text-white md:text-6xl lg:text-7xl;
+    @apply font-display text-5xl font-semibold leading-[0.95] tracking-normal text-white md:text-6xl lg:text-7xl;
     text-shadow: 0 20px 60px rgba(13, 39, 64, 0.28);
   }
 
   .section-title {
-    @apply font-display text-4xl font-semibold leading-[1] tracking-[-0.03em] text-ink md:text-5xl;
+    @apply font-display text-4xl font-semibold leading-[1] tracking-normal text-ink md:text-5xl;
   }
 
   .section-title-inverse {
-    @apply font-display text-4xl font-semibold leading-[1] tracking-[-0.03em] text-white md:text-5xl;
+    @apply font-display text-4xl font-semibold leading-[1] tracking-normal text-white md:text-5xl;
     text-shadow: 0 18px 50px rgba(13, 39, 64, 0.25);
   }
 

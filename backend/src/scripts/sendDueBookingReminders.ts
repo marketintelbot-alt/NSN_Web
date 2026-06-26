@@ -5,8 +5,14 @@ import { sendDueBookingReminderEmails } from '../lib/bookingEmailDelivery.js'
 import { listDueReminderBookings } from '../lib/bookingStore.js'
 import { getBusinessNotificationEmails } from '../lib/notificationEmails.js'
 import { retryPendingServiceRequestEmails } from '../lib/serviceRequestEmailDelivery.js'
+import { pingSupabaseKeepAlive } from '../lib/supabaseKeepAlive.js'
 
 async function main() {
+  const keepAlive = await pingSupabaseKeepAlive()
+  console.log(
+    `Supabase keep-alive query succeeded for ${keepAlive.tableName} in ${keepAlive.durationMs}ms.`,
+  )
+
   const bookings = await listDueReminderBookings()
 
   const options = {

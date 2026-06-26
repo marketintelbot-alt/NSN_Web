@@ -7,7 +7,42 @@ import { CtaBanner } from '../components/ui/CtaBanner'
 import { FadeIn } from '../components/ui/FadeIn'
 import { PageHero } from '../components/ui/PageHero'
 import { SectionIntro } from '../components/ui/SectionIntro'
-import { galleryCategories, galleryStories, type GalleryStory } from '../content/site'
+import {
+  galleryCategories,
+  galleryStories,
+  type GalleryCategory,
+  type GalleryStory,
+} from '../content/site'
+
+type GalleryStoryGroup = {
+  category: GalleryCategory
+  startIndex: number
+  stories: GalleryStory[]
+}
+
+function buildGalleryStoryGroups(activeCategory: string): GalleryStoryGroup[] {
+  const activeCategories = galleryCategories.filter((category) => {
+    if (category.slug === 'all') {
+      return false
+    }
+
+    return activeCategory === 'all' || category.slug === activeCategory
+  })
+
+  let startIndex = 0
+
+  return activeCategories.flatMap((category) => {
+    const stories = galleryStories.filter((story) => story.categorySlug === category.slug)
+
+    if (stories.length === 0) {
+      return []
+    }
+
+    const group = { category, startIndex, stories }
+    startIndex += stories.length
+    return [group]
+  })
+}
 
 function GalleryImage({
   alt,
@@ -76,7 +111,7 @@ function GalleryStoryCard({ story, index }: { story: GalleryStory; index: number
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
           {story.category}
         </p>
-        <h2 className="mt-3 text-2xl font-semibold text-ink">{story.title}</h2>
+        <h3 className="mt-3 text-2xl font-semibold text-ink">{story.title}</h3>
         <p className="mt-3 text-base leading-8 text-slate">{story.caption}</p>
         {story.tags ? (
           <div className="mt-5 flex flex-wrap gap-2">
@@ -108,13 +143,10 @@ export function GalleryPage() {
     )
   }, [])
 
-  const visibleStories = useMemo(() => {
-    if (activeCategory === 'all') {
-      return galleryStories
-    }
-
-    return galleryStories.filter((story) => story.categorySlug === activeCategory)
-  }, [activeCategory])
+  const visibleStoryGroups = useMemo(
+    () => buildGalleryStoryGroups(activeCategory),
+    [activeCategory],
+  )
 
   const availableCategories = useMemo(
     () => galleryCategories.filter((category) => (categoryCounts[category.slug] ?? 0) > 0),
@@ -150,7 +182,7 @@ export function GalleryPage() {
           <SectionIntro
             label="Work Gallery"
             title="Find examples that feel close to your own boat or watercraft."
-            copy="Gallery categories are grouped around recognizable boat and personal watercraft types, with before-and-after projects highlighted when matching photos are available."
+            copy="Each boat has its own selected photo set, with before-and-after projects highlighted when matching angles are available."
           />
 
           <div className="mt-10 flex flex-wrap gap-3" aria-label="Gallery categories">
@@ -183,9 +215,35 @@ export function GalleryPage() {
             })}
           </div>
 
-          <div className="mt-12 grid gap-6 lg:grid-cols-2">
-            {visibleStories.map((story, index) => (
-              <GalleryStoryCard key={story.title} story={story} index={index} />
+          <div className="mt-12 grid gap-12">
+            {visibleStoryGroups.map((group) => (
+              <section key={group.category.slug} aria-labelledby={`gallery-${group.category.slug}`}>
+                <div className="flex flex-col gap-2 border-b border-ink/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-navy/70">
+                      Boat Gallery
+                    </p>
+                    <h2
+                      id={`gallery-${group.category.slug}`}
+                      className="mt-2 text-3xl font-semibold text-ink"
+                    >
+                      {group.category.label}
+                    </h2>
+                  </div>
+                  <p className="text-sm font-semibold text-slate">
+                    {group.stories.length} selected photo {group.stories.length === 1 ? 'set' : 'sets'}
+                  </p>
+                </div>
+                <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                  {group.stories.map((story, index) => (
+                    <GalleryStoryCard
+                      key={story.title}
+                      story={story}
+                      index={group.startIndex + index}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </div>

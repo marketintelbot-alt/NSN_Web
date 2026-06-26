@@ -262,7 +262,62 @@ export const galleryStories: GalleryStory[] = [
     categorySlug: 'bayliner',
     tags: ['Gelcoat finish', 'Hull presentation', 'Brand detail', 'Final look'],
   },
+  {
+    title: 'Sea Ray sink basin cleanup',
+    caption:
+      'Before-and-after Sea Ray sink basin cleanup showing built-up grime around the drain before service and a cleaner galley surface after the detail pass.',
+    image: '/images/gallery/sea-ray/sea-ray-sink-basin-after.jpg',
+    imageAlt: 'Clean Sea Ray galley sink and cooktop after detailing',
+    category: 'Sea Ray',
+    categorySlug: 'sea-ray',
+    beforeImage: '/images/gallery/sea-ray/sea-ray-sink-basin-before.jpg',
+    beforeAlt: 'Dirty Sea Ray sink basin and drain before detailing',
+    afterImage: '/images/gallery/sea-ray/sea-ray-sink-basin-after.jpg',
+    afterAlt: 'Clean Sea Ray galley sink and cooktop after detailing',
+    tags: ['Cabin galley', 'Sink basin', 'Before and after', 'Interior detail'],
+  },
+  {
+    title: 'Sea Ray side compartment cleanup',
+    caption:
+      'A close detail comparison focused on the low side compartment and textured surfaces where debris and dark buildup collect.',
+    image: '/images/gallery/sea-ray/sea-ray-side-compartment-after.jpg',
+    imageAlt: 'Clean Sea Ray side compartment after detailing',
+    category: 'Sea Ray',
+    categorySlug: 'sea-ray',
+    beforeImage: '/images/gallery/sea-ray/sea-ray-side-compartment-before.jpg',
+    beforeAlt: 'Dirty Sea Ray side compartment before detailing',
+    afterImage: '/images/gallery/sea-ray/sea-ray-side-compartment-after.jpg',
+    afterAlt: 'Clean Sea Ray side compartment after detailing',
+    tags: ['Side compartment', 'Textured surfaces', 'Before and after', 'Detail access'],
+  },
+  {
+    title: 'Sea Ray galley finish',
+    caption:
+      'Finished Sea Ray galley presentation with the counter, sink, cooktop cover, surrounding trim, and storage surfaces cleaned up.',
+    image: '/images/gallery/sea-ray/sea-ray-galley-finish.jpg',
+    imageAlt: 'Clean Sea Ray galley with sink, cooktop, counter, and wood trim',
+    category: 'Sea Ray',
+    categorySlug: 'sea-ray',
+    tags: ['Galley finish', 'Counter surfaces', 'Wood trim', 'Final look'],
+  },
+  {
+    title: 'Sea Ray cabin presentation',
+    caption:
+      'A wider cabin view showing the dinette, seating, table, trim, and surrounding interior surfaces after the cleanup.',
+    image: '/images/gallery/sea-ray/sea-ray-cabin-finish.jpg',
+    imageAlt: 'Clean Sea Ray cabin dinette and seating after detailing',
+    category: 'Sea Ray',
+    categorySlug: 'sea-ray',
+    tags: ['Cabin interior', 'Dinette seating', 'Interior presentation', 'Final look'],
+  },
 ]
+
+export const galleryPreviewStories = galleryCategories
+  .filter((category) => category.slug !== 'all')
+  .flatMap((category) => {
+    const story = galleryStories.find((item) => item.categorySlug === category.slug)
+    return story ? [story] : []
+  })
 
 export const advisoryPillars = [
   {

@@ -10,7 +10,7 @@ import {
   advisoryHighlights,
   brandPromise,
   faqItems,
-  galleryStories,
+  galleryPreviewStories,
   homeMetrics,
   localSearchFocus,
   marineCareHighlights,
@@ -187,8 +187,8 @@ export function HomePage() {
               View full gallery
             </Link>
           </div>
-          <div className="mt-10 grid gap-5 lg:grid-cols-2">
-            {galleryStories.slice(0, 2).map((story, index) => {
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+            {galleryPreviewStories.map((story, index) => {
               const comparisonImages =
                 story.beforeImage && story.afterImage
                   ? [

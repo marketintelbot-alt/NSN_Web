@@ -5,11 +5,14 @@ import type { PublicServiceRequestInput } from './serviceRequestSchemas.js'
 import { parseRequestedDateTimeLocal } from './serviceRequestSchemas.js'
 import {
   businessTimeZone,
+  calculatePublishedEstimateCents,
   calculateServicePriceCents,
   findServiceById,
   getConfiguredStripePriceId,
   isBoatLengthWithinConfiguredRange,
+  maximumBoatLengthFeet,
   minimumBoatLengthFeet,
+  publishedEstimateMaximumBoatLengthFeet,
   roundBoatLengthFeet,
   type PaymentType,
   type ServiceCategory,
@@ -347,6 +350,15 @@ function buildQuoteTriggerReasons(
     !isBoatLengthWithinConfiguredRange(service, roundedBoatLengthFeet)
   ) {
     reasons.push('boat_length_over_maximum')
+  }
+
+  if (
+    service?.requiresBoatLength &&
+    roundedBoatLengthFeet &&
+    roundedBoatLengthFeet > publishedEstimateMaximumBoatLengthFeet &&
+    isBoatLengthWithinConfiguredRange(service, roundedBoatLengthFeet)
+  ) {
+    reasons.push('boat_length_over_published_estimate_range')
   }
 
   if (input.heavyOxidation) {
@@ -746,34 +758,25 @@ export async function createPublicServiceRequest(input: PublicServiceRequestInpu
     throw new Error(`Boat length must be at least ${minimumBoatLengthFeet} feet.`)
   }
 
-  const quoteTriggerReasons = buildQuoteTriggerReasons(input, roundedBoatLengthFeet)
-  const shouldRouteToInquiry =
-    input.submissionIntent === 'inquiry' ||
-    quoteTriggerReasons.length > 0 ||
-    !service ||
-    service.paymentType !== 'instant_checkout'
-  const checkoutQuantity =
-    !shouldRouteToInquiry && service ? getCheckoutQuantity(service, roundedBoatLengthFeet) : null
+  if (service?.requiresBoatLength && roundedBoatLengthFeet && roundedBoatLengthFeet > maximumBoatLengthFeet) {
+    throw new Error(`Boat length must be ${maximumBoatLengthFeet} feet or fewer.`)
+  }
 
+  const quoteTriggerReasons = buildQuoteTriggerReasons(input, roundedBoatLengthFeet)
   const requestedDateTime = parseRequestedDateTimeLocal(input.requestedDateTimeLocal).toISOString()
-  const calculatedPriceCents =
-    !shouldRouteToInquiry && service
-      ? calculateServicePriceCents(service, roundedBoatLengthFeet)
-      : null
-  const checkoutPreparation =
-    !shouldRouteToInquiry && service && checkoutQuantity
-      ? await prepareServiceRequestCheckout(service.id)
-      : null
+  const calculatedPriceCents = service
+    ? calculatePublishedEstimateCents(service, roundedBoatLengthFeet)
+    : null
   const request = await insertServiceRequest({
-    request_kind: shouldRouteToInquiry ? 'inquiry' : 'booking',
-    booking_status: shouldRouteToInquiry ? 'pending_review' : 'draft',
+    request_kind: 'inquiry',
+    booking_status: 'pending_review',
     payment_status: 'not_started',
     source: 'public_site',
     selected_service_id: service?.id || null,
     selected_service_name: service?.name || 'Not sure what I need',
     selected_service_category: service?.category || null,
     payment_type: service?.paymentType || 'quote_only',
-    quote_only: shouldRouteToInquiry,
+    quote_only: true,
     quote_trigger_reasons: quoteTriggerReasons,
     selected_add_ons: [],
     boat_length_feet: input.boatLengthFeet ?? null,
@@ -804,59 +807,9 @@ export async function createPublicServiceRequest(input: PublicServiceRequestInpu
     last_internal_email_sent_at: null,
   })
 
-  if (shouldRouteToInquiry || !service || !checkoutQuantity || !checkoutPreparation) {
-    return {
-      kind: 'inquiry' as const,
-      request,
-    }
-  }
-
-  let checkoutSession: Awaited<ReturnType<typeof createServiceRequestCheckoutSession>>
-
-  try {
-    checkoutSession = await createServiceRequestCheckoutSession(
-      request,
-      service.id,
-      checkoutQuantity,
-      roundedBoatLengthFeet,
-      checkoutPreparation,
-    )
-  } catch (error) {
-    try {
-      await deleteServiceRequestRow(request.id)
-    } catch (cleanupError) {
-      console.error('Unable to remove a failed checkout draft.', {
-        requestId: request.id,
-        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-      })
-    }
-
-    throw error
-  }
-
-  try {
-    const updatedRequest = await updateServiceRequestRow(request.id, {
-      stripe_checkout_session_id: checkoutSession.id,
-    })
-
-    return {
-      kind: 'checkout' as const,
-      request: updatedRequest,
-      checkoutUrl: checkoutSession.url,
-    }
-  } catch (error) {
-    await expireCheckoutSession(checkoutSession.id)
-
-    try {
-      await deleteServiceRequestRow(request.id)
-    } catch (cleanupError) {
-      console.error('Unable to remove a checkout draft after persistence failed.', {
-        requestId: request.id,
-        error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
-      })
-    }
-
-    throw error
+  return {
+    kind: 'inquiry' as const,
+    request,
   }
 }
 

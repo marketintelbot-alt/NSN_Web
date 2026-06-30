@@ -9,15 +9,42 @@ import { PageHero } from '../components/ui/PageHero'
 import { SectionIntro } from '../components/ui/SectionIntro'
 import { pricingConditionNotes } from '../content/site'
 import { apiRequest } from '../lib/api'
-import { formatCurrency } from '../lib/servicePricing'
+import {
+  formatCurrency,
+  maximumBoatLengthFeet,
+  minimumBoatLengthFeet,
+  publishedEstimateMaximumBoatLengthFeet,
+} from '../lib/servicePricing'
 import type { PublicServiceCatalogResponse, ServiceCatalogItem } from '../types/service'
+
+const maintenancePackageNames = new Set([
+  'Interior Refresh',
+  'Maintenance Detail',
+  'Signature Detail',
+  'Restoration Detail',
+])
+
+function isMaintenancePackage(service: ServiceCatalogItem) {
+  return maintenancePackageNames.has(service.name)
+}
 
 function groupServices(services: ServiceCatalogItem[]) {
   return {
-    instantCheckout: services.filter(
-      (service) => service.category === 'marine_care' && !service.quoteOnly,
+    maintenancePackages: services.filter(
+      (service) => service.category === 'marine_care' && isMaintenancePackage(service),
     ),
-    quoteOnly: services.filter((service) => service.category === 'marine_care' && service.quoteOnly),
+    additionalMarineCare: services.filter(
+      (service) =>
+        service.category === 'marine_care' &&
+        !isMaintenancePackage(service) &&
+        service.pricingModel !== 'custom',
+    ),
+    customReview: services.filter(
+      (service) =>
+        service.category === 'marine_care' &&
+        !isMaintenancePackage(service) &&
+        service.pricingModel === 'custom',
+    ),
     advisory: services.filter((service) => service.category === 'advisory'),
   }
 }
@@ -60,14 +87,14 @@ export function PricingPage() {
     <>
       <Seo
         title="Pricing"
-        description="View instant-checkout marine care pricing, quote-only specialty work, and advisory request options for North Shore Nautical."
+        description="View starting marine care pricing, custom-review specialty work, and invoice-after-review request options for North Shore Nautical."
         path="/pricing"
       />
 
       <PageHero
         eyebrow="Pricing"
         title="Transparent pricing for routine marine care, with quote review for specialty work."
-        description="Routine flat and per-foot services can move to secure checkout after the estimate is calculated. Restoration, heavier-condition work, and advisory requests stay inquiry-first."
+        description="Published rates are starting estimates. Every request is reviewed before scheduling and invoicing so scope, condition, and access stay clear."
       />
 
       <section className="section-pad">
@@ -75,7 +102,7 @@ export function PricingPage() {
           <SectionIntro
             label="How Pricing Works"
             title="Flat and per-foot pricing stay clear. Heavier-condition work gets reviewed first."
-            copy="Online pricing assumes routine condition. Per-foot services are for boats from 10-30 feet; boats over 30 feet, heavier-condition jobs, and unusual access are quoted directly after review."
+            copy={`Published starting estimates assume routine condition and boats from ${minimumBoatLengthFeet}-${publishedEstimateMaximumBoatLengthFeet} feet. Boats over ${publishedEstimateMaximumBoatLengthFeet} feet and up to ${maximumBoatLengthFeet} feet, heavier-condition jobs, and unusual access are reviewed directly before invoice pricing is finalized.`}
           />
 
           <div className="mt-8 grid gap-4 lg:grid-cols-2">
@@ -110,12 +137,83 @@ export function PricingPage() {
 
           {!loading && !message ? (
             <>
-              <div className="mt-10">
+              <div className="mt-10 rounded-[2rem] border border-lake/20 bg-[#edf6f2]/76 p-5 shadow-soft md:p-7">
+                <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.18em] text-navy/70">
+                      Maintenance Packages
+                    </p>
+                    <h2 className="mt-3 max-w-3xl text-3xl font-semibold text-ink md:text-4xl">
+                      Choose the service block that matches the level of care the boat needs.
+                    </h2>
+                    <p className="mt-3 max-w-3xl text-sm leading-7 text-slate">
+                      These are the core North Shore Nautical packages. Routine boats from{' '}
+                      {minimumBoatLengthFeet}-{publishedEstimateMaximumBoatLengthFeet} ft can use the
+                      published starting estimate; larger boats, restoration, and heavier-condition work
+                      are reviewed before invoice pricing is finalized.
+                    </p>
+                  </div>
+                  <Link className="button-secondary shrink-0" to="/booking">
+                    Start a Request
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+
+                <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {groupedServices.maintenancePackages.map((service, index) => (
+                    <FadeIn
+                      key={service.id}
+                      className="flex h-full flex-col rounded-3xl border border-white/80 bg-[#f8fbf7]/95 p-5 shadow-soft"
+                      delay={index * 0.06}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <h3 className="text-xl font-semibold text-ink">{service.name}</h3>
+                        <span className="status-pill">{service.pricingLabel}</span>
+                      </div>
+                      <p className="mt-4 text-sm leading-7 text-slate">{service.description}</p>
+                      <div className="mt-5 flex flex-wrap gap-2">
+                        <span className="rounded-full border border-ink/10 bg-white/70 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate">
+                          Invoice review
+                        </span>
+                        {service.requiresBoatLength ? (
+                          <span className="rounded-full border border-ink/10 bg-white/70 px-3 py-1.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate">
+                            {service.pricingModel === 'starting_at_per_foot'
+                              ? `Review up to ${maximumBoatLengthFeet} ft`
+                              : `Estimate ${service.minBoatLengthFeet}-${publishedEstimateMaximumBoatLengthFeet} ft`}
+                          </span>
+                        ) : null}
+                      </div>
+                      {service.warningNotes.length > 0 ? (
+                        <p className="mt-4 text-xs leading-6 text-slate/90">
+                          {service.warningNotes[0]}
+                        </p>
+                      ) : null}
+                      {service.contractValueCents ? (
+                        <p className="mt-3 text-xs leading-6 text-slate/90">
+                          Interior Refresh packages start at{' '}
+                          {formatCurrency(service.contractValueCents)} per week.
+                        </p>
+                      ) : null}
+                      <div className="mt-auto pt-5">
+                        <Link
+                          className="button-primary w-full"
+                          to={`/booking?service=${service.id}`}
+                        >
+                          Request This Package
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </FadeIn>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-14">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-navy/70">
-                  Instant Checkout Services
+                  Additional Marine Care
                 </h2>
                 <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                  {groupedServices.instantCheckout.map((service, index) => (
+                  {groupedServices.additionalMarineCare.map((service, index) => (
                     <FadeIn key={service.id} className="panel p-6" delay={index * 0.06}>
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
@@ -128,11 +226,11 @@ export function PricingPage() {
                       </div>
                       <div className="mt-5 flex flex-wrap gap-3">
                         <span className="rounded-full border border-ink/10 bg-[#f8fbf7] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate">
-                          Instant checkout eligible
+                          Invoice review
                         </span>
                         {service.requiresBoatLength ? (
                           <span className="rounded-full border border-ink/10 bg-[#f8fbf7] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate">
-                            {service.minBoatLengthFeet}-{service.maxBoatLengthFeet} ft
+                            Estimate {service.minBoatLengthFeet}-{publishedEstimateMaximumBoatLengthFeet} ft
                           </span>
                         ) : null}
                       </div>
@@ -141,9 +239,9 @@ export function PricingPage() {
                       ) : null}
                       {service.contractValueCents ? (
                         <p className="mt-3 text-sm leading-7 text-slate">
-                          Interior Refresh visits are valued at{' '}
-                          {formatCurrency(service.contractValueCents)} per visit for approved
-                          seasonal or invoiced contract clients.
+                          Interior Refresh packages start at{' '}
+                          {formatCurrency(service.contractValueCents)} per week for approved
+                          seasonal or invoiced clients.
                         </p>
                       ) : null}
                       <p className="mt-3 text-sm leading-7 text-slate">
@@ -151,12 +249,12 @@ export function PricingPage() {
                       </p>
                       {service.requiresBoatLength ? (
                         <p className="mt-2 text-sm leading-7 text-slate">
-                          Larger than {service.maxBoatLengthFeet} ft? Contact North Shore Nautical for a custom quote.
+                          Boats over {publishedEstimateMaximumBoatLengthFeet} ft route to direct invoice review. Boats over {maximumBoatLengthFeet} ft should contact North Shore Nautical directly for a custom quote.
                         </p>
                       ) : null}
                       <div className="mt-6">
                         <Link className="button-primary" to={`/booking?service=${service.id}`}>
-                          {service.quoteOnly ? 'Request an Estimate' : 'Book This Service'}
+                          Request This Service
                           <ArrowRight className="h-4 w-4" />
                         </Link>
                       </div>
@@ -167,10 +265,10 @@ export function PricingPage() {
 
               <div className="mt-14">
                 <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-navy/70">
-                  Quote-Only Services
+                  Specialty & Custom Review
                 </h2>
                 <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                  {[...groupedServices.quoteOnly, ...groupedServices.advisory].map(
+                  {[...groupedServices.customReview, ...groupedServices.advisory].map(
                     (service, index) => (
                       <FadeIn key={service.id} className="soft-panel p-6" delay={index * 0.06}>
                         <div className="flex flex-wrap items-start justify-between gap-4">

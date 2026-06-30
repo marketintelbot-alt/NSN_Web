@@ -189,11 +189,13 @@ export function GalleryPage() {
             {availableCategories.map((category) => {
               const isActive = activeCategory === category.slug
               const count = categoryCounts[category.slug] ?? 0
+              const photoSetLabel = count === 1 ? 'photo set' : 'photo sets'
 
               return (
                 <button
                   key={category.slug}
                   type="button"
+                  aria-label={`${category.label}, ${count} ${photoSetLabel}`}
                   aria-pressed={isActive}
                   className={`inline-flex min-h-12 items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lake focus-visible:ring-offset-2 focus-visible:ring-offset-white ${
                     isActive
@@ -202,8 +204,9 @@ export function GalleryPage() {
                   }`}
                   onClick={() => setActiveCategory(category.slug)}
                 >
-                  {category.label}
+                    {category.label}
                   <span
+                    aria-hidden="true"
                     className={`rounded-full px-2 py-0.5 text-[0.68rem] ${
                       isActive ? 'bg-white/15 text-white' : 'bg-lake/15 text-slate'
                     }`}

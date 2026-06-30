@@ -134,16 +134,16 @@ function collectServiceCatalogFindings(repoRootPath) {
     findings.push(`${pathFromRoot}:${blockStartLine} quick-reset display name must be Interior Refresh`)
   }
 
-  if (!/flatPriceCents:\s*7995/.test(block)) {
-    findings.push(`${pathFromRoot}:${blockStartLine} Interior Refresh public price must be 7995 cents`)
+  if (!/flatPriceCents:\s*8500/.test(block)) {
+    findings.push(`${pathFromRoot}:${blockStartLine} Interior Refresh public package price must be 8500 cents`)
   }
 
-  if (/flatPriceCents:\s*(?:7999|6000)/.test(block)) {
+  if (/flatPriceCents:\s*(?:7995|7999|6000)/.test(block)) {
     findings.push(`${pathFromRoot}:${blockStartLine} Interior Refresh public price is set to the wrong amount`)
   }
 
-  if (!/contractValueCents:\s*6000/.test(block)) {
-    findings.push(`${pathFromRoot}:${blockStartLine} Interior Refresh contract value must be 6000 cents`)
+  if (!/contractValueCents:\s*8500/.test(block)) {
+    findings.push(`${pathFromRoot}:${blockStartLine} Interior Refresh contract package value must be 8500 cents`)
   }
 
   if (!/scopeType:\s*'interior_only'/.test(block)) {

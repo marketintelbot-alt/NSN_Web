@@ -63,9 +63,9 @@ function getConfirmationCopy(request: ServiceRequestConfirmation['request']) {
 
   if (request.requestKind === 'inquiry' || request.paymentStatus === 'not_started') {
     return {
-      eyebrow: 'Inquiry Received',
-      title: 'Thanks — your inquiry has been received.',
-      body: 'North Shore Nautical will review your details and follow up shortly.',
+      eyebrow: 'Request Received',
+      title: 'Thanks — your request has been received.',
+      body: 'North Shore Nautical will review your details and follow up with invoice next steps shortly.',
       eventName: '',
     }
   }
@@ -73,7 +73,7 @@ function getConfirmationCopy(request: ServiceRequestConfirmation['request']) {
   return {
     eyebrow: 'Pending Review',
     title: 'Your appointment request has been received.',
-    body: 'Your payment method has been authorized, but payment will not be captured until North Shore Nautical reviews and approves your request. You will hear from us shortly.',
+    body: 'North Shore Nautical will review your request before confirming scheduling or invoice details. You will hear from us shortly.',
     eventName: 'authorization_completed',
   }
 }

@@ -76,19 +76,23 @@ export function ServicesPage() {
       </PageHero>
 
       <section className="section-pad">
-        <div className="container grid gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+        <div className="container">
           <SectionIntro
-            label="What We Do"
-            title="A premium local marine care company should feel polished, calm, and operationally clear."
-            copy="The public service story is simple: marine care comes first, advisory is available where useful, and every request is reviewed with real boat condition and marina context in mind."
+            label="Maintenance Packages"
+            title="Core care options are separated into clear package blocks."
+            copy="Start with the package that matches the boat’s condition and how much presentation work it needs. Routine maintenance packages show starting estimates, while restoration and heavier-condition scopes stay review-first before invoicing."
           />
-          <div className="grid gap-5">
+          <div className="mt-10 grid gap-5 md:grid-cols-2 xl:grid-cols-4">
             {coreServices.map((service, index) => {
               const Icon = service.icon
               return (
-                <FadeIn key={service.title} className="panel p-6 md:p-7" delay={index * 0.08}>
-                  <div className="flex items-start gap-4">
-                    <span className="mt-1 flex h-12 w-12 items-center justify-center rounded-2xl bg-lake/14 text-lake">
+                <FadeIn
+                  key={service.title}
+                  className="flex h-full flex-col rounded-3xl border border-white/80 bg-[#f8fbf7]/95 p-6 shadow-soft"
+                  delay={index * 0.08}
+                >
+                  <div className="grid gap-4">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lake/14 text-lake">
                       <Icon className="h-5 w-5" />
                     </span>
                     <div>
@@ -143,15 +147,15 @@ export function ServicesPage() {
           </div>
           <SectionIntro
             label="How Requests Are Reviewed"
-            title="Instant checkout where it makes sense. Inquiry review when it does not."
-            copy="Routine flat and per-foot services can move to secure checkout after the estimate is calculated. Larger boats, heavier oxidation, mildew, neglected condition, unusual access, restoration work, and advisory needs go to manual review instead."
+            title="Starting estimates where they make sense. Personal review before invoicing."
+            copy="Routine flat and per-foot services show a starting estimate. Larger boats, heavier oxidation, mildew, neglected condition, unusual access, restoration work, and advisory needs are reviewed manually before invoice pricing is finalized."
           />
         </div>
       </section>
 
       <CtaBanner
         title="Need pricing or want to move straight into the request flow?"
-        copy="Use the pricing page to compare instant-checkout services and quote-only work, then submit the request with your boat details, marina, timing, and condition notes."
+        copy="Use the pricing page to compare starting rates and custom-review work, then submit the request with your boat details, marina, timing, and condition notes."
         primaryLabel="View Pricing"
         primaryTo="/pricing"
         secondaryLabel="Book Marine Care"

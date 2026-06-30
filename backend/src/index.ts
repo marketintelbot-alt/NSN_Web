@@ -169,12 +169,12 @@ app.get(['/api/health/ready', '/api/health/dependencies'], async (_request, resp
       process.env.FROM_EMAIL?.trim() &&
       getBusinessNotificationEmails(getPrimaryAdminEmail()).length > 0,
   )
-  const operationalConfigReady =
-    process.env.NODE_ENV !== 'production' ||
-    (stripeWebhookConfigured && adminAuthConfigured && emailConfigured)
   const instantCheckoutServices = listPublicServiceCatalog().filter(
     (service) => service.paymentType === 'instant_checkout',
   )
+  const stripeRequired = instantCheckoutServices.length > 0
+  const operationalConfigReady =
+    process.env.NODE_ENV !== 'production' || (adminAuthConfigured && emailConfigured)
   const missingStripePriceServices = instantCheckoutServices
     .filter((service) => {
       const serviceDefinition = findServiceById(service.id)
@@ -216,8 +216,7 @@ app.get(['/api/health/ready', '/api/health/dependencies'], async (_request, resp
   const dependenciesOk =
     supabaseConfigured &&
     serviceRequestsTable.ok &&
-    stripeConfigured &&
-    missingStripePriceServices.length === 0 &&
+    (!stripeRequired || (stripeConfigured && missingStripePriceServices.length === 0)) &&
     operationalConfigReady
 
   response.status(dependenciesOk ? 200 : 503).json({
@@ -228,6 +227,7 @@ app.get(['/api/health/ready', '/api/health/dependencies'], async (_request, resp
         ok: serviceRequestsTable.ok,
       },
       stripeConfigured,
+      stripeRequired,
       stripePricesConfigured: missingStripePriceServices.length === 0,
       stripeWebhookConfigured,
       adminAuthConfigured,

@@ -13,9 +13,9 @@ const agreementSections = [
       'Flat services are priced as listed. For per-foot services, pricing is calculated based on boat length provided by the client. Boat length may be rounded up to the nearest whole foot. If boat length is entered incorrectly, North Shore Nautical may adjust or decline the request before approval.',
   },
   {
-    title: '3. Payment Authorization and Approval',
+    title: '3. Invoice Review and Approval',
     body:
-      'Payment method may be authorized at checkout. Payment is not captured until North Shore Nautical reviews and approves the appointment request. Checkout does not guarantee appointment approval.',
+      'Public site submissions are request inquiries, not confirmed appointments or online payment purchases. North Shore Nautical reviews the requested scope, boat condition, access, timing, and pricing before confirming the appointment or sending invoice details.',
   },
   {
     title: '4. Cancellations, Date Modifications, and Refunds',

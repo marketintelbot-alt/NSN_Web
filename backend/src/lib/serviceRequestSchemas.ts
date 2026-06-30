@@ -2,7 +2,11 @@ import { parse } from 'date-fns'
 import { fromZonedTime } from 'date-fns-tz'
 import { z } from 'zod'
 
-import { businessTimeZone, SERVICE_AGREEMENT_POLICY_VERSION } from './serviceCatalog.js'
+import {
+  businessTimeZone,
+  maximumBoatLengthFeet,
+  SERVICE_AGREEMENT_POLICY_VERSION,
+} from './serviceCatalog.js'
 import { normalizeMultilineText, normalizeText } from './sanitize.js'
 
 const phonePattern = /^[0-9+().\-\s]{7,20}$/
@@ -55,7 +59,7 @@ const optionalBoatLength = z.preprocess((value) => {
 
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : value
-}, z.number().positive('Boat length must be greater than zero.').max(200, 'Boat length must be 200 feet or fewer.').optional())
+}, z.number().positive('Boat length must be greater than zero.').max(maximumBoatLengthFeet, `Boat length must be ${maximumBoatLengthFeet} feet or fewer.`).optional())
 
 export function parseRequestedDateTimeLocal(value: string) {
   const parsed = parse(value, "yyyy-MM-dd'T'HH:mm", new Date())
@@ -81,7 +85,7 @@ function isReasonableRequestedDateTime(value: string, currentDate = new Date()) 
 }
 
 export const publicServiceRequestSchema = z.object({
-  submissionIntent: z.enum(['checkout', 'inquiry']),
+  submissionIntent: z.enum(['checkout', 'inquiry']).transform(() => 'inquiry' as const),
   selectedServiceId: z
     .string()
     .optional()

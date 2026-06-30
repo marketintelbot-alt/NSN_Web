@@ -10,6 +10,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}) {
 
   try {
     const response = await fetch(`${apiBaseUrl}${path}`, {
+      cache: options.cache || 'no-store',
       ...options,
       headers,
     })

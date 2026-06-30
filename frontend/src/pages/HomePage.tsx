@@ -49,7 +49,7 @@ export function HomePage() {
         }}
       />
 
-      <section className="relative min-h-[92svh] overflow-hidden bg-ink pt-28 text-white md:pt-36">
+      <section className="relative min-h-[88svh] overflow-hidden bg-ink pt-28 text-white md:pt-32">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -59,7 +59,7 @@ export function HomePage() {
         <div className="absolute inset-0 bg-hero-overlay" />
         <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-b from-transparent to-[#f7fbff]" />
 
-        <div className="container relative flex min-h-[calc(92svh-7rem)] items-end pb-16 md:pb-20">
+        <div className="container relative flex min-h-[calc(88svh-7rem)] items-end pb-14 md:pb-16">
           <FadeIn className="max-w-4xl">
             <span className="eyebrow">{siteMeta.tagline}</span>
             <p className="mt-6 text-sm font-semibold uppercase tracking-[0.24em] text-white/80">
@@ -72,14 +72,8 @@ export function HomePage() {
               Professional detailing, seasonal upkeep, and owner advisory designed to keep your boat
               clean, protected, and ready to enjoy all summer.
             </p>
-            <p className="mt-5 hidden max-w-2xl text-base leading-8 text-white/90 sm:block">
-              {brandPromise}
-            </p>
-            <p className="mt-4 hidden max-w-2xl text-sm leading-7 text-white/85 md:block">
-              {localSearchFocus}
-            </p>
 
-            <div className="mt-7 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:gap-4">
               <Link className="button-primary w-full justify-center sm:w-auto" to="/booking">
                 Book Marine Care
                 <ArrowRight className="h-4 w-4" />
@@ -91,6 +85,13 @@ export function HomePage() {
                 Explore Services
               </Link>
             </div>
+
+            <p className="mt-6 hidden max-w-2xl text-base leading-8 text-white/90 sm:block">
+              {brandPromise}
+            </p>
+            <p className="mt-4 hidden max-w-2xl text-sm leading-7 text-white/85 lg:block">
+              {localSearchFocus}
+            </p>
           </FadeIn>
         </div>
       </section>
@@ -265,7 +266,7 @@ export function HomePage() {
 
       <CtaBanner
         title="Ready to price the work or submit your request?"
-        copy="Choose an instant-checkout marine care service or route the request to review when the boat needs heavier-condition work, advisory support, or a custom scope."
+        copy="Choose a marine care service, review the starting estimate, and submit the request so North Shore Nautical can confirm scope and invoice next steps."
         primaryLabel="Book Marine Care"
         primaryTo="/booking"
         secondaryLabel="View Pricing"

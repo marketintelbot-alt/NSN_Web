@@ -8,9 +8,10 @@ import { apiRequest } from '../../lib/api'
 import { trackEvent } from '../../lib/analytics'
 import {
   calculateEstimateCents,
-  formatCurrency,
+  formatStartingAtCurrency,
   maximumBoatLengthFeet,
   minimumBoatLengthFeet,
+  publishedEstimateMaximumBoatLengthFeet,
   serviceAgreementPolicyVersion,
   shouldRouteToInquiry,
 } from '../../lib/servicePricing'
@@ -74,6 +75,20 @@ function parseBoatLength(value: string) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
+function padDateTimePart(value: number) {
+  return String(value).padStart(2, '0')
+}
+
+function formatDateTimeLocalValue(date: Date) {
+  const year = date.getFullYear()
+  const month = padDateTimePart(date.getMonth() + 1)
+  const day = padDateTimePart(date.getDate())
+  const hours = padDateTimePart(date.getHours())
+  const minutes = padDateTimePart(date.getMinutes())
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
 export function MarineServiceRequestForm({
   mode,
   presetServiceId = '',
@@ -84,6 +99,7 @@ export function MarineServiceRequestForm({
   const [catalogState, setCatalogState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [submitState, setSubmitState] = useState<'idle' | 'submitting'>('idle')
   const [message, setMessage] = useState('')
+  const minimumRequestedDateTimeLocal = useMemo(() => formatDateTimeLocalValue(new Date()), [])
 
   useEffect(() => {
     let isMounted = true
@@ -190,6 +206,10 @@ export function MarineServiceRequestForm({
       return 'Please enter your email address.'
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.customerEmail.trim())) {
+      return 'Please enter a valid email address.'
+    }
+
     if (!form.customerPhone.trim()) {
       return 'Please enter your phone number.'
     }
@@ -200,6 +220,10 @@ export function MarineServiceRequestForm({
 
     if (!form.requestedDateTimeLocal.trim()) {
       return 'Please enter your preferred date and time.'
+    }
+
+    if (form.requestedDateTimeLocal < minimumRequestedDateTimeLocal) {
+      return 'Please choose a future service window.'
     }
 
     if (!form.agreementAccepted) {
@@ -221,9 +245,9 @@ export function MarineServiceRequestForm({
     if (
       selectedServiceRequiresBoatLength &&
       typeof numericBoatLength === 'number' &&
-      numericBoatLength > 200
+      numericBoatLength > maximumBoatLengthFeet
     ) {
-      return 'Please enter a realistic boat length.'
+      return `Boat length must be ${maximumBoatLengthFeet} feet or fewer.`
     }
 
     return ''
@@ -239,18 +263,10 @@ export function MarineServiceRequestForm({
       return
     }
 
-    const submissionIntent =
-      mode === 'contact' ? 'inquiry' : routesToInquiry ? ('inquiry' as const) : ('checkout' as const)
+    const submissionIntent = 'inquiry' as const
 
     setSubmitState('submitting')
     setMessage('')
-
-    if (submissionIntent === 'checkout') {
-      trackEvent('checkout_started', {
-        serviceId: form.selectedServiceId || 'not_sure',
-        mode,
-      })
-    }
 
     const response = await apiRequest<CreateServiceRequestResponse>('/api/service-requests', {
       method: 'POST',
@@ -285,11 +301,6 @@ export function MarineServiceRequestForm({
       return
     }
 
-    if (response.payload.outcome === 'checkout' && response.payload.checkoutUrl) {
-      window.location.assign(response.payload.checkoutUrl)
-      return
-    }
-
     if (response.payload.requestId) {
       if (response.payload.outcome === 'inquiry') {
         trackEvent('inquiry_submitted', {
@@ -316,9 +327,7 @@ export function MarineServiceRequestForm({
   const submitLabel =
     mode === 'contact'
       ? 'Submit Inquiry'
-      : routesToInquiry
-        ? 'Submit for Review'
-        : 'Continue to Secure Checkout'
+      : 'Submit for Invoice Review'
 
   return (
     <div className="panel p-6 md:p-8">
@@ -344,7 +353,7 @@ export function MarineServiceRequestForm({
       ) : null}
 
       {catalogState === 'ready' ? (
-        <form className="mt-8 grid gap-8" onSubmit={handleSubmit}>
+        <form className="mt-8 grid gap-8" noValidate onSubmit={handleSubmit}>
           <div className="grid gap-4">
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
@@ -352,7 +361,7 @@ export function MarineServiceRequestForm({
                   Choose a service
                 </p>
                 <p className="mt-2 text-sm leading-7 text-slate">
-                  Marine care drives the booking flow. Advisory and condition-heavy work route to inquiry review.
+                  Marine care drives the request flow. Every submission is reviewed before invoice next steps are sent.
                 </p>
               </div>
               {mode === 'booking' ? (
@@ -363,39 +372,45 @@ export function MarineServiceRequestForm({
             </div>
 
             <div className="grid gap-4 lg:grid-cols-2">
-              {services.map((service, index) => (
-                <FadeIn
-                  key={service.id}
-                  className={`rounded-3xl border p-5 transition ${
-                    form.selectedServiceId === service.id && !form.notSureWhatINeed
-                      ? 'border-lake bg-lake/10'
-                      : 'border-ink/10 bg-[#f8fbf7]/90 hover:border-lake/35'
-                  }`}
-                  delay={index * 0.03}
-                >
-                  <button
-                    className="w-full text-left"
-                    type="button"
-                    onClick={() => handleServiceSelection(service.id)}
+              {services.map((service, index) => {
+                const isSelected = form.selectedServiceId === service.id && !form.notSureWhatINeed
+
+                return (
+                  <FadeIn
+                    key={service.id}
+                    className={`rounded-3xl border p-5 transition ${
+                      isSelected
+                        ? 'border-lake bg-lake/10'
+                        : 'border-ink/10 bg-[#f8fbf7]/90 hover:border-lake/35'
+                    }`}
+                    delay={index * 0.03}
                   >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
-                          {service.categoryLabel}
-                        </p>
-                        <h3 className="mt-2 text-xl font-semibold text-ink">{service.name}</h3>
+                    <button
+                      aria-label={`Select ${service.name}, ${service.pricingLabel}`}
+                      aria-pressed={isSelected}
+                      className="w-full text-left"
+                      type="button"
+                      onClick={() => handleServiceSelection(service.id)}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-navy/70">
+                            {service.categoryLabel}
+                          </p>
+                          <h3 className="mt-2 text-xl font-semibold text-ink">{service.name}</h3>
+                        </div>
+                        <span className="status-pill">{service.pricingLabel}</span>
                       </div>
-                      <span className="status-pill">{service.pricingLabel}</span>
-                    </div>
-                    <p className="mt-3 text-sm leading-7 text-slate">{service.description}</p>
-                    {service.warningNotes.length > 0 ? (
-                      <p className="mt-3 text-xs leading-6 text-slate/90">
-                        {service.warningNotes[0]}
-                      </p>
-                    ) : null}
-                  </button>
-                </FadeIn>
-              ))}
+                      <p className="mt-3 text-sm leading-7 text-slate">{service.description}</p>
+                      {service.warningNotes.length > 0 ? (
+                        <p className="mt-3 text-xs leading-6 text-slate/90">
+                          {service.warningNotes[0]}
+                        </p>
+                      ) : null}
+                    </button>
+                  </FadeIn>
+                )
+              })}
 
               <div
                 className={`rounded-3xl border p-5 transition ${
@@ -405,6 +420,8 @@ export function MarineServiceRequestForm({
                 }`}
               >
                 <button
+                  aria-label="Select guided intake, not sure what I need"
+                  aria-pressed={form.notSureWhatINeed}
                   className="w-full text-left"
                   type="button"
                   onClick={() =>
@@ -419,7 +436,7 @@ export function MarineServiceRequestForm({
                   </p>
                   <h3 className="mt-2 text-xl font-semibold text-ink">Not sure what I need</h3>
                   <p className="mt-3 text-sm leading-7 text-slate">
-                    Tell us about the boat and the condition. We’ll route the request to review instead of checkout.
+                    Tell us about the boat and the condition. We’ll review the request and follow up with invoice next steps.
                   </p>
                 </button>
               </div>
@@ -467,7 +484,7 @@ export function MarineServiceRequestForm({
                   <input
                     className="input-field"
                     inputMode="decimal"
-                    max={200}
+                    max={maximumBoatLengthFeet}
                     min={1}
                     name="boatLengthFeet"
                     placeholder="For example: 28"
@@ -517,6 +534,7 @@ export function MarineServiceRequestForm({
                   Requested Date & Time
                   <input
                     className="input-field"
+                    min={minimumRequestedDateTimeLocal}
                     name="requestedDateTimeLocal"
                     type="datetime-local"
                     value={form.requestedDateTimeLocal}
@@ -530,7 +548,7 @@ export function MarineServiceRequestForm({
                   Condition flags
                 </p>
                 <p className="mt-2 text-sm leading-7 text-slate">
-                  These route heavier-condition projects into quote review instead of instant checkout. Boat condition can also change the final price after review.
+                  These help flag heavier-condition projects before invoice review. Boat condition can change the final price after review.
                 </p>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   {[
@@ -577,16 +595,12 @@ export function MarineServiceRequestForm({
                 <h3 className="mt-3 text-2xl font-semibold text-ink">
                   {mode === 'contact'
                     ? 'Inquiry review'
-                    : routesToInquiry
-                      ? 'Quote and review'
-                      : 'Secure checkout'}
+                    : 'Invoice review'}
                 </h3>
                 <p className="mt-3 text-sm leading-7 text-slate">
                   {mode === 'contact'
                     ? 'This form always routes to inquiry review so the team can respond directly.'
-                    : routesToInquiry
-                      ? 'This request needs manual review before any payment capture or confirmation.'
-                      : 'You will see the estimate first, then continue to Stripe for card authorization.'}
+                    : 'North Shore Nautical reviews the request, confirms scope and timing, then follows up with invoice details directly.'}
                 </p>
               </div>
 
@@ -596,14 +610,14 @@ export function MarineServiceRequestForm({
                     Estimated price
                   </p>
                   <p className="mt-3 font-display text-5xl font-semibold text-ink">
-                    {routesToInquiry ? 'Review first' : formatCurrency(estimatedPriceCents)}
+                    {routesToInquiry ? 'Review first' : formatStartingAtCurrency(estimatedPriceCents)}
                   </p>
                   <p className="mt-3 text-sm leading-7 text-slate">
                     {routesToInquiry
-                      ? `Quote-only, condition-heavy, and boats over ${maximumBoatLengthFeet} feet are reviewed manually before pricing is finalized.`
+                      ? `Quote-only, condition-heavy, and boats over ${publishedEstimateMaximumBoatLengthFeet} feet are reviewed manually before invoice pricing is finalized. Requests can be submitted online up to ${maximumBoatLengthFeet} feet.`
                       : selectedServiceRequiresBoatLength
-                        ? `Boat length is rounded up to the nearest whole foot for checkout. Routine online checkout is designed for boats between ${minimumBoatLengthFeet} and ${maximumBoatLengthFeet} feet, and condition can still affect approval or final pricing.`
-                        : 'This flat visit price does not require boat length for checkout, though condition can still affect approval or move the request to review.'}
+                        ? `Boat length is rounded up to the nearest whole foot for the starting estimate. Routine published estimates are designed for boats between ${minimumBoatLengthFeet} and ${publishedEstimateMaximumBoatLengthFeet} feet. Boats up to ${maximumBoatLengthFeet} feet can still be submitted for review.`
+                        : 'This flat package estimate does not require boat length, though condition can still affect final invoice pricing.'}
                   </p>
                 </div>
               ) : null}

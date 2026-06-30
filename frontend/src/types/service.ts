@@ -28,7 +28,7 @@ export type PublicServiceCatalogResponse = {
 }
 
 export type ServiceRequestPayload = {
-  submissionIntent: 'checkout' | 'inquiry'
+  submissionIntent: 'inquiry'
   selectedServiceId: string
   notSureWhatINeed: boolean
   heavyOxidation: boolean
@@ -51,9 +51,8 @@ export type ServiceRequestPayload = {
 }
 
 export type CreateServiceRequestResponse = {
-  outcome: 'checkout' | 'inquiry' | 'ignored'
+  outcome: 'inquiry' | 'ignored'
   requestId?: string
-  checkoutUrl?: string
   message?: string
 }
 

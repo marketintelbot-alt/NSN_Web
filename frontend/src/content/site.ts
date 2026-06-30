@@ -107,7 +107,7 @@ export const teamMembers = [
 
 export const trustHighlights = [
   'Premium detailing and upkeep-first service plans',
-  'Manual request review before any payment is captured',
+  'Manual request review before invoice next steps are sent',
   'Chicago North Shore and Lake Michigan scheduling fluency',
   'Practical advisory support for confident ownership decisions',
 ]
@@ -116,12 +116,12 @@ export const pricingConditionNotes = [
   {
     title: 'Boat condition changes pricing',
     description:
-      'Published rates assume routine condition and boats from 10-30 feet. Heavy oxidation, mildew, severe staining, neglected surfaces, unusual access, restoration needs, or boats over 30 feet may increase price or move the request to manual quote review.',
+      'Published starting rates assume routine condition and boats from 10-40 feet. Heavy oxidation, mildew, severe staining, neglected surfaces, unusual access, restoration needs, or boats over 40 feet may increase final invoice pricing after review.',
   },
   {
     title: 'Larger boats are quoted directly',
     description:
-      'If your boat is larger than 30 feet, contact North Shore Nautical for a custom quote so the team can review size, access, timing, and condition before pricing the work.',
+      'Boats over 40 feet and up to 70 feet can be submitted for inquiry review. If your boat is larger than 70 feet, contact North Shore Nautical directly for a custom quote.',
   },
 ]
 
@@ -132,9 +132,9 @@ export const homeMetrics = [
     description: 'Detailing, upkeep, protection, and finish care lead the service experience.',
   },
   {
-    label: 'Checkout Model',
-    value: 'Pending Review',
-    description: 'Requests are reviewed before approval, and card authorizations are captured only after approval.',
+    label: 'Invoice Model',
+    value: 'Review First',
+    description: 'Requests are reviewed before approval, scheduling, and invoice next steps.',
   },
   {
     label: 'Service Footprint',
@@ -339,14 +339,14 @@ export const advisoryPillars = [
 
 export const faqItems = [
   {
-    question: 'Which services can I check out online?',
+    question: 'Do I check out online?',
     answer:
-      'Routine flat and per-foot marine care services can move to secure checkout online. Boats over 30 feet, heavier condition work, and advisory requests are reviewed through an inquiry-first process.',
+      'No. Public site requests are reviewed first, then North Shore Nautical follows up directly with invoice next steps. Published rates are starting estimates for routine condition and boats from 10-40 feet.',
   },
   {
-    question: 'When is my card actually charged?',
+    question: 'When do I pay?',
     answer:
-      'For instant-checkout services, your payment method is authorized first. North Shore Nautical captures payment only after reviewing and approving the request.',
+      'North Shore Nautical reviews scope, condition, timing, and access before sending invoice details. No payment is taken through the public request form.',
   },
   {
     question: 'What if I am not sure which service fits my boat?',

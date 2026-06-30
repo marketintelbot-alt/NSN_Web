@@ -94,7 +94,7 @@ export function createInquiryReceivedEmail(request: ServiceRequestRecord) {
     `
       ${renderRequestSummary(request)}
       <p style="margin:22px 0 0;color:#5c7386;font-size:14px;line-height:1.8;">
-        Thanks — your inquiry has been received. North Shore Nautical will review your details and follow up shortly.
+        Thanks — your request has been received. North Shore Nautical will review your details and follow up with invoice next steps shortly.
       </p>
       <p style="margin:16px 0 0;color:#5c7386;font-size:14px;line-height:1.8;">
         A North Shore Nautical team member will follow up directly if additional access details are needed.
@@ -105,7 +105,7 @@ export function createInquiryReceivedEmail(request: ServiceRequestRecord) {
   const text = [
     'Inquiry Received | North Shore Nautical',
     '',
-    'Thanks — your inquiry has been received. North Shore Nautical will review your details and follow up shortly.',
+    'Thanks — your request has been received. North Shore Nautical will review your details and follow up with invoice next steps shortly.',
     `Service: ${request.selectedServiceName || 'Not sure what I need'}`,
     `Requested date: ${request.requestedDateTimeLabel || 'Pending review'}`,
     `Estimate: ${formatCurrency(request.calculatedPriceCents)}`,

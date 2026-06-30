@@ -107,7 +107,7 @@ function respondWithRequestError(error: unknown, response: Response) {
 
     return response.status(503).json({
       message:
-        'Secure checkout is temporarily unavailable. Please submit the request for review or contact North Shore Nautical directly.',
+        'Online requests are temporarily unavailable. Please contact North Shore Nautical directly and we will help with invoice review.',
     })
   }
 
@@ -154,21 +154,13 @@ export async function createServiceRequestHandler(request: Request, response: Re
 
     const result = await createPublicServiceRequest(publicServiceRequestSchema.parse(request.body))
 
-    if (result.kind === 'inquiry') {
-      void sendInquiryReceivedEmails(result.request, getEmailOptions())
-
-      return response.status(200).json({
-        outcome: 'inquiry',
-        requestId: result.request.id,
-        message:
-          'Thanks — your inquiry has been received. North Shore Nautical will review your details and follow up shortly.',
-      })
-    }
+    void sendInquiryReceivedEmails(result.request, getEmailOptions())
 
     return response.status(200).json({
-      outcome: 'checkout',
+      outcome: 'inquiry',
       requestId: result.request.id,
-      checkoutUrl: result.checkoutUrl,
+      message:
+        'Thanks — your request has been received. North Shore Nautical will review your details and follow up with invoice next steps.',
     })
   } catch (error) {
     return respondWithRequestError(error, response)
